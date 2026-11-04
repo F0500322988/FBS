@@ -48,7 +48,7 @@ try
     Check(rejected, "student pairing key is never overwritten implicitly");
     var command = new ProcessStartInfo("powershell.exe") { UseShellExecute = false, CreateNoWindow = true };
     command.ArgumentList.Add("-NoProfile"); command.ArgumentList.Add("-NonInteractive"); command.ArgumentList.Add("-Command");
-    command.ArgumentList.Add("$ErrorActionPreference='Stop'; $s=(Get-Content -LiteralPath $env:FBS_TEST_KEY_FILE -Raw).Trim() | ConvertTo-SecureString; $p=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($s); try { if ([Runtime.InteropServices.Marshal]::PtrToStringBSTR($p) -cne $env:FBS_TEST_EXPECTED) { exit 2 } } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($p) }");
+    command.ArgumentList.Add("try { $ErrorActionPreference='Stop'; $s=(Get-Content -LiteralPath $env:FBS_TEST_KEY_FILE -Raw).Trim() | ConvertTo-SecureString; $p=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($s); try { if ([Runtime.InteropServices.Marshal]::PtrToStringBSTR($p) -cne $env:FBS_TEST_EXPECTED) { exit 2 } } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($p) } } catch { [Console]::Error.WriteLine(\"FAIL: PowerShell error category \" + $_.CategoryInfo.Category + \" type \" + $_.Exception.GetType().FullName); exit 3 }");
     command.Environment["FBS_TEST_KEY_FILE"] = pairingFile;
     command.Environment["FBS_TEST_EXPECTED"] = labKey; // Random disposable fixture, never printed.
     using var process = Process.Start(command)!;
