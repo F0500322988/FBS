@@ -1,0 +1,46 @@
+{
+  "stage": "M178",
+  "applicationVersion": "0.178.0-preview",
+  "featureSourceCommit": "c5c16b6",
+  "correctedMacSourceCommit": "b49f215",
+  "javascriptLinux": {
+    "passed": 1480,
+    "failed": 0,
+    "skipped": 0,
+    "realPinnedTlsPauseIntegrationPassed": true
+  },
+  "browser": {
+    "passed": true,
+    "apiMocked": true,
+    "delayedStartCancellationPassed": true,
+    "lostKeepalivePassed": true
+  },
+  "dotnetLinux": {
+    "setupTls": 48,
+    "nativeGate": 80,
+    "fileSave": 9
+  },
+  "windowsBuild": {
+    "teacherPublished": true,
+    "studentPublished": true,
+    "installerBuildPassed": true,
+    "payloadFilesSha256Verified": 93,
+    "installerExecuted": false,
+    "actualStudentAppGuiTested": false,
+    "signed": false
+  },
+  "windowsCI": {
+    "status": "queued-at-last-check",
+    "winFormsCiTestExecuted": false,
+    "currentVersionDpapiTestExecuted": false,
+    "run": "https://github.com/F0500322988/FBS/actions/runs/41865123015"
+  },
+  "macOS": {
+    "swiftSyntaxParsePassedOnLinux": true,
+    "nativeBuildPassed": null,
+    "status": "queued-at-last-check",
+    "correctedBuildRun": "https://github.com/F0500322988/FBS/actions/runs/41865372433",
+    "guiTested": false,
+    "nativeArmExecution": false
+  }
+}

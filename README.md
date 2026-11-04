@@ -3,13 +3,13 @@
 Local-network classroom management software for separate Windows and macOS labs, targeting up to 40 student endpoints per lab.
 
 ## Status
-M177 adds persistent lab names and device groups, revision checks for concurrent browser edits, atomic file replacement and group filters for the roster, screen viewer and message/file/broadcast recipients. Groups organize device IDs and never grant enrollment or remote input permissions. See [M177-START-HERE.md](M177-START-HERE.md).
+M178 adds temporary classroom screen overlays for Windows and macOS/iMac, with key-bound requests, teacher stop, immediate student release and short local expiry. This is an application overlay, not an operating-system account lock; system shortcuts and remote input remain unaffected. See [M178-START-HERE.md](M178-START-HERE.md).
 
-All 1471 JavaScript tests passed on Linux, along with Chromium acceptance for lab editing, group filtering, failure recovery and previous message/file/broadcast features. Windows CI [41860885504](https://github.com/F0500322988/FBS/actions/runs/41860885504) passed the new persistence/API restart tests and 148 .NET checks. The POSIX symlink test was explicitly skipped on Windows. Both Windows x64 installers were built and 91 extracted payload files were hash verified; interactive installer and GUI acceptance remain untested.
+All 1480 JavaScript tests passed on Linux, including real pinned TLS pause delivery, receipt, release, stop, revocation and expiry. Chromium acceptance passed with mocked APIs, including delayed-start cancellation and lost keepalive handling. Both native Windows applications compile and publish successfully. Swift syntax parsing passed on Linux; this does not establish an AppKit build or Mac runtime success.
 
-Mac M177 Intel packaging and additional Apple Silicon validation are tracked in the milestone evidence. Earlier [M176 Mac packages](https://github.com/F0500322988/FBS/releases/tag/m176-macos-preview-7-1) remain available until M177 publication is confirmed. Windows installers are unsigned; Mac apps use ad-hoc signing without Developer ID or notarization. Physical mixed-device LAN and GUI acceptance remain outstanding.
+Windows CI (including the new isolated WinForms test) and corrected Mac packaging are pending GitHub runner availability. Earlier M177 Windows checks passed; they do not establish M178 GUI acceptance. The milestone reports distinguish completed, queued and untested work. Windows installers are unsigned; Mac builds use ad-hoc signing without Developer ID or notarization.
 
-Remote input, locking, multiple independent lab profiles and full visual matching remain incomplete. One lab profile and its groups now persist per teacher account. Older milestone notes are historical.
+Remote input, operating-system account locking, multiple independent lab profiles, full visual matching, mixed-device physical LAN and classroom-scale acceptance remain incomplete. M177 lab settings and groups persist per teacher account. Older milestone notes are historical.
 
 ## Components
 - `src/shared`: protocol contracts and security requirements
