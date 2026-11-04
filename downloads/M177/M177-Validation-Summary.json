@@ -1,0 +1,37 @@
+{
+  "stage": "M177",
+  "applicationVersion": "0.177.0-preview",
+  "featureSourceCommit": "b70d436",
+  "javascriptLinux": {
+    "passed": 1471,
+    "failed": 0,
+    "skipped": 0
+  },
+  "browser": {
+    "passed": true,
+    "apiMocked": true,
+    "separateRealApiRestartTestPassed": true
+  },
+  "windowsCI": {
+    "passed": true,
+    "run": "https://github.com/F0500322988/FBS/actions/runs/41860885504",
+    "newPersistenceAndApiTestsPassed": true,
+    "posixSymlinkTestSkipped": true,
+    "dotnetChecks": 148,
+    "guiExecuted": false,
+    "installerExecuted": false
+  },
+  "windowsInstaller": {
+    "extractedPayloadFilesVerified": 91,
+    "allSha256Verified": true,
+    "signed": false
+  },
+  "macIntel": {
+    "status": "queued-at-last-check",
+    "run": "https://github.com/F0500322988/FBS/actions/runs/41860754584"
+  },
+  "macAppleSilicon": {
+    "status": "queued-at-last-check",
+    "run": "https://github.com/F0500322988/FBS/actions/runs/41861681223"
+  }
+}

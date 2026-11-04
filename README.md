@@ -3,11 +3,13 @@
 Local-network classroom management software for separate Windows and macOS labs, targeting up to 40 student endpoints per lab.
 
 ## Status
-M176 adds explicit student file saving on Windows and macOS/iMac with SHA-256 verification, a 5 MiB limit, recipient approval and expiring transfers. See [M176-START-HERE.md](M176-START-HERE.md). Mac universal PKG/DMG packages are available in [the M176 preview release](https://github.com/F0500322988/FBS/releases/tag/m176-macos-preview-7-1), targeting macOS 13+ on Intel and Apple Silicon.
+M177 adds persistent lab names and device groups, revision checks for concurrent browser edits, atomic file replacement and group filters for the roster, screen viewer and message/file/broadcast recipients. Groups organize device IDs and never grant enrollment or remote input permissions. See [M177-START-HERE.md](M177-START-HERE.md).
 
-All 1462 JavaScript checks and Chromium file-delivery acceptance passed. Portable .NET checks passed (48 setup/TLS, 80 native safety, 9 file-save). Mac Intel CI compiled both architectures, passed 23 configuration and 8 file-save checks, verified package payloads, mounted DMGs and installed/self-checked/removed both apps. Interactive GUI, Keychain, screen recording, native Apple Silicon execution and mixed-device LAN acceptance remain untested. Windows CI also passed all four projects, including 11 DPAPI/legacy PowerShell checks (run 41858436280); installer extraction/hash checks do not establish successful installation.
+All 1471 JavaScript tests passed on Linux, along with Chromium acceptance for lab editing, group filtering, failure recovery and previous message/file/broadcast features. Windows CI [41860885504](https://github.com/F0500322988/FBS/actions/runs/41860885504) passed the new persistence/API restart tests and 148 .NET checks. The POSIX symlink test was explicitly skipped on Windows. Both Windows x64 installers were built and 91 extracted payload files were hash verified; interactive installer and GUI acceptance remain untested.
 
-Windows installers are unsigned; Mac apps use ad-hoc signing without Developer ID or notarization. Remote input, locking, persistent lab management and full visual matching remain incomplete. Older milestone notes are historical.
+Mac M177 Intel packaging and additional Apple Silicon validation are tracked in the milestone evidence. Earlier [M176 Mac packages](https://github.com/F0500322988/FBS/releases/tag/m176-macos-preview-7-1) remain available until M177 publication is confirmed. Windows installers are unsigned; Mac apps use ad-hoc signing without Developer ID or notarization. Physical mixed-device LAN and GUI acceptance remain outstanding.
+
+Remote input, locking, multiple independent lab profiles and full visual matching remain incomplete. One lab profile and its groups now persist per teacher account. Older milestone notes are historical.
 
 ## Components
 - `src/shared`: protocol contracts and security requirements

@@ -1,0 +1,33 @@
+{
+  "stage": "M177",
+  "applicationVersion": "0.177.0-preview",
+  "buildTool": "NSIS native Linux compiler / signed Debian packages",
+  "buildPassed": true,
+  "allPayloadSha256Verified": true,
+  "unexpectedPayloadRejected": true,
+  "windowsInstallExecuted": false,
+  "windowsGuiExecuted": false,
+  "twoPcLanTested": false,
+  "installers": [
+    {
+      "role": "Teacher",
+      "file": "FBS-Classroom-Teacher-M177-Setup-PREVIEW.exe",
+      "size": 69286385,
+      "sha256": "0239daf4714739385ea628e8e2e809131f47101e145c7058baf961db05b24a96",
+      "payloadFilesVerified": 46,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    },
+    {
+      "role": "Student",
+      "file": "FBS-Classroom-Student-M177-Setup-PREVIEW.exe",
+      "size": 69264652,
+      "sha256": "bf4d78f620f28e2cc5864d66637da754946f3b0e77aabcc20c86b9eeb322ae49",
+      "payloadFilesVerified": 45,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    }
+  ]
+}
