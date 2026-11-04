@@ -1,0 +1,29 @@
+{
+  "stage": "M176",
+  "platform": "macOS",
+  "minimumOS": "13.0",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "nativeBuildPassed": true,
+  "selfCheckHostArchitecture": "x86_64",
+  "otherArchitectureExecuted": false,
+  "pkgPayloadVerified": true,
+  "dmgVerified": true,
+  "bundleAdHocSigned": true,
+  "developerIDSigned": false,
+  "notarized": false,
+  "guiTested": false,
+  "keychainTested": false,
+  "screenRecordingTested": false,
+  "twoMacLanTested": false,
+  "installedOnMacTested": true,
+  "uninstallOnIsolatedRunnerTested": true,
+  "files": [
+    "FBS-Classroom-Student-M176-macOS-Universal-PREVIEW.dmg",
+    "FBS-Classroom-Student-M176-macOS-Universal-PREVIEW.pkg",
+    "FBS-Classroom-Teacher-M176-macOS-Universal-PREVIEW.dmg",
+    "FBS-Classroom-Teacher-M176-macOS-Universal-PREVIEW.pkg"
+  ]
+}

@@ -3,11 +3,11 @@
 Local-network classroom management software for separate Windows and macOS labs, targeting up to 40 student endpoints per lab.
 
 ## Status
-Windows preview M174 remains available. macOS/iMac preview M175 now includes separate universal Teacher and Student applications for Intel and Apple Silicon, targeting macOS 13+. Download PKG or DMG from [the verified Mac preview release](https://github.com/F0500322988/FBS/releases/tag/m175-macos-preview-6-1). See [M175-START-HERE.md](M175-START-HERE.md) for exact evidence and limits.
+M176 adds explicit student file saving on Windows and macOS/iMac with SHA-256 verification, a 5 MiB limit, recipient approval and expiring transfers. See [M176-START-HERE.md](M176-START-HERE.md). Mac universal PKG/DMG packages are available in [the M176 preview release](https://github.com/F0500322988/FBS/releases/tag/m176-macos-preview-7-1), targeting macOS 13+ on Intel and Apple Silicon.
 
-Mac native compilation, package extraction/hash verification, DMG mounting, isolated Intel installation/removal, bundled Node and local HTTP self-checks passed. The 1454 shared JavaScript tests, 23 Swift configuration checks and 5 Python payload checks passed. macOS GUI, Keychain interaction, screen recording and native Apple Silicon execution remain untested. Apps are ad-hoc signed, without Developer ID signing or notarization. Windows physical GUI/installation acceptance remains separate from these Mac checks.
+All 1462 JavaScript checks and Chromium file-delivery acceptance passed. Portable .NET checks passed (48 setup/TLS, 80 native safety, 9 file-save). Mac Intel CI compiled both architectures, passed 23 configuration and 8 file-save checks, verified package payloads, mounted DMGs and installed/self-checked/removed both apps. Interactive GUI, Keychain, screen recording, native Apple Silicon execution and mixed-device LAN acceptance remain untested. Windows CI also passed all four projects, including 11 DPAPI/legacy PowerShell checks (run 41858436280); installer extraction/hash checks do not establish successful installation.
 
-Remote input remains disabled. Locking, file delivery, persistent lab management and full visual matching remain incomplete. Older milestone notes are historical.
+Windows installers are unsigned; Mac apps use ad-hoc signing without Developer ID or notarization. Remote input, locking, persistent lab management and full visual matching remain incomplete. Older milestone notes are historical.
 
 ## Components
 - `src/shared`: protocol contracts and security requirements

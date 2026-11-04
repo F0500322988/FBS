@@ -1,0 +1,33 @@
+{
+  "stage": "M176",
+  "applicationVersion": "0.176.0-preview",
+  "buildTool": "NSIS native Linux compiler / signed Debian packages",
+  "buildPassed": true,
+  "allPayloadSha256Verified": true,
+  "unexpectedPayloadRejected": true,
+  "windowsInstallExecuted": false,
+  "windowsGuiExecuted": false,
+  "twoPcLanTested": false,
+  "installers": [
+    {
+      "role": "Teacher",
+      "file": "FBS-Classroom-Teacher-M176-Setup-PREVIEW.exe",
+      "size": 69299944,
+      "sha256": "1ca3afcb8aec64c724e8f144f47c0d384f3ecd21b6abdef68ad5b5d9190e9bd6",
+      "payloadFilesVerified": 45,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    },
+    {
+      "role": "Student",
+      "file": "FBS-Classroom-Student-M176-Setup-PREVIEW.exe",
+      "size": 69256244,
+      "sha256": "ecd967dea4c8528430d7f61bf39af7af3f0495c1000ed0378127a37edd7400b3",
+      "payloadFilesVerified": 44,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    }
+  ]
+}

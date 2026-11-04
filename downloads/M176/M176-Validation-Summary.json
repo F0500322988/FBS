@@ -1,0 +1,42 @@
+{
+  "stage": "M176",
+  "javascript": {
+    "passed": 1462,
+    "failed": 0,
+    "skipped": 0
+  },
+  "browser": {
+    "passed": true,
+    "apiMocked": true,
+    "separateRealTlsIntegrationPassed": true
+  },
+  "dotnetLinux": {
+    "setupTls": 48,
+    "nativeGate": 80,
+    "atomicSave": 9
+  },
+  "macOS": {
+    "run": "https://github.com/F0500322988/FBS/actions/runs/41845789404",
+    "release": "https://github.com/F0500322988/FBS/releases/tag/m176-macos-preview-7-1",
+    "configurationChecks": 23,
+    "atomicSaveChecks": 8,
+    "installedAndRemovedOnIntelRunner": true,
+    "nativeArmExecution": false,
+    "guiTested": false
+  },
+  "windowsInstaller": {
+    "extractedAndHashVerifiedFiles": 89,
+    "installerExecuted": false,
+    "guiTested": false
+  },
+  "windowsCI": {
+    "passed": true,
+    "run": "https://github.com/F0500322988/FBS/actions/runs/41858436280",
+    "nativeGateChecks": 80,
+    "setupTlsChecks": 48,
+    "dpapiPowerShellChecks": 11,
+    "atomicSaveChecks": 9,
+    "guiExecuted": false,
+    "installerExecuted": false
+  }
+}
