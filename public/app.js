@@ -14,10 +14,10 @@ async function fbsTeacherAuth(){
 fbsTeacherAuth().catch(console.error);
 'use strict';
 let previousMonitorSnapshot=null,monitorHistory=[],monitorInterrupted=false;let roster=[];let frames=new Map();let pageNow="home";let selectedScreen=null;let lastStatusAt=0,lastStatusMode='unconfigured';
-const labels={home:'الرئيسية',screens:'عرض الشاشات',broadcast:'مشاركة الشاشة',control:'التحكم عن بُعد',lock:'قفل الأجهزة',files:'توزيع الملفات',messages:'الرسائل',labs:'إدارة المعمل',monitor:'مراقبة الأجهزة',enrollment:'اعتماد الأجهزة'};
+const labels={home:'الرئيسية',screens:'عرض الشاشات',broadcast:'مشاركة الشاشة',control:'التحكم عن بُعد',lock:'حجب العرض',files:'توزيع الملفات',messages:'الرسائل',labs:'إدارة المعمل',monitor:'مراقبة الأجهزة',enrollment:'اعتماد الأجهزة'};
 const el=id=>document.getElementById(id);
 let deviceView='grid',refreshBusy=false,previewUnavailable=false;
-const plannedPages=new Set(['control','lock']);
+const plannedPages=new Set(['control']);
 function updatePageNotice(){
  const notice=el('notice');
  notice.hidden=true;
@@ -28,6 +28,8 @@ function updatePageNotice(){
 function render(){
  const custom=pageNow==='monitor'||pageNow==='enrollment';
  el('view-toolbar').hidden=custom||plannedPages.has(pageNow)||pageNow==='messages';
+ el('pause-panel').hidden=pageNow!=='lock';
+ if(pageNow==='lock'){el('view-toolbar').hidden=true;el('files-panel').hidden=true;el('labs-panel').hidden=true;el('messages-panel').hidden=true;el('broadcast-panel').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;renderPauseRecipients();return;}
  el('labs-panel').hidden=pageNow!=='labs';
  if(pageNow==='labs'){el('view-toolbar').hidden=true;el('files-panel').hidden=true;el('messages-panel').hidden=true;el('broadcast-panel').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;return;}
  el('files-panel').hidden=pageNow!=='files';
@@ -83,7 +85,7 @@ async function refresh(){
   el('total').textContent=roster.length;el('online').textContent=roster.filter(x=>x.online).length;el('offline').textContent=roster.filter(x=>!x.online).length;
   el('lab-name').textContent=data.lab?.name||'المعمل';
   el('mode').textContent=data.mode==='demo'?'وضع العرض التجريبي':data.mode==='live'?'أجهزة حقيقية على الشبكة':'الاتصال غير مهيأ';
-  el('mode').dataset.mode=data.mode;updatePageNotice();render();updateLargeScreen();if(pageNow==='messages')loadMessageHistory();if(pageNow==='broadcast')loadBroadcastState();if(pageNow==='files')loadFileHistory();
+  el('mode').dataset.mode=data.mode;updatePageNotice();render();updateLargeScreen();if(pageNow==='messages')loadMessageHistory();if(pageNow==='broadcast')loadBroadcastState();if(pageNow==='files')loadFileHistory();if(pageNow==='lock')loadPauseState();
  }catch(e){
   monitorInterrupted=true;previousMonitorSnapshot=null;lastStatusAt=0;roster=[];frames.clear();
   el('total').textContent='—';el('online').textContent='—';el('offline').textContent='—';
@@ -93,7 +95,7 @@ async function refresh(){
 }
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
  document.querySelectorAll('nav button').forEach(x=>{x.classList.remove('active');x.removeAttribute('aria-current');});
- b.classList.add('active');b.setAttribute('aria-current','page');if(pageNow==='broadcast'&&b.dataset.page!=='broadcast')stopBroadcast();pageNow=b.dataset.page;
+ b.classList.add('active');b.setAttribute('aria-current','page');if(pageNow==='broadcast'&&b.dataset.page!=='broadcast')stopBroadcast();if(pageNow==='lock'&&b.dataset.page!=='lock')stopPause();pageNow=b.dataset.page;
  el('page-title').textContent=labels[pageNow];el('section-title').textContent=pageNow==='home'?'أجهزة الطلاب':labels[pageNow];
  frames.clear();if(el('screen-dialog').open)el('screen-dialog').close();
  updatePageNotice();el('monitor-panel').hidden=pageNow!=='monitor';render();
@@ -332,7 +334,7 @@ async function loadMessageHistory(){
 // M174: explicit browser display selection and key-bound, short-lived JPEG broadcast.
 const broadcastSelection=new Set();let broadcastRecipientsKey='',broadcastStream=null,broadcastSession=null,broadcastTimer=null,broadcastBusy=false,broadcastSending=false,broadcastGeneration=0,broadcastSequence=0,broadcastStateBusy=false;
 function updateBroadcastButtons(){
- el('lab-group-filter').disabled=broadcastBusy||!!broadcastSession;
+ el('lab-group-filter').disabled=broadcastBusy||!!broadcastSession||pauseBusy||pauseOwned;
  el('broadcast-start').disabled=broadcastBusy||!!broadcastSession||!broadcastSelection.size;
  el('broadcast-stop').disabled=!broadcastBusy&&!broadcastSession;
  for(const input of el('broadcast-recipients').querySelectorAll('input'))input.disabled=broadcastBusy||!!broadcastSession;
@@ -475,8 +477,8 @@ el('lab-platform').addEventListener('change',()=>{if(labDraft){labDraft.platform
 el('lab-add-group').addEventListener('click',()=>{if(!labDraft||labSaving||labDraft.groups.length>=20)return;labDraft.groups.push({id:crypto.randomUUID(),name:'',deviceIds:[]});markLabDirty();drawLabDraft();});
 el('lab-reload').addEventListener('click',()=>{if(labDirty&&!confirm('تجاهل التعديلات غير المحفوظة وإعادة تحميل المحفوظ؟'))return;refreshLabSettings(true);});
 el('lab-group-filter').addEventListener('change',()=>{
- if(broadcastBusy||broadcastSession){el('lab-group-filter').value=labGroupId;return;}
- labGroupId=el('lab-group-filter').value;messageSelection.clear();fileSelection.clear();
+ if(broadcastBusy||broadcastSession||pauseBusy||pauseOwned){el('lab-group-filter').value=labGroupId;return;}
+ labGroupId=el('lab-group-filter').value;messageSelection.clear();fileSelection.clear();pauseSelection.clear();pauseRecipientsKey='';
  if(!broadcastBusy&&!broadcastSession)broadcastSelection.clear();
  messageRecipientsKey='';fileRecipientsKey='';broadcastRecipientsKey='';render();
 });
@@ -489,3 +491,42 @@ el('lab-form').addEventListener('submit',async event=>{
  }catch(error){el('lab-result').textContent=error.name==='TimeoutError'?'لم يصل تأكيد الحفظ؛ أعد تحميل المحفوظ قبل المحاولة مجددًا':error.message;}
  finally{labSaving=false;for(const node of el('lab-form').querySelectorAll('input,select,textarea,button'))node.disabled=false;drawLabDraft();}
 });
+
+// M178: classroom overlay requests, bounded by a browser-owned ten-second lease.
+const pauseSelection=new Set();let pauseRecipientsKey='',pauseSession=null,pauseOwned=false,pauseBusy=false,pauseLoading=false,pauseTouching=false,pauseGeneration=0;
+function updatePauseButtons(){
+ el('pause-start').disabled=pauseBusy||!!pauseSession||!pauseSelection.size;
+ el('pause-stop').disabled=pauseBusy||!pauseSession;
+ el('pause-duration').disabled=pauseBusy||!!pauseSession;el('pause-all').disabled=pauseBusy||!!pauseSession;
+ for(const input of el('pause-recipients').querySelectorAll('input'))input.disabled=pauseBusy||!!pauseSession;
+ el('lab-group-filter').disabled=broadcastBusy||!!broadcastSession||pauseBusy||pauseOwned;
+}
+function renderPauseRecipients(){
+ const available=groupRoster().filter(s=>s.online===true&&s.approved===true),ids=new Set(available.map(s=>s.id));for(const id of pauseSelection)if(!ids.has(id))pauseSelection.delete(id);
+ const key=JSON.stringify(available.map(s=>s.id));if(key!==pauseRecipientsKey){pauseRecipientsKey=key;el('pause-recipients').replaceChildren(...available.map(s=>{const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=s.id;input.checked=pauseSelection.has(s.id);input.addEventListener('change',()=>{if(input.checked)pauseSelection.add(s.id);else pauseSelection.delete(s.id);updatePauseButtons();});label.append(input,document.createTextNode(s.id));return label;}));if(!available.length)el('pause-recipients').textContent='لا توجد أجهزة متصلة ومعتمدة';}updatePauseButtons();
+}
+function renderPauseState(state){
+ const labels={requested:'أُرسل الطلب؛ العرض غير مؤكد',displayed:'أكد تطبيق الطالب إظهار النافذة',released:'أنهى الطالب الحجب محليًا',stopped:'أوقف المعلم الطلب',expired:'انتهت المهلة أوالاتصال',revoked:'أُلغي اعتماد الجهاز'};
+ el('pause-receipts').replaceChildren(...(state.recipients||[]).map(r=>{const line=document.createElement('p');line.textContent=r.id+' — '+(labels[r.state]||'غير معروف');return line;}));
+}
+async function pauseApi(action,body){const r=await fetch('/api/pause'+action,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:'no-store',signal:AbortSignal.timeout(3500)});if(!r.ok)throw Error('Pause unavailable');return r.json();}
+async function loadPauseState(){if(pauseLoading||pauseBusy)return;pauseLoading=true;const generation=pauseGeneration;try{const state=await pauseApi('');if(generation!==pauseGeneration)return;renderPauseState(state);if(!state.active){pauseSession=null;pauseOwned=false;}else{pauseSession=state.sessionId;if(!pauseOwned)el('pause-result').textContent='طلب نشط؛ يمكن إيقافه. التحديث يستمر من نافذة المعلم التي بدأته فقط.';}updatePauseButtons();}catch{if(generation===pauseGeneration)el('pause-result').textContent='تعذر تحديث الحالة؛ لا يوجد تأكيد حديث لعرض النافذة';}finally{pauseLoading=false;}}
+async function stopPause(){
+ const id=pauseSession;pauseGeneration++;pauseOwned=false;pauseSession=null;updatePauseButtons();if(!id)return;
+ try{const state=await pauseApi('/stop',{sessionId:id});renderPauseState(state);el('pause-result').textContent='أُوقف طلب الحجب؛ يتحدث الطالب خلال ثوانٍ';}catch{el('pause-result').textContent='توقف التجديد محليًا؛ ينتهي الحجب عند انتهاء المهلة القصيرة تلقائيًا';}
+}
+el('pause-all').addEventListener('click',()=>{if(pauseBusy||pauseSession)return;for(const input of el('pause-recipients').querySelectorAll('input')){input.checked=true;pauseSelection.add(input.value);}updatePauseButtons();});
+el('pause-start').addEventListener('click',async()=>{
+ if(pauseBusy||pauseSession||!pauseSelection.size)return;pauseBusy=true;const generation=++pauseGeneration;updatePauseButtons();
+ try{const state=await pauseApi('/start',{deviceIds:[...pauseSelection],seconds:Number(el('pause-duration').value)});if(generation!==pauseGeneration){await pauseApi('/stop',{sessionId:state.sessionId});return;}pauseSession=state.sessionId;pauseOwned=true;renderPauseState(state);el('pause-result').textContent='أُرسل طلب الحجب المؤقت؛ تابع تأكيد تطبيق الطالب أدناه';}
+ catch{if(generation===pauseGeneration)el('pause-result').textContent='لم يتأكد بدء الحجب؛ راجع الحالة قبل إعادة المحاولة. الطلب غير المجدد ينتهي تلقائيًا';}
+ finally{pauseBusy=false;updatePauseButtons();}
+});
+el('pause-stop').addEventListener('click',stopPause);
+setInterval(async()=>{
+ if(!pauseOwned||!pauseSession||pauseTouching||pageNow!=='lock')return;pauseTouching=true;const id=pauseSession,generation=pauseGeneration;
+ try{const state=await pauseApi('/keepalive',{sessionId:id});if(generation!==pauseGeneration)return;renderPauseState(state);if(!state.active){pauseSession=null;pauseOwned=false;updatePauseButtons();}}
+ catch{if(generation===pauseGeneration){pauseOwned=false;pauseSession=null;pauseGeneration++;el('pause-result').textContent='انتهى الطلب أوتعذر تأكيد الاتصال؛ توقف التجديد وينتهي الحجب تلقائيًا';updatePauseButtons();}}
+ finally{pauseTouching=false;}
+},2500);
+window.addEventListener('pagehide',()=>{const id=pauseSession;pauseGeneration++;pauseOwned=false;if(id)navigator.sendBeacon('/api/pause/stop',JSON.stringify({sessionId:id}));});

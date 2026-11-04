@@ -1,0 +1,109 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
+const {spawn,execFileSync}=require('node:child_process');const {once}=require('node:events');
+test('real TLS screen pause: authenticated requests, local release, stop, revocation and expiry', {timeout:65000},async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'fbs-m178-')),cert=path.join(dir,'cert.pem'),key=path.join(dir,'key.pem');
+ execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout',key,'-out',cert,'-subj','/CN=localhost','-days','1'],{stdio:'ignore'});
+ const fixture={FBS_DEMO:'0',FBS_PAIRING_KEY:'m173-test-only-lab-key',FBS_TEACHER_PASSWORD:'m173-test-only-password',FBS_TLS_CERT:cert,FBS_TLS_KEY:key,FBS_ENROLLMENT_FILE:path.join(dir,'enrollment.json'),FBS_AGENT_PORT:'0',FBS_DISCOVERY_ENABLED:'0'};
+ const previous=Object.fromEntries(Object.keys(fixture).map(k=>[k,process.env[k]]));Object.assign(process.env,fixture);
+ const teacher=require('../server');let child;
+ const until=async callback=>{for(let n=0;n<100;n++){const result=await callback();if(result)return result;await new Promise(r=>setTimeout(r,100));}throw Error('Timed out waiting for message state');};
+ try{
+  await teacher.lan.start();await new Promise(r=>teacher.server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+teacher.server.address().port;
+  assert.equal((await fetch(base+'/api/messages')).status,401);assert.equal((await fetch(base+'/api/broadcast')).status,401);
+  const login=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:fixture.FBS_TEACHER_PASSWORD})});const cookie=login.headers.get('set-cookie').split(';')[0];
+  const api=async(route,body,origin)=>{const r=await fetch(base+route,{method:body===undefined?'GET':'POST',headers:{Cookie:cookie,'Content-Type':'application/json',...(origin?{Origin:origin}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});return {status:r.status,body:await r.json()};};
+  const fingerprint=crypto.createHash('sha256').update(new crypto.X509Certificate(fs.readFileSync(cert)).raw).digest('hex'),token='ab'.repeat(32);
+  child=spawn(process.execPath,['student-agent.js'],{cwd:path.join(__dirname,'..'),env:{...process.env,FBS_DEVICE_ID:'MSG-PC',FBS_IDENTITY_FILE:path.join(dir,'identity.json'),FBS_LOCAL_PORT:'0',FBS_LOCAL_CONTROL_TOKEN:token,FBS_TEACHER_HOST:'127.0.0.1',FBS_TEACHER_PORT:String(teacher.lan.server.address().port),FBS_TEACHER_FINGERPRINT:fingerprint},stdio:['ignore','pipe','pipe']});
+  const port=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Agent startup timed out')),8000);child.once('error',reject);let raw='';child.stdout.on('data',c=>{raw+=c;const match=raw.match(/Optional screen share: http:\/\/127\.0\.0\.1:(\d+)/);if(match){clearTimeout(timer);resolve(match[1]);}});});
+  const local='http://127.0.0.1:'+port;
+  const inbox=async()=>await(await fetch(local+'/messages/local',{headers:{'X-FBS-Local-Token':token}})).json();
+  await until(async()=>teacher.lan.devices.has('MSG-PC'));
+  assert.equal((await api('/api/messages',{text:'hello',deviceIds:['MSG-PC']})).status,409);
+  assert.equal((await api('/api/enrollment/approve',{deviceId:'MSG-PC'})).status,200);
+  assert.equal((await api('/api/messages',{text:'hello',deviceIds:['MSG-PC']},'https://evil.invalid')).status,403);
+  const sent=await api('/api/messages',{text:'مرحبا <script>plain text</script>',deviceIds:['MSG-PC']});assert.equal(sent.status,202);
+  const delivered=await until(async()=>{const v=await inbox();return v.messages.length?v:null;});assert.equal(delivered.messages[0].id,sent.body.id);assert.equal(delivered.messages[0].read,false);
+  await until(async()=>{const v=await api('/api/messages');return v.body.messages[0].recipients[0].state==='received';});
+  assert.equal((await fetch(local+'/messages/local')).status,403);
+  const readOptions={method:'POST',headers:{'X-FBS-Local-Token':token,'Content-Type':'application/json'},body:JSON.stringify({id:sent.body.id})};
+  assert.equal((await fetch(local+'/messages/local/read',{...readOptions,headers:{...readOptions.headers,Origin:local}})).status,403);
+  assert.equal((await fetch(local+'/messages/local/read',readOptions)).status,202);
+  await until(async()=>{const v=await api('/api/messages');return v.body.messages[0].recipients[0].state==='read';});
+  const second=await api('/api/messages',{text:'pending revoke',deviceIds:['MSG-PC']});assert.equal(second.status,202);
+  await api('/api/enrollment/revoke',{deviceId:'MSG-PC'});
+  await until(async()=>!(await inbox()).messages.length);
+  assert.equal((await api('/api/messages')).body.messages[0].recipients[0].state,'revoked');
+  assert.equal((await api('/api/messages',{text:'no longer allowed',deviceIds:['MSG-PC']})).status,409);
+
+  assert.equal((await api('/api/broadcast/start',{deviceIds:['MSG-PC']})).status,409);
+  await api('/api/enrollment/approve',{deviceId:'MSG-PC'});
+  const opened=await api('/api/broadcast/start',{deviceIds:['MSG-PC']});assert.equal(opened.status,201);
+  const jpeg='data:image/jpeg;base64,'+fs.readFileSync(path.join(__dirname,'fixtures/m174-frame.jpg')).toString('base64');
+  const frame={sessionId:opened.body.id,sequence:1,jpeg};
+  assert.equal((await api('/api/broadcast/frame',frame,'https://evil.invalid')).status,403);
+  assert.equal((await api('/api/broadcast/frame',{...frame,jpeg:'bad'})).status,409);
+  assert.equal((await api('/api/broadcast/frame',frame)).status,202);
+  assert.equal((await api('/api/broadcast/frame',frame)).status,409);
+  assert.equal((await fetch(local+'/broadcast/local')).status,403);
+  const view=async()=>await(await fetch(local+'/broadcast/local',{headers:{'X-FBS-Local-Token':token}})).json();
+  const live=await until(async()=>{const v=await view();return v.broadcast?v:null;});assert.equal(live.broadcast.jpeg,jpeg);assert.equal(live.broadcast.sessionId,opened.body.id);
+  await api('/api/broadcast/stop',{sessionId:opened.body.id});await until(async()=>!(await view()).broadcast);
+  assert.equal((await api('/api/broadcast/frame',{...frame,sequence:2})).status,409);
+  const next=await api('/api/broadcast/start',{deviceIds:['MSG-PC']});assert.equal(next.status,201);
+  assert.equal((await api('/api/broadcast/stop',{sessionId:opened.body.id})).status,409);
+  await api('/api/broadcast/frame',{...frame,sessionId:next.body.id});await until(async()=>(await view()).broadcast);
+  await api('/api/enrollment/revoke',{deviceId:'MSG-PC'});await until(async()=>!(await view()).broadcast);assert.equal((await api('/api/broadcast')).body.active,false);
+
+  assert.equal((await fetch(base+'/api/files')).status,401);
+  const content=Buffer.from('FBS worksheet — نشاط'),base64=content.toString('base64');
+  assert.equal((await api('/api/files',{name:'lesson.txt',base64,deviceIds:['MSG-PC']})).status,409);
+  await api('/api/enrollment/approve',{deviceId:'MSG-PC'});
+  assert.equal((await api('/api/files',{name:'../bad',base64,deviceIds:['MSG-PC']})).status,400);
+  assert.equal((await api('/api/files',{name:'lesson.txt',base64,deviceIds:['MSG-PC']},'https://evil.invalid')).status,403);
+  const unicodeBody=Buffer.from(JSON.stringify({name:'نشاط.txt',base64,deviceIds:['MSG-PC']}));
+  const boundary=unicodeBody.indexOf(Buffer.from('ن'))+1;
+  const unicodeReply=await new Promise((resolve,reject)=>{
+   const request=require('node:http').request(base+'/api/files',{method:'POST',headers:{Cookie:cookie,'Content-Type':'application/json'}},response=>{let raw='';response.on('data',c=>raw+=c);response.on('end',()=>resolve({status:response.statusCode,body:JSON.parse(raw)}));});request.on('error',reject);request.setNoDelay(true);request.write(unicodeBody.subarray(0,boundary));setTimeout(()=>request.end(unicodeBody.subarray(boundary)),25);
+  });assert.equal(unicodeReply.status,202);assert.equal(unicodeReply.body.name,'نشاط.txt','split UTF-8 names must remain intact');
+  const sentFile=await api('/api/files',{name:'lesson.txt',base64,deviceIds:['MSG-PC']});assert.equal(sentFile.status,202);
+  const fileList=async()=>await(await fetch(local+'/files/local',{headers:{'X-FBS-Local-Token':token}})).json();
+  await until(async()=>(await fileList()).files.some(f=>f.id===sentFile.body.id));
+  const opts={method:'POST',headers:{'X-FBS-Local-Token':token,'Content-Type':'application/json'},body:JSON.stringify({id:sentFile.body.id})};
+  assert.equal((await fetch(local+'/files/local')).status,403);
+  assert.equal((await fetch(local+'/files/local/saved',opts)).status,409);
+  const downloaded=await fetch(local+'/files/local/download',opts);assert.equal(downloaded.status,200);assert.deepEqual(Buffer.from(await downloaded.arrayBuffer()),content);assert.equal(downloaded.headers.get('x-fbs-sha256'),crypto.createHash('sha256').update(content).digest('hex'));
+  assert.equal((await api('/api/files')).body.files[0].recipients[0].state,'downloaded');
+  assert.equal((await fetch(local+'/files/local/saved',opts)).status,200);assert.equal((await api('/api/files')).body.files[0].recipients[0].state,'saved');
+  await api('/api/enrollment/revoke',{deviceId:'MSG-PC'});assert.equal((await fetch(local+'/files/local/download',opts)).status,409);
+  await until(async()=>!(await fileList()).files.length);await api('/api/enrollment/approve',{deviceId:'MSG-PC'});assert.equal((await fetch(local+'/files/local/download',opts)).status,404);
+
+  assert.equal((await fetch(base+'/api/pause')).status,401);
+  assert.equal((await api('/api/pause/start',{deviceIds:['MSG-PC'],seconds:60},'https://evil.invalid')).status,403);
+  const pauseView=async()=>await(await fetch(local+'/pause/local',{headers:{'X-FBS-Local-Token':token}})).json();
+  const pauseReceipt=async(sessionId,state,origin)=>fetch(local+'/pause/local',{method:'POST',headers:{'X-FBS-Local-Token':token,'Content-Type':'application/json',...(origin?{Origin:origin}:{})},body:JSON.stringify({sessionId,state})});
+  assert.equal((await fetch(local+'/pause/local')).status,403);
+  let pause=await api('/api/pause/start',{deviceIds:['MSG-PC'],seconds:60});assert.equal(pause.status,201);
+  await until(async()=>(await pauseView()).pause?.sessionId===pause.body.sessionId);
+  assert.equal((await pauseReceipt(pause.body.sessionId,'displayed',local)).status,403);
+  assert.equal((await pauseReceipt(pause.body.sessionId,'displayed')).status,200);
+  assert.equal((await api('/api/pause')).body.recipients[0].state,'displayed');
+  assert.equal((await pauseReceipt(pause.body.sessionId,'released')).status,200);
+  assert.equal((await pauseView()).pause,null);await new Promise(r=>setTimeout(r,1200));assert.equal((await pauseView()).pause,null,'released session must not reopen on next poll');
+  assert.equal((await api('/api/pause')).body.recipients[0].state,'released');
+  assert.equal((await pauseReceipt(pause.body.sessionId,'displayed')).status,400);
+  pause=await api('/api/pause/start',{deviceIds:['MSG-PC'],seconds:60});assert.equal(pause.status,201);await until(async()=>(await pauseView()).pause?.sessionId===pause.body.sessionId);
+  assert.equal((await api('/api/pause/stop',{sessionId:pause.body.sessionId})).status,200);await until(async()=>!(await pauseView()).pause);
+  pause=await api('/api/pause/start',{deviceIds:['MSG-PC'],seconds:60});await until(async()=>(await pauseView()).pause?.sessionId===pause.body.sessionId);
+  await api('/api/enrollment/revoke',{deviceId:'MSG-PC'});await until(async()=>!(await pauseView()).pause);
+  assert.equal((await api('/api/pause/start',{deviceIds:['MSG-PC'],seconds:60})).status,409);await api('/api/enrollment/approve',{deviceId:'MSG-PC'});assert.equal((await pauseView()).pause,null);
+  pause=await api('/api/pause/start',{deviceIds:['MSG-PC'],seconds:30});await until(async()=>(await pauseView()).pause?.sessionId===pause.body.sessionId);
+  await new Promise(r=>setTimeout(r,10500));assert.equal((await pauseView()).pause,null);assert.equal((await api('/api/pause')).body.active,false);assert.equal((await api('/api/pause/keepalive',{sessionId:pause.body.sessionId})).status,409);
+ }finally{
+  if(child&&child.exitCode===null&&child.signalCode===null){const done=once(child,'exit');child.kill();await done;}
+  if(teacher.server.listening){teacher.server.closeAllConnections();await new Promise(r=>teacher.server.close(r));}
+  if(teacher.lan.server.listening)await teacher.lan.stop();
+  for(const[k,v]of Object.entries(previous))if(v===undefined)delete process.env[k];else process.env[k]=v;
+  fs.rmSync(dir,{recursive:true,force:true});
+ }
+});

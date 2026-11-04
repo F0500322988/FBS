@@ -27,6 +27,7 @@ if(lan)lan.setMessageStore(messageStore);
 const broadcastStore=require('./classroom-broadcast').createBroadcastStore();
 if(lan)lan.setBroadcastStore(broadcastStore);
 const fileStore=require('./classroom-files').createFileStore();if(lan)lan.setFileStore(fileStore);
+const pauseStore=require('./classroom-pause').createPauseStore();if(lan)lan.setPauseStore(pauseStore);
 const controlSessions=leases.sessions;
 if(lan){lan.setApprovedKeys(enrollment.keys);lan.setControlLeases(leases);lan.setControlCommands(commands);}
 const controlAudit=leases.audit;
@@ -68,7 +69,7 @@ const server=http.createServer((req,res)=>{
      const publicKey=lan.devices.get(id).publicKey;
      if(!publicKey)return send(res,409,{error:'Device has no verified public key'});
      enrollment.approve(id,publicKey);
-    }else{enrollment.revoke(id);messageStore.revoke(id);broadcastStore.revoke(id);fileStore.revoke(id);leases.cancel(id);commands.clear(id);lan?.frames.delete(id);}
+    }else{enrollment.revoke(id);messageStore.revoke(id);broadcastStore.revoke(id);fileStore.revoke(id);pauseStore.revoke(id);leases.cancel(id);commands.clear(id);lan?.frames.delete(id);}
     return send(res,200,{ok:true,deviceId:id,approved:enrollment.approved.has(id)});
    }).catch(()=>{if(!res.headersSent)send(res,400,{error:'Invalid request'});});
   }
@@ -146,6 +147,26 @@ const server=http.createServer((req,res)=>{
    }catch(e){return send(res,409,{error:e.message});}
   }).catch(()=>send(res,400,{error:'Invalid broadcast request'}));
  }
+ if(['/api/pause','/api/pause/start','/api/pause/keepalive','/api/pause/stop'].includes(url.pathname)){
+  if(!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
+  if(req.method==='GET'&&url.pathname==='/api/pause')return send(res,200,pauseStore.state());
+  if(req.method!=='POST')return send(res,405,{error:'Method not allowed'});
+  if(!teacherOriginAllowed(req))return send(res,403,{error:'Origin rejected'});
+  return readJson(req).then(body=>{
+   try{
+    if(url.pathname.endsWith('/start')){
+     if(!lan)return send(res,409,{error:'Live connection required'});
+     if(!Array.isArray(body.deviceIds)||!body.deviceIds.length||body.deviceIds.length>40||new Set(body.deviceIds).size!==body.deviceIds.length)return send(res,400,{error:'Invalid recipients'});
+     const targets=body.deviceIds.map(id=>lan.devices.get(id));
+     if(targets.some(d=>!d||Date.now()-d.lastSeen>20000||!enrollment.approved.has(d.id)||enrollment.keys.get(d.id)!==d.publicKey))return send(res,409,{error:'Recipients must be online and approved'});
+     return send(res,201,pauseStore.start(targets,body.seconds));
+    }
+    if(url.pathname.endsWith('/keepalive'))return send(res,200,pauseStore.touch(body.sessionId));
+    if(url.pathname.endsWith('/stop'))return send(res,200,pauseStore.stop(body.sessionId));
+    return send(res,404,{error:'Unknown pause operation'});
+   }catch{return send(res,409,{error:'Screen pause unavailable or invalid'});}
+  }).catch(()=>{if(!res.headersSent)send(res,400,{error:'Invalid screen pause request'});});
+ }
  if(url.pathname==='/api/lab-settings'){
   if(!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
   if(req.method==='GET'){try{return send(res,200,labSettings.snapshot());}catch(e){return send(res,e.status||503,{error:e.message});}}
@@ -181,7 +202,7 @@ const server=http.createServer((req,res)=>{
  }
  if(url.pathname==='/api/auth')return send(res,200,{required:!!teacherPassword,authenticated:isAuthenticated(req),startupId});
  if((url.pathname==='/api/status'||url.pathname==='/api/frames')&&!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
- if(req.method==='GET' && url.pathname==='/api/status') return send(res,200,{lab:labStatus(),mode:demo?'demo':lan?'live':'unconfigured',students:[...(demo?students:lan?lan.devices:new Map()).values()].map(s=>({...s,online:s.demo?s.online:Date.now()-s.lastSeen<20000,approved:enrollment.approved.has(s.id)&&enrollment.keys.get(s.id)===s.publicKey})),features:{screenView:true,remoteControl:false,screenBroadcast:true,fileTransfer:true,messages:true,labManagement:true}});
+ if(req.method==='GET' && url.pathname==='/api/status') return send(res,200,{lab:labStatus(),mode:demo?'demo':lan?'live':'unconfigured',students:[...(demo?students:lan?lan.devices:new Map()).values()].map(s=>({...s,online:s.demo?s.online:Date.now()-s.lastSeen<20000,approved:enrollment.approved.has(s.id)&&enrollment.keys.get(s.id)===s.publicKey})),features:{screenView:true,remoteControl:false,screenBroadcast:true,fileTransfer:true,messages:true,labManagement:true,screenPause:true}});
  if(req.method==='GET' && url.pathname==='/api/frames') return send(res,200,{frames:lan?[...lan.frames.entries()].filter(([id,v])=>Date.now()-v.at<5000&&lan.devices.has(id)&&enrollment.approved.has(id)&&enrollment.keys.get(id)===lan.devices.get(id).publicKey).map(([id,v])=>({id,jpeg:v.jpeg,at:v.at})):[]});
  if(req.method==='GET' && (url.pathname==='/' || url.pathname==='/app.js' || url.pathname==='/style.css' || /^\/m1(?:0[5-9]|1[0-4])-[a-z-]+\.js$/.test(url.pathname))) {
   const file=url.pathname==='/'?'index.html':url.pathname.slice(1);

@@ -119,6 +119,24 @@ function localFiles(req,res){
   finally{if(ownsDownload)fileDownloadBusy=false;}
  });
 }
+
+// M178: short-lived classroom overlay; local release never waits for the network.
+const pauseReceiver=require('./classroom-pause').createPauseReceiver();let pauseBusy=false;
+async function pollPause(){if(pauseBusy)return;pauseBusy=true;const revision=pauseReceiver.revision;try{const result=await fileRequest('/pause/poll');pauseReceiver.accept(result.pause,revision);}catch{pauseReceiver.clear();}finally{pauseBusy=false;}}
+function localPause(req,res){
+ const reply=(status,body)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(body));};
+ if(!authorizedLocalRequest(req,localControlToken))return reply(403,{error:'Unauthorized local controller'});
+ if(req.method==='GET')return reply(200,{pause:pauseReceiver.snapshot()});
+ if(req.method!=='POST')return reply(405,{error:'Method not allowed'});
+ let chunks=[],bytes=0;req.on('data',c=>{bytes+=c.length;if(bytes>1024){req.destroy();return;}chunks.push(c);});req.on('end',async()=>{
+  try{const body=JSON.parse(Buffer.concat(chunks).toString());if(!['displayed','released'].includes(body.state))throw Error();
+   if(body.state==='released')pauseReceiver.dismiss(body.sessionId);
+   else if(pauseReceiver.snapshot()?.sessionId!==body.sessionId)throw Error();
+   try{await fileRequest('/pause/ack',{sessionId:body.sessionId,state:body.state});reply(200,{confirmed:true});}catch{reply(202,{confirmed:false});}
+  }catch{reply(400,{error:'Invalid screen pause receipt'});}
+ });
+}
+
 function pollBroadcast(){
  if(!teacher||broadcastBusy)return;
  broadcastBusy=true;const endpoint=teacher;
@@ -161,6 +179,7 @@ function localMessages(req,res){
  req.on('end',()=>{try{const body=JSON.parse(Buffer.concat(chunks).toString());if(!inbox.read(body.id))return reply(404,{error:'Message unavailable'});reply(202,{read:true,confirmedByTeacher:false});}catch{reply(400,{error:'Invalid request'});}});
 }
 const localServer=http.createServer((req,res)=>{
+ if(req.url==='/pause/local')return localPause(req,res);
  if(['/files/local','/files/local/download','/files/local/saved'].includes(req.url))return localFiles(req,res);
  if(req.url==='/broadcast/local'){
   if(!authorizedLocalRequest(req,localControlToken)){res.writeHead(403);return res.end();}
@@ -187,3 +206,5 @@ setInterval(pollMessages,2000);
 setInterval(pollBroadcast,1000);
 
 setInterval(pollFiles,2000);
+
+setInterval(pollPause,1000);

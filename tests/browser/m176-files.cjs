@@ -54,7 +54,7 @@ const publicRoot=path.resolve(__dirname,'../../public');
   await page.locator('#devices .has-preview').press('Enter');assert.equal(await page.locator('#screen-dialog').evaluate(x=>x.open),true);
   framesFail=true;await page.evaluate(()=>refresh());assert.equal(await page.locator('#devices img').count(),0);assert.equal(await page.locator('#screen-large').getAttribute('src'),null);assert.match(await page.locator('#notice').textContent(),/تعذر تحديث/);
   framesFail=false;frameMode='stale';await page.evaluate(()=>refresh());assert.equal(await page.locator('#devices img').count(),0,'expired frames must not render');
-  await page.click('#screen-close');await page.click('nav [data-page="lock"]');assert.equal(await page.locator('#devices .device').count(),0);assert.match(await page.locator('#notice').textContent(),/غير متاحة/);
+  await page.click('#screen-close');await page.click('nav [data-page="control"]');assert.equal(await page.locator('#devices .device').count(),0);assert.match(await page.locator('#notice').textContent(),/غير متاحة/);
   await page.click('nav [data-page="home"]');await page.waitForFunction(()=>!refreshBusy);
   statusFail=true;await page.evaluate(()=>refresh());assert.equal(await page.locator('#total').textContent(),'—');assert.equal(await page.locator('#devices .device').count(),0);assert.match(await page.locator('#mode').textContent(),/تعذر/);
   statusFail=false;await page.evaluate(()=>refresh());assert.equal(await page.locator('#total').textContent(),'2');

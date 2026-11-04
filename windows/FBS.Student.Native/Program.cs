@@ -24,6 +24,7 @@ public sealed class StudentStatusForm : Form
     private readonly Button messagesButton = new();
     private readonly Button broadcastButton = new();
     private TeacherBroadcastForm? broadcastWindow;
+    private ScreenPauseController? screenPause;
     private readonly NotifyIcon tray = new();
     private readonly HttpClient localClient = new() { Timeout = TimeSpan.FromSeconds(2) };
     private readonly System.Windows.Forms.Timer consentTimer = new() { Interval = 2000 };
@@ -229,9 +230,9 @@ public sealed class StudentStatusForm : Form
         {
             status.Text = "جارٍ تشغيل وكيل الطالب — التحكم عن بُعد غير مفعّل";
             await agent.StartAsync();
-            if (!IsDisposed) status.Text = agent.Status + " — التحكم عن بُعد غير مفعّل";
+            if (!IsDisposed) { status.Text = agent.Status + " — التحكم عن بُعد غير مفعّل"; screenPause ??= new ScreenPauseController(agent.LocalControlToken); }
         };
-        FormClosed += (_, _) => { nativeInput.Disable(); inputGate.Deactivate(); localConsent.ResetActive(); consentTimer.Stop(); consentTimer.Dispose(); localClient.Dispose(); agent.Dispose(); tray.Dispose(); sessionBanner.Dispose(); };
+        FormClosed += (_, _) => { nativeInput.Disable(); inputGate.Deactivate(); screenPause?.Dispose(); localConsent.ResetActive(); consentTimer.Stop(); consentTimer.Dispose(); localClient.Dispose(); agent.Dispose(); tray.Dispose(); sessionBanner.Dispose(); };
     }
 
     private bool polling;
