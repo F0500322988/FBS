@@ -81,11 +81,14 @@ final class RuntimeHost {
     }
     private func parsePort() {
         guard !teacher, baseURL == nil, let range = stdoutBuffer.range(of: "Optional screen share: http://127.0.0.1:") else { return }
-        let digits = stdoutBuffer[range.upperBound...].prefix(while: { $0.isNumber })
+        let remaining = stdoutBuffer[range.upperBound...]
+        guard let newline = remaining.firstIndex(of: "\n") else { return }
+        let digits = remaining[..<newline]
         if let port = Int(digits), (1...65535).contains(port) { baseURL = URL(string: "http://127.0.0.1:\(port)") }
     }
     func get(_ path: String, body: [String: Any]? = nil, completion: @escaping (Result<[String: Any], Error>) -> Void) {
         guard let base = baseURL else { completion(.failure(ConfigurationError.invalid("التطبيق غير جاهز"))); return }
+        let requestGeneration = generation
         var request = URLRequest(url: base.appendingPathComponent(String(path.dropFirst()))); request.timeoutInterval = 2
         request.setValue(token, forHTTPHeaderField: "X-FBS-Local-Token")
         if let body = body { request.httpMethod = "POST"; request.setValue("application/json", forHTTPHeaderField: "Content-Type"); request.httpBody = try? JSONSerialization.data(withJSONObject: body) }
@@ -97,7 +100,9 @@ final class RuntimeHost {
             if let error = error { result = .failure(error) }
             else if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode), let data = data, data.count <= 250000, let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] { result = .success(json) }
             else { result = .failure(ConfigurationError.invalid("تعذر تحديث البيانات المحلية")) }
-            DispatchQueue.main.async { completion(result) }
+            DispatchQueue.main.async { [weak self] in
+                guard self?.generation == requestGeneration else { completion(.failure(ConfigurationError.invalid("تغير الاتصال؛ أُهملت استجابة قديمة"))); return }; completion(result)
+            }
         }.resume()
     }
     func stop() { generation += 1; timer?.invalidate(); timer = nil; let owned = process; process = nil; baseURL = nil; if owned?.isRunning == true { owned?.terminate() } }

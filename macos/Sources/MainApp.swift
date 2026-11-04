@@ -44,10 +44,12 @@ import AppKit
         do { config = try PlatformServices.load(role) ?? ConnectionConfig(role: role, pairingKey: ""); loaded = true; key.stringValue = config.pairingKey; password.stringValue = config.teacherPassword; address.stringValue = config.teacherHost; port.stringValue = String(config.teacherPort); pin.stringValue = config.fingerprint; device.stringValue = config.deviceName; discovery.state = config.discovery ? .on : .off }
         catch { startButton.isEnabled = false; showError(error) }
         pollTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+            Task { @MainActor in
             guard let self = self, self.role == .student, self.host.process?.isRunning == true else { return }
             self.host.get("/control/local") { [weak self] result in
                 guard let self = self else { return }
                 if case .success(let json) = result { self.messageButton.title = "رسائل المعلم (\(json["unreadMessages"] as? Int ?? 0) غير مقروءة)"; self.viewButton.title = json["broadcastAvailable"] as? Bool == true ? "● شاشة المعلم متاحة — فتح العرض" : "عرض شاشة المعلم" }
+            }
             }
         }
         let menu = NSMenu(), item = NSMenuItem(); menu.addItem(item); let appMenu = NSMenu(); appMenu.addItem(withTitle: "إنهاء FBS Classroom", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); item.submenu = appMenu; NSApp.mainMenu = menu

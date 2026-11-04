@@ -10,7 +10,7 @@ const {createControlCommands} = require('./control-commands');
 const PORT = Number(process.env.PORT || 4177);
 const HOST = '127.0.0.1'; // loopback only: demo is not a LAN-ready security implementation
 const students = new Map();
-const lab = {name:'معمل ويندوز 11', capacity:40};
+const lab = {name:process.platform==='darwin'?'معمل Mac':'معمل ويندوز 11', capacity:40};
 const demo = process.env.FBS_DEMO === '1';
 const lan = !demo && process.env.FBS_PAIRING_KEY ? createTeacherLan({secret:process.env.FBS_PAIRING_KEY,port:Number(process.env.FBS_AGENT_PORT||4180),discoveryPort:Number(process.env.FBS_DISCOVERY_PORT||4181),discoveryEnabled:process.env.FBS_DISCOVERY_ENABLED!=='0'}) : null;
 if (demo) for(let i=1;i<=21;i++) students.set(`PC-${String(i).padStart(2,'0')}`, {id:`PC-${String(i).padStart(2,'0')}`,online:i!==17,os:'Windows 11',lastSeen:Date.now()- (i===17?120000:Math.round(Math.random()*9000)), demo:true});

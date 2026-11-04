@@ -16,7 +16,7 @@ import AppKit
         let stack = NSStackView(views: [choices, scroll, readButton, state]); stack.orientation = .vertical; stack.spacing = 12
         Self.install(stack, into: window); scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 230).isActive = true
         choices.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true; scroll.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.refresh() }; refresh()
+        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } }; refresh()
     }
     func show() { window.center(); window.makeKeyAndOrderFront(nil) }
     private func refresh() {
@@ -63,7 +63,7 @@ import AppKit
         image.imageScaling = .scaleProportionallyUpOrDown
         let stack = NSStackView(views: [image, state]); stack.orientation = .vertical; stack.spacing = 10; MessagesWindow.install(stack, into: window)
         image.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true; image.heightAnchor.constraint(greaterThanOrEqualToConstant: 250).isActive = true
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refresh() }; refresh()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } }; refresh()
     }
     func show() { window.center(); window.makeKeyAndOrderFront(nil) }
     private func refresh() {
