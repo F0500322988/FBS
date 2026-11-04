@@ -49,6 +49,9 @@ try
     var command = new ProcessStartInfo("powershell.exe") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
     command.ArgumentList.Add("-NoProfile"); command.ArgumentList.Add("-NonInteractive"); command.ArgumentList.Add("-Command");
     command.ArgumentList.Add("try { $ErrorActionPreference='Stop'; $s=(Get-Content -LiteralPath $env:FBS_TEST_KEY_FILE -Raw).Trim() | ConvertTo-SecureString; $p=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($s); try { if ([Runtime.InteropServices.Marshal]::PtrToStringBSTR($p) -cne $env:FBS_TEST_EXPECTED) { exit 2 } } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($p) } } catch { [Console]::Error.WriteLine(\"FAIL: PowerShell error category \" + $_.CategoryInfo.Category + \" type \" + $_.Exception.GetType().FullName); exit 3 }");
+    // The CI parent is PowerShell 7; its module path hides Windows PowerShell 5 modules.
+    // Let the legacy child initialize its own system module path.
+    command.Environment.Remove("PSModulePath");
     command.Environment["FBS_TEST_KEY_FILE"] = pairingFile;
     command.Environment["FBS_TEST_EXPECTED"] = labKey; // Random disposable fixture, never printed.
     using var process = Process.Start(command)!;
@@ -91,7 +94,7 @@ finally
         Directory.CreateDirectory(Path.GetDirectoryName(reportPath)!);
         File.WriteAllText(reportPath, System.Text.Json.JsonSerializer.Serialize(new
         {
-            stage = "M170", generatedAt = DateTimeOffset.UtcNow, passed = successful,
+            stage = "M176", generatedAt = DateTimeOffset.UtcNow, passed = successful,
             passedCount = passed, guiTested = false, twoPcLanTested = false, checks, failure
         }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine("A secret-free JSON report was saved.");
