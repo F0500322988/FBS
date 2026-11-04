@@ -35,7 +35,7 @@ for fbs_role in Teacher Student; do
   for fbs_arch in arm64 x64; do
     cp "$fbs_mac_work/node-v22.23.4-darwin-$fbs_arch/bin/node" "$fbs_mac_app/Contents/Resources/Runtime/node-$fbs_arch"
     chmod 755 "$fbs_mac_app/Contents/Resources/Runtime/node-$fbs_arch"
-    codesign --force --sign - --timestamp=none "$fbs_mac_app/Contents/Resources/Runtime/node-$fbs_arch"
+    codesign --force --sign - --preserve-metadata=entitlements --timestamp=none "$fbs_mac_app/Contents/Resources/Runtime/node-$fbs_arch"
   done
   cp "$fbs_mac_work/node-v22.23.4-darwin-arm64/LICENSE" "$fbs_mac_app/Contents/Resources/Runtime/Node-LICENSE.txt"
   python3 - "$fbs_mac_app/Contents/Info.plist" "$fbs_role" "$fbs_role_lower" <<'PY'
@@ -57,9 +57,25 @@ PY
   hdiutil verify "$fbs_mac_dmg"
   pkgutil --expand-full "$fbs_mac_pkg" "$fbs_mac_work/$fbs_role-expanded"
   python3 "$fbs_mac_root/macos/verify-payload.py" "$fbs_mac_app" "$fbs_mac_work/$fbs_role-expanded" "$fbs_mac_output/$fbs_role-payload-verification.json"
+  fbs_mac_mount="$fbs_mac_work/$fbs_role-mounted"
+  mkdir -p "$fbs_mac_mount"
+  hdiutil attach "$fbs_mac_dmg" -readonly -nobrowse -mountpoint "$fbs_mac_mount"
+  python3 "$fbs_mac_root/macos/verify-payload.py" "$fbs_mac_app" "$fbs_mac_mount" "$fbs_mac_output/$fbs_role-dmg-payload-verification.json"
+  hdiutil detach "$fbs_mac_mount"
+  if [[ "${FBS_MAC_INSTALL_SMOKE:-0}" == 1 ]]; then
+    # Enabled only on the disposable hosted runner; never overwrite a preexisting app.
+    fbs_mac_installed="/Applications/FBS Classroom $fbs_role.app"
+    if [[ -e "$fbs_mac_installed" || -L "$fbs_mac_installed" ]]; then echo 'Smoke-test target already exists; refusing install or removal.' >&2; exit 2; fi
+    sudo -n /usr/sbin/installer -pkg "$fbs_mac_pkg" -target /
+    python3 "$fbs_mac_root/macos/verify-payload.py" "$fbs_mac_app" /Applications "$fbs_mac_output/$fbs_role-installed-payload-verification.json"
+    codesign --verify --deep --strict "$fbs_mac_installed"
+    "$fbs_mac_installed/Contents/MacOS/FBSClassroom" --self-check > "$fbs_mac_output/$fbs_role-installed-self-check.json"
+    sudo -n python3 "$fbs_mac_root/macos/remove-smoke-app.py" "$fbs_mac_installed" "$fbs_mac_output/$fbs_role-installed-payload-verification.json"
+    sudo -n pkgutil --forget "com.fbsclassroom.$fbs_role_lower.preview"
+  fi
 done
 (cd "$fbs_mac_output" && shasum -a 256 ./*.pkg ./*.dmg > SHA256SUMS.txt)
 python3 - "$fbs_mac_output" <<'PY'
-import json,pathlib,sys,platform
-out=pathlib.Path(sys.argv[1]);report={'stage':'M175','platform':'macOS','minimumOS':'13.0','architectures':['arm64','x86_64'],'nativeBuildPassed':True,'selfCheckHostArchitecture':platform.machine(),'otherArchitectureExecuted':False,'pkgPayloadVerified':True,'dmgVerified':True,'bundleAdHocSigned':True,'developerIDSigned':False,'notarized':False,'guiTested':False,'keychainTested':False,'screenRecordingTested':False,'twoMacLanTested':False,'installedOnMacTested':False,'files':[p.name for p in sorted(out.glob('*')) if p.suffix in ('.pkg','.dmg')]};(out/'macOS-validation.json').write_text(json.dumps(report,indent=2)+'\n')
+import json,pathlib,sys,platform,os
+out=pathlib.Path(sys.argv[1]);report={'stage':'M175','platform':'macOS','minimumOS':'13.0','architectures':['arm64','x86_64'],'nativeBuildPassed':True,'selfCheckHostArchitecture':platform.machine(),'otherArchitectureExecuted':False,'pkgPayloadVerified':True,'dmgVerified':True,'bundleAdHocSigned':True,'developerIDSigned':False,'notarized':False,'guiTested':False,'keychainTested':False,'screenRecordingTested':False,'twoMacLanTested':False,'installedOnMacTested':os.environ.get('FBS_MAC_INSTALL_SMOKE')=='1','uninstallOnIsolatedRunnerTested':os.environ.get('FBS_MAC_INSTALL_SMOKE')=='1','files':[p.name for p in sorted(out.glob('*')) if p.suffix in ('.pkg','.dmg')]};(out/'macOS-validation.json').write_text(json.dumps(report,indent=2)+'\n')
 PY

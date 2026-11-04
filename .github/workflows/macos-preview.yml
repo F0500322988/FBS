@@ -21,7 +21,7 @@ jobs:
       - name: Build universal teacher and student applications, PKG and DMG
         run: |
           set +e
-          bash macos/build.sh "$RUNNER_TEMP/fbs-m175-macos-output" > "$RUNNER_TEMP/fbs-m175-build.log" 2>&1
+          FBS_MAC_INSTALL_SMOKE=1 bash macos/build.sh "$RUNNER_TEMP/fbs-m175-macos-output" > "$RUNNER_TEMP/fbs-m175-build.log" 2>&1
           fbs_build_status=$?
           set -e
           cat "$RUNNER_TEMP/fbs-m175-build.log"
