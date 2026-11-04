@@ -1,7 +1,7 @@
 name: Windows M176 native and DPAPI checks
 on:
   push:
-    branches: ['build/windows-m176-checks']
+    branches: ['build/windows-m176-checks', 'build/windows-m176-checks-*']
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,14 +19,29 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Path checks-output -Force | Out-Null
+          $PSNativeCommandUseErrorActionPreference = $false
+          $failedProjects = @()
+          $results = @{}
           $projects = @('FBS.NativeGate.Tests','FBS.Setup.Tests','FBS.WindowsSetup.Tests','FBS.FileDelivery.Tests')
           foreach ($project in $projects) {
             $log = Join-Path 'checks-output' "$project.log"
+            $ErrorActionPreference = 'Continue'
             & dotnet run --project "windows/$project/$project.csproj" -c Release 2>&1 | Tee-Object -FilePath $log
-            if ($LASTEXITCODE -ne 0) { throw "$project failed; no success report was written" }
+            $exitCode = $LASTEXITCODE
+            $ErrorActionPreference = 'Stop'
+            $results[$project] = ($exitCode -eq 0)
+            if ($exitCode -ne 0) {
+              $failedProjects += $project
+              $details = @(Get-Content $log | Where-Object { $_ -match 'error|FAIL|Exception|Unhandled' } | Select-Object -Last 12)
+              if ($details.Count -eq 0) { $details = @(Get-Content $log -Tail 12) }
+              foreach ($line in $details) { $encoded = $line.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A'); Write-Output "::error::$project $encoded" }
+            }
           }
+          $results | ConvertTo-Json | Set-Content checks-output/Windows-project-results.json
+          if ($failedProjects.Count -gt 0) { throw ('Failed projects: ' + ($failedProjects -join ', ')) }
           @{ stage='M176'; platform='Windows'; nativeGatePassed=$true; localTlsPassed=$true; dpapiAndPowerShellCompatibilityPassed=$true; atomicFileSavePassed=$true; guiExecuted=$false; installerExecuted=$false } | ConvertTo-Json | Set-Content checks-output/Windows-validation.json
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: FBS-M176-Windows-Checks
           path: checks-output/*
