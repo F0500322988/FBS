@@ -10,7 +10,7 @@ int passed = 0;
 var checks = new List<object>();
 bool successful = false;
 string? failure = null;
-void Check(bool ok, string name) { checks.Add(new { name, passed = ok }); if (!ok) throw new Exception("FAIL: " + name); Console.WriteLine("PASS: " + name); passed++; }
+void Check(bool ok, string name) { checks.Add(new { name, passed = ok }); if (!ok) { Console.Error.WriteLine("FAIL: " + name); throw new Exception("FAIL: " + name); } Console.WriteLine("PASS: " + name); passed++; }
 try
 {
     var cert = TeacherCertificateFactory.Create("teacher.lab.example");

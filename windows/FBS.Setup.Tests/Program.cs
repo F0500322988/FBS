@@ -54,7 +54,9 @@ finally { Directory.Delete(endpointDirectory, true); }
 foreach (var host in new[] { "teacher.lab.example", "192.168.1.10" })
 {
     var generated = TeacherCertificateFactory.Create(host);
-    using var certificate = X509Certificate2.CreateFromPem(generated.CertificatePem, generated.PrivateKeyPem);
+    using var pemCertificate = X509Certificate2.CreateFromPem(generated.CertificatePem, generated.PrivateKeyPem);
+    // Schannel requires a persisted-key import for this test's TLS server.
+    using var certificate = new X509Certificate2(pemCertificate.Export(X509ContentType.Pfx), (string?)null, X509KeyStorageFlags.UserKeySet);
     Check(certificate.HasPrivateKey, host + ": certificate and private key match");
     Check(certificate.NotBefore.ToUniversalTime() < DateTime.UtcNow && certificate.NotAfter.ToUniversalTime() > DateTime.UtcNow.AddDays(360), host + ": valid lifetime");
     Check(Convert.ToHexString(SHA256.HashData(certificate.RawData)) == generated.Fingerprint, host + ": fingerprint matches certificate");
@@ -82,7 +84,9 @@ Console.WriteLine($"Setup certificate checks: {passed} passed.");
 async Task TlsTrial(string certificateHost, bool wrongPin, bool shouldConnect)
 {
     var generated = TeacherCertificateFactory.Create(certificateHost);
-    using var certificate = X509Certificate2.CreateFromPem(generated.CertificatePem, generated.PrivateKeyPem);
+    using var pemCertificate = X509Certificate2.CreateFromPem(generated.CertificatePem, generated.PrivateKeyPem);
+    // Schannel requires a persisted-key import for this test's TLS server.
+    using var certificate = new X509Certificate2(pemCertificate.Export(X509ContentType.Pfx), (string?)null, X509KeyStorageFlags.UserKeySet);
     using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
     listener.Start();
     using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
