@@ -1,0 +1,34 @@
+{
+  "stage": "M173",
+  "javascript": {
+    "passed": 1445,
+    "failed": 0,
+    "skipped": 0
+  },
+  "browser": {
+    "engine": "Chromium",
+    "passed": true,
+    "apiDataMocked": true,
+    "nativeWindowsUiExecuted": false
+  },
+  "messagesTlsIntegration": {
+    "passed": true,
+    "platform": "Linux",
+    "realTeacherAndStudentProcesses": true,
+    "receivedAndReadAcknowledgementsVerified": true,
+    "revocationVerified": true
+  },
+  "dotnet": {
+    "setupTlsPassed": 48,
+    "nativeGatePassed": 80,
+    "platform": "Linux",
+    "windowsTeacherPublishPassed": true,
+    "windowsStudentPublishPassed": true,
+    "version": "0.173.0-preview",
+    "buildWarnings": 0
+  },
+  "windowsInstallExecuted": false,
+  "windowsUninstallExecuted": false,
+  "windowsDpapiExecuted": false,
+  "twoPcLanTested": false
+}
