@@ -2,17 +2,18 @@ import AppKit
 
 @MainActor final class ClassroomApp: NSObject, NSApplicationDelegate {
     private var window: NSWindow!, role = ClassroomRole.student
-    private var config: ConnectionConfig!, host = RuntimeHost(), messages: MessagesWindow?, broadcast: BroadcastWindow?
+    private var config: ConnectionConfig!, host = RuntimeHost(), messages: MessagesWindow?, broadcast: BroadcastWindow?, filesWindow: FilesWindow?
     private let key = NSSecureTextField(), password = NSSecureTextField(), address = NSTextField(), port = NSTextField(), pin = NSTextField(), device = NSTextField()
     private let discovery = NSButton(checkboxWithTitle: "اكتشاف المعلم تلقائيًا داخل الشبكة", target: nil, action: nil)
     private let state = NSTextField(wrappingLabelWithString: "التحكم عن بُعد غير مفعّل في هذه النسخة")
     private let connection = NSTextField(wrappingLabelWithString: "")
     private let startButton = NSButton(title: "حفظ الإعداد وتشغيل البرنامج", target: nil, action: nil)
+    private let filesButton = NSButton(title: "ملفات المعلم — حفظ بموافقتك", target: nil, action: nil)
     private let messageButton = NSButton(title: "رسائل المعلم", target: nil, action: nil), viewButton = NSButton(title: "عرض شاشة المعلم", target: nil, action: nil), shareButton = NSButton(title: "مشاركة شاشة الطالب بموافقته", target: nil, action: nil)
     private var loaded = false, pollTimer: Timer?
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let value = Bundle.main.object(forInfoDictionaryKey: "FBSRole") as? String, let parsed = ClassroomRole(rawValue: value) else { showError(ConfigurationError.invalid("دور التطبيق غير صالح")); NSApp.terminate(nil); return }; role = parsed
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: role == .teacher ? 580 : 780), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: role == .teacher ? 580 : 820), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = "FBS Classroom — " + (role == .teacher ? "المعلم" : "الطالب") + " — macOS Preview"
         window.isReleasedWhenClosed = false
         let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .trailing; stack.spacing = 8
@@ -28,8 +29,8 @@ import AppKit
         let stop = NSButton(title: "إيقاف التطبيق محليًا", target: self, action: #selector(stopHost)); stack.addArrangedSubview(stop)
         if role == .teacher { stack.addArrangedSubview(NSButton(title: "فتح لوحة المعلم", target: self, action: #selector(openTeacher))) }
         else {
-            messageButton.target = self; messageButton.action = #selector(openMessages); viewButton.target = self; viewButton.action = #selector(openBroadcast); shareButton.target = self; shareButton.action = #selector(openShare)
-            for button in [messageButton, viewButton, shareButton] { button.isEnabled = false; stack.addArrangedSubview(button) }
+            filesButton.target = self; filesButton.action = #selector(openFiles); messageButton.target = self; messageButton.action = #selector(openMessages); viewButton.target = self; viewButton.action = #selector(openBroadcast); shareButton.target = self; shareButton.action = #selector(openShare)
+            for button in [messageButton, viewButton, shareButton, filesButton] { button.isEnabled = false; stack.addArrangedSubview(button) }
         }
         connection.isSelectable = true; connection.alignment = .right; state.alignment = .right
         stack.addArrangedSubview(connection); stack.addArrangedSubview(state)
@@ -39,7 +40,7 @@ import AppKit
         host.ready = { [weak self] url in
             guard let self = self else { return }
             if self.role == .teacher { NSWorkspace.shared.open(url) }
-            else { self.messageButton.isEnabled = true; self.viewButton.isEnabled = true; self.shareButton.isEnabled = true }
+            else { self.messageButton.isEnabled = true; self.viewButton.isEnabled = true; self.shareButton.isEnabled = true; self.filesButton.isEnabled = true }
         }
         do { config = try PlatformServices.load(role) ?? ConnectionConfig(role: role, pairingKey: ""); loaded = true; key.stringValue = config.pairingKey; password.stringValue = config.teacherPassword; address.stringValue = config.teacherHost; port.stringValue = String(config.teacherPort); pin.stringValue = config.fingerprint; device.stringValue = config.deviceName; discovery.state = config.discovery ? .on : .off }
         catch { startButton.isEnabled = false; showError(error) }
@@ -70,10 +71,11 @@ import AppKit
             else { connection.stringValue = "اسم الجهاز: \(updated.deviceName) — مشاركة الشاشة والرسائل تتطلب اعتماد المعلم" }
         } catch { showError(error) }
     }
-    @objc private func stopHost() { host.stop(); messages?.window.close(); broadcast?.window.close(); for button in [messageButton, viewButton, shareButton] { button.isEnabled = false }; state.stringValue = "توقف التطبيق محليًا — التحكم غير مفعّل" }
+    @objc private func stopHost() { host.stop(); messages?.window.close(); broadcast?.window.close(); filesWindow?.window.close(); for button in [messageButton, viewButton, shareButton, filesButton] { button.isEnabled = false }; state.stringValue = "توقف التطبيق محليًا — التحكم غير مفعّل" }
     @objc private func openTeacher() { if let url = host.baseURL, host.process?.isRunning == true { NSWorkspace.shared.open(url) } }
-    @objc private func openMessages() { if messages?.window.isVisible != true { messages = MessagesWindow(host) }; messages?.show() }
-    @objc private func openBroadcast() { if broadcast?.window.isVisible != true { broadcast = BroadcastWindow(host) }; broadcast?.show() }
+    @objc private func openFiles() { if filesWindow == nil || filesWindow!.isClosed { filesWindow = FilesWindow(host) }; filesWindow?.show() }
+    @objc private func openMessages() { if messages == nil || messages!.isClosed { messages = MessagesWindow(host) }; messages?.show() }
+    @objc private func openBroadcast() { if broadcast == nil || broadcast!.isClosed { broadcast = BroadcastWindow(host) }; broadcast?.show() }
     @objc private func openShare() { if let url = host.baseURL { NSWorkspace.shared.open(url) } }
     private func showError(_ error: Error) { let alert = NSAlert(); alert.messageText = "FBS Classroom"; alert.informativeText = error.localizedDescription; alert.runModal() }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }

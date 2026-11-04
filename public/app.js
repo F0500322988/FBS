@@ -17,7 +17,7 @@ let previousMonitorSnapshot=null,monitorHistory=[],monitorInterrupted=false;let 
 const labels={home:'الرئيسية',screens:'عرض الشاشات',broadcast:'مشاركة الشاشة',control:'التحكم عن بُعد',lock:'قفل الأجهزة',files:'توزيع الملفات',messages:'الرسائل',labs:'إدارة المعمل',monitor:'مراقبة الأجهزة',enrollment:'اعتماد الأجهزة'};
 const el=id=>document.getElementById(id);
 let deviceView='grid',refreshBusy=false,previewUnavailable=false;
-const plannedPages=new Set(['control','lock','files','labs']);
+const plannedPages=new Set(['control','lock','labs']);
 function updatePageNotice(){
  const notice=el('notice');
  notice.hidden=true;
@@ -28,6 +28,8 @@ function updatePageNotice(){
 function render(){
  const custom=pageNow==='monitor'||pageNow==='enrollment';
  el('view-toolbar').hidden=custom||plannedPages.has(pageNow)||pageNow==='messages';
+ el('files-panel').hidden=pageNow!=='files';
+ if(pageNow==='files'){el('view-toolbar').hidden=true;el('messages-panel').hidden=true;el('broadcast-panel').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;renderFileRecipients();return;}
  el('broadcast-panel').hidden=pageNow!=='broadcast';
  el('messages-panel').hidden=pageNow!=='messages';
  if(pageNow==='broadcast'){el('view-toolbar').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;renderBroadcastRecipients();return;}
@@ -78,7 +80,7 @@ async function refresh(){
   el('total').textContent=roster.length;el('online').textContent=roster.filter(x=>x.online).length;el('offline').textContent=roster.filter(x=>!x.online).length;
   el('lab-name').textContent=data.lab?.name||'المعمل';
   el('mode').textContent=data.mode==='demo'?'وضع العرض التجريبي':data.mode==='live'?'أجهزة حقيقية على الشبكة':'الاتصال غير مهيأ';
-  el('mode').dataset.mode=data.mode;updatePageNotice();render();updateLargeScreen();if(pageNow==='messages')loadMessageHistory();if(pageNow==='broadcast')loadBroadcastState();
+  el('mode').dataset.mode=data.mode;updatePageNotice();render();updateLargeScreen();if(pageNow==='messages')loadMessageHistory();if(pageNow==='broadcast')loadBroadcastState();if(pageNow==='files')loadFileHistory();
  }catch(e){
   monitorInterrupted=true;previousMonitorSnapshot=null;lastStatusAt=0;roster=[];frames.clear();
   el('total').textContent='—';el('online').textContent='—';el('offline').textContent='—';
@@ -404,3 +406,31 @@ async function startBroadcast(){
 el('broadcast-all').addEventListener('click',()=>{if(broadcastBusy||broadcastSession)return;for(const input of el('broadcast-recipients').querySelectorAll('input')){input.checked=true;broadcastSelection.add(input.value);}updateBroadcastButtons();});
 el('broadcast-start').addEventListener('click',startBroadcast);el('broadcast-stop').addEventListener('click',stopBroadcast);
 window.addEventListener('pagehide',()=>{const stopped=broadcastSession;broadcastGeneration++;broadcastStream?.getTracks().forEach(t=>t.stop());if(stopped)navigator.sendBeacon('/api/broadcast/stop',JSON.stringify({sessionId:stopped.id}));});
+
+// M176: explicit file selection and receipt tracking; never opens transferred files.
+const fileSelection=new Set();let fileRecipientsKey='',fileSending=false,fileHistoryBusy=false;
+function updateFileSend(){el('file-send').disabled=fileSending||!fileSelection.size||!el('file-input').files.length;}
+function renderFileRecipients(){
+ const available=roster.filter(s=>s.online===true&&s.approved===true),ids=new Set(available.map(s=>s.id));for(const id of fileSelection)if(!ids.has(id))fileSelection.delete(id);
+ const key=JSON.stringify(available.map(s=>s.id));if(key!==fileRecipientsKey){fileRecipientsKey=key;el('file-recipients').replaceChildren(...available.map(s=>{const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=s.id;input.checked=fileSelection.has(s.id);input.addEventListener('change',()=>{if(input.checked)fileSelection.add(s.id);else fileSelection.delete(s.id);updateFileSend();});label.append(input,document.createTextNode(s.id));return label;}));if(!available.length)el('file-recipients').textContent='لا توجد أجهزة متصلة ومعتمدة';}updateFileSend();
+}
+el('file-input').addEventListener('change',updateFileSend);el('file-all').addEventListener('click',()=>{for(const input of el('file-recipients').querySelectorAll('input')){input.checked=true;fileSelection.add(input.value);}updateFileSend();});
+el('files-form').addEventListener('submit',async event=>{
+ event.preventDefault();if(fileSending||!fileSelection.size)return;const file=el('file-input').files[0];if(!file)return;
+ if(!file.size||file.size>5*1024*1024){el('file-result').textContent='اختر ملفًا غير فارغ لا يتجاوز 5 ميجابايت';return;}
+ const targets=[...fileSelection];fileSending=true;updateFileSend();el('file-result').textContent='جارٍ تحميل الملف...';
+ try{
+  const base64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=reject;reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.readAsDataURL(file);});
+  const response=await fetch('/api/files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:file.name,base64,deviceIds:targets}),signal:AbortSignal.timeout(15000)});
+  if(!response.ok)throw Error(response.status===409?'تأكد من اتصال الأجهزة واعتمادها':response.status===429?'قائمة الملفات ممتلئة؛ انتظر انتهاء صلاحيتها':'تعذر توزيع الملف؛ تحقق من الاسم والحجم');
+  el('file-result').textContent='الملف متاح للطلاب المحددين؛ تابع تأكيد التنزيل والحفظ أدناه';el('file-input').value='';await loadFileHistory();
+ }catch(e){el('file-result').textContent=e.name==='TimeoutError'?'لم يصل التأكيد؛ راجع السجل قبل إعادة الإرسال':e.message||'تعذر قراءة الملف';}
+ finally{fileSending=false;updateFileSend();}
+});
+async function loadFileHistory(){
+ if(fileHistoryBusy)return;fileHistoryBusy=true;
+ try{const response=await fetch('/api/files',{cache:'no-store',signal:AbortSignal.timeout(5000)});if(!response.ok)throw Error();const result=await response.json();
+  const states={queued:'متاح للتنزيل',downloaded:'تحقق وكيل الطالب من الملف',saved:'أكد تطبيق الطالب الحفظ',expired:'انتهت الصلاحية',revoked:'أُلغي اعتماد الجهاز'};
+  el('file-history').replaceChildren(...result.files.map(f=>{const card=document.createElement('article');card.className='message-card';const title=document.createElement('strong');title.textContent=f.name+' — '+Math.ceil(f.size/1024)+' كيلوبايت';card.append(title);for(const r of f.recipients){const item=document.createElement('small');item.textContent=r.id+' — '+(states[r.state]||'غير معروف');card.append(item);}return card;}));if(!result.files.length)el('file-history').textContent='لم تُرسل ملفات في هذه الجلسة';
+ }catch{el('file-history').textContent='تعذر تحديث سجل الملفات؛ لا يوجد تأكيد حديث';}finally{fileHistoryBusy=false;}
+}

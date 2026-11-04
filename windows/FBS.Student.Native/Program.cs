@@ -110,7 +110,7 @@ public sealed class StudentStatusForm : Form
         Text = "FBS Classroom — جهاز الطالب";
         RightToLeft = RightToLeft.Yes;
         RightToLeftLayout = true;
-        ClientSize = new Size(540, 450);
+        ClientSize = new Size(540, 495);
         BackColor = Color.FromArgb(20, 38, 69);
         ForeColor = Color.White;
         Font = new Font("Segoe UI", 12);
@@ -181,6 +181,9 @@ public sealed class StudentStatusForm : Form
             broadcastWindow.Show(this); broadcastWindow.Activate();
         };
         Controls.Add(broadcastButton);
+        var filesButton = new Button { Text = "ملفات المعلم — حفظ بموافقتك", Location = new Point(145, 435), Size = new Size(250, 38) };
+        filesButton.Click += (_, _) => { using var files = new TeacherFilesForm(agent.LocalControlToken); files.ShowDialog(this); };
+        Controls.Add(filesButton);
         localClient.DefaultRequestHeaders.Add("X-FBS-Local-Token", agent.LocalControlToken);
         consentTimer.Tick += async (_, _) =>
         {

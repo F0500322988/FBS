@@ -13,6 +13,8 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
  let controlCommands=null;
  let messageStore=null;
  let broadcastStore=null;
+ let fileStore=null;
+ function setFileStore(store){fileStore=store;}
  function setBroadcastStore(store){broadcastStore=store;}
  function setMessageStore(store){messageStore=store;}
  function setControlCommands(commands){controlCommands=commands;}
@@ -23,7 +25,7 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
  const cert=fs.readFileSync(certPath),key=fs.readFileSync(keyPath);
  const fingerprint=crypto.createHash('sha256').update(new crypto.X509Certificate(cert).raw).digest('hex');
  const server=https.createServer({cert,key,minVersion:'TLSv1.2'},(req,res)=>{
-  if(req.method!=='POST'||!['/heartbeat','/frame','/control/poll','/control/ack','/control/stop','/control/commands','/messages/poll','/broadcast/poll'].includes(req.url)){res.writeHead(404);return res.end();}
+  if(req.method!=='POST'||!['/heartbeat','/frame','/control/poll','/control/ack','/control/stop','/control/commands','/messages/poll','/broadcast/poll','/files/poll','/files/download','/files/ack'].includes(req.url)){res.writeHead(404);return res.end();}
   if(!safeEqual(req.headers['x-fbs-key'],secret)){res.writeHead(401);return res.end();}
   let chunks=[],bytes=0;req.on('data',c=>{bytes+=c.length;if(bytes>180000){req.destroy();return;}chunks.push(c);});req.on('end',()=>{
    const raw=Buffer.concat(chunks).toString('utf8');
@@ -39,6 +41,15 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
     if(replay.has(nonceKey)||!verifyMessage(packet,pub,new Set()))throw Error('invalid signature');
     replay.set(nonceKey,Date.now());
     const ip=req.socket.remoteAddress?.replace(/^::ffff:/,'')||'';
+    if(req.url.startsWith('/files/')){
+     const device=devices.get(body.id);
+     if(!known||!device||device.publicKey!==known||device.ip!==ip||Date.now()-device.lastSeen>20000||!fileStore)throw Error('not enrolled');
+     let result;
+     if(req.url==='/files/poll')result={files:fileStore.poll(body.id,known)};
+     else if(req.url==='/files/download')result=fileStore.download(body.fileId,body.id,known);
+     else {fileStore.acknowledge(body.fileId,body.id,known,body.state);result={acknowledged:true};}
+     res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});return res.end(JSON.stringify(result));
+    }
     if(req.url==='/broadcast/poll'){
      const device=devices.get(body.id);
      if(!known||!device||device.publicKey!==known||device.ip!==ip||Date.now()-device.lastSeen>20000||!broadcastStore)throw Error('not enrolled');
@@ -95,7 +106,7 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
   announce();timer=setInterval(announce,intervalMs);console.log('Teacher LAN active:',localIPv4().join(', '));
  }
  async function stop(){clearInterval(timer);await Promise.all([new Promise(resolve=>server.close(resolve)),udpStarted?new Promise(resolve=>udp.close(resolve)):Promise.resolve()]);}
- return {devices,frames,server,start,stop,setApprovedKeys,setControlLeases,setControlCommands,setMessageStore,setBroadcastStore};
+ return {devices,frames,server,start,stop,setApprovedKeys,setControlLeases,setControlCommands,setMessageStore,setBroadcastStore,setFileStore};
 }
 if(require.main===module){const lan=createTeacherLan({secret:process.env.FBS_PAIRING_KEY});lan.start().catch(e=>{console.error(e);process.exitCode=1;});}
 module.exports={createTeacherLan};

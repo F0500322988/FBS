@@ -17,7 +17,7 @@ final class RuntimeHost {
         #endif
     }
     static func selfCheck() throws {
-        let fm = FileManager.default, files = ["server.js", "student-agent.js", "classroom-messages.js", "classroom-broadcast.js", "pinned-https.js", "public/index.html", "node-x64", "node-arm64"]
+        let fm = FileManager.default, files = ["server.js", "student-agent.js", "classroom-messages.js", "classroom-broadcast.js", "classroom-files.js", "pinned-https.js", "public/index.html", "node-x64", "node-arm64"]
         for file in files where !fm.fileExists(atPath: runtime.appendingPathComponent(file).path) { throw ConfigurationError.invalid("Missing bundled runtime: " + file) }
         let version = try PlatformServices.run(node.path, ["--version"])
         guard String(data: version, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) == "v22.23.4" else { throw ConfigurationError.invalid("Unexpected Node runtime version") }
@@ -103,6 +103,21 @@ final class RuntimeHost {
             DispatchQueue.main.async { [weak self] in
                 guard self?.generation == requestGeneration else { completion(.failure(ConfigurationError.invalid("تغير الاتصال؛ أُهملت استجابة قديمة"))); return }; completion(result)
             }
+        }.resume()
+    }
+    func downloadFile(_ id: String, completion: @escaping (Result<Data, Error>) -> Void) {
+        guard let base = baseURL else { completion(.failure(ConfigurationError.invalid("التطبيق غير جاهز"))); return }
+        let revision = generation
+        var request = URLRequest(url: base.appendingPathComponent("files/local/download")); request.httpMethod = "POST"; request.timeoutInterval = 15
+        request.setValue(token, forHTTPHeaderField: "X-FBS-Local-Token"); request.setValue("application/json", forHTTPHeaderField: "Content-Type"); request.httpBody = try? JSONSerialization.data(withJSONObject: ["id": id])
+        let configuration = URLSessionConfiguration.ephemeral; configuration.connectionProxyDictionary = [:]; let session = URLSession(configuration: configuration)
+        session.dataTask(with: request) { [weak self] data, response, error in
+            defer { session.finishTasksAndInvalidate() }
+            let result: Result<Data, Error>
+            if let error = error { result = .failure(error) }
+            else if let http = response as? HTTPURLResponse, http.statusCode == 200, let data = data, !data.isEmpty, data.count <= 5 * 1024 * 1024 { result = .success(data) }
+            else { result = .failure(ConfigurationError.invalid("الملف غير متاح أو لم يكتمل النقل")) }
+            DispatchQueue.main.async { guard self?.generation == revision else { completion(.failure(ConfigurationError.invalid("تغير الاتصال"))); return }; completion(result) }
         }.resume()
     }
     func stop() { generation += 1; timer?.invalidate(); timer = nil; let owned = process; process = nil; baseURL = nil; if owned?.isRunning == true { owned?.terminate() } }

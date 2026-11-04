@@ -20,6 +20,7 @@ const inbox=require('./classroom-messages').createStudentInbox();
 let messagesBusy=false;
 const broadcastReceiver=require('./classroom-broadcast').createBroadcastReceiver();
 let broadcastBusy=false;
+const filePolicy=require('./classroom-files');let availableFiles=[],filesBusy=false,fileDownloadBusy=false;
 const capturePage=`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>FBS Student — مشاركة الشاشة</title><style>body{font:18px system-ui;background:#f3f7ff;color:#152b4e;max-width:650px;margin:60px auto}button{padding:12px 22px;margin:8px;border:0;border-radius:8px;background:#1658ac;color:white;cursor:pointer}#stop{background:#a42a39}</style><h2>FBS Classroom — مشاركة شاشة الطالب</h2><p>المشاركة اختيارية في هذا الإصدار التجريبي. ستظهر نافذة من المتصفح لتحديد الشاشة، ويمكنك الإيقاف في أي وقت. النقل إلى المعلم يستخدم TLS مع التحقق من بصمة شهادته. المشاركة لا تبدأ إلا باختيارك ويمكنك إيقافها في أي وقت.</p><button id="start">بدء مشاركة الشاشة</button><button id="stop">إيقاف المشاركة</button><p id="state">غير مشارك</p><video id="preview" autoplay muted playsinline width="480"></video><script>let stream,timer;const state=document.getElementById('state');async function stop(){clearInterval(timer);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;state.textContent='تم إيقاف المشاركة'}document.getElementById('stop').onclick=stop;document.getElementById('start').onclick=async()=>{try{await stop();stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:1},audio:false});document.getElementById('preview').srcObject=stream;stream.getVideoTracks()[0].onended=stop;state.textContent='الشاشة قيد المشاركة';const canvas=document.createElement('canvas');canvas.width=640;canvas.height=360;timer=setInterval(async()=>{if(!stream||!document.getElementById('preview').videoWidth)return;canvas.getContext('2d').drawImage(document.getElementById('preview'),0,0,640,360);try{await fetch('/frame',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jpeg:canvas.toDataURL('image/jpeg',.45)})})}catch{}},1500)}catch(e){state.textContent='لم تبدأ المشاركة: '+e.message}};</script></html>`;
 let pendingControl=null;
 let previewCommands=[];
@@ -84,6 +85,40 @@ function localControl(req,res){
   }catch{send(400,{error:'Invalid request'});}
  });
 }
+function fileRequest(path,body={}){
+ return new Promise((resolve,reject)=>{
+  if(!teacher)return reject(Error('Teacher unavailable'));
+  const endpoint=teacher,data=JSON.stringify(signMessage(identity,{id,platform:process.platform,...body}));
+  const request=pinnedRequest({fingerprint:endpoint.fingerprint,host:endpoint.host,port:endpoint.port,path,method:'POST',timeout:5000,headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data),'X-FBS-Key':secret}},res=>{
+   let chunks=[],bytes=0;res.on('error',reject);res.on('aborted',()=>reject(Error('Interrupted transfer')));
+   res.on('data',c=>{bytes+=c.length;if(bytes>7100000){request.destroy();return;}chunks.push(c);});
+   res.on('end',()=>{if(res.statusCode!==200||teacher.host!==endpoint.host||teacher.port!==endpoint.port||teacher.fingerprint!==endpoint.fingerprint)return reject(Error('File unavailable'));try{resolve(JSON.parse(Buffer.concat(chunks).toString()));}catch(e){reject(e);}});
+  });request.on('error',reject);request.on('timeout',()=>request.destroy(Error('Transfer timeout')));request.end(data);
+ });
+}
+async function pollFiles(){if(filesBusy)return;filesBusy=true;try{const result=await fileRequest('/files/poll');if(!Array.isArray(result.files)||result.files.length>10)throw Error('Invalid file list');availableFiles=result.files.filter(f=>filePolicy.validName(f.name)&&typeof f.id==='string'&&/^[a-f0-9-]{36}$/.test(f.id)&&Number.isInteger(f.size)&&f.size>0&&f.size<=filePolicy.MAX_BYTES&&/^[a-f0-9]{64}$/.test(f.sha256)&&Number.isFinite(f.expiresAt)&&f.expiresAt>Date.now()&&f.expiresAt<=Date.now()+305000);}catch{availableFiles=[];}finally{filesBusy=false;}}
+function localFiles(req,res){
+ const reply=(code,body)=>{res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(body));};
+ if(!authorizedLocalRequest(req,localControlToken))return reply(403,{error:'Unauthorized local controller'});
+ const active=()=>availableFiles.filter(f=>f.expiresAt>Date.now());
+ if(req.method==='GET'&&req.url==='/files/local')return reply(200,{files:active()});
+ if(req.method!=='POST'||!['/files/local/download','/files/local/saved'].includes(req.url))return reply(405,{error:'Method not allowed'});
+ let chunks=[],bytes=0;req.on('data',c=>{bytes+=c.length;if(bytes>1024){req.destroy();return;}chunks.push(c);});
+ req.on('end',async()=>{
+  let ownsDownload=false;
+  try{
+   const body=JSON.parse(Buffer.concat(chunks).toString()),meta=active().find(f=>f.id===body.id);if(!meta)return reply(404,{error:'File unavailable'});
+   if(req.url.endsWith('/saved')){await fileRequest('/files/ack',{fileId:meta.id,state:'saved'});return reply(200,{confirmed:true});}
+   if(fileDownloadBusy)return reply(429,{error:'Download already active'});fileDownloadBusy=true;ownsDownload=true;
+   const result=await fileRequest('/files/download',{fileId:meta.id});if(result.id!==meta.id||result.sha256!==meta.sha256||result.size!==meta.size)throw Error('File metadata changed');
+   const data=filePolicy.decodeFile(result.base64,meta.size,meta.sha256);
+   if(!active().some(f=>f.id===meta.id))throw Error('File expired or revoked');
+   await fileRequest('/files/ack',{fileId:meta.id,state:'downloaded'});
+   res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':data.length,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-FBS-SHA256':meta.sha256});res.end(data);
+  }catch{if(!res.headersSent)reply(409,{error:'File transfer failed or unavailable'});}
+  finally{if(ownsDownload)fileDownloadBusy=false;}
+ });
+}
 function pollBroadcast(){
  if(!teacher||broadcastBusy)return;
  broadcastBusy=true;const endpoint=teacher;
@@ -126,6 +161,7 @@ function localMessages(req,res){
  req.on('end',()=>{try{const body=JSON.parse(Buffer.concat(chunks).toString());if(!inbox.read(body.id))return reply(404,{error:'Message unavailable'});reply(202,{read:true,confirmedByTeacher:false});}catch{reply(400,{error:'Invalid request'});}});
 }
 const localServer=http.createServer((req,res)=>{
+ if(['/files/local','/files/local/download','/files/local/saved'].includes(req.url))return localFiles(req,res);
  if(req.url==='/broadcast/local'){
   if(!authorizedLocalRequest(req,localControlToken)){res.writeHead(403);return res.end();}
   if(req.method!=='GET'){res.writeHead(405);return res.end();}
@@ -149,3 +185,5 @@ setInterval(pollPreviewCommands,2000);
 setInterval(pollMessages,2000);
 
 setInterval(pollBroadcast,1000);
+
+setInterval(pollFiles,2000);

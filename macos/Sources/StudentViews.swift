@@ -18,7 +18,8 @@ import AppKit
         choices.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true; scroll.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } }; refresh()
     }
-    func show() { window.center(); window.makeKeyAndOrderFront(nil) }
+    var isClosed: Bool { closed }
+    func show() { if window.isMiniaturized { window.deminiaturize(nil) }; window.center(); window.makeKeyAndOrderFront(nil) }
     private func refresh() {
         if busy || closed { return }; busy = true
         let selected = choices.indexOfSelectedItem; let previous = messages.indices.contains(selected) ? messages[selected]["id"] as? String : nil
@@ -65,7 +66,8 @@ import AppKit
         image.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true; image.heightAnchor.constraint(greaterThanOrEqualToConstant: 250).isActive = true
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } }; refresh()
     }
-    func show() { window.center(); window.makeKeyAndOrderFront(nil) }
+    var isClosed: Bool { closed }
+    func show() { if window.isMiniaturized { window.deminiaturize(nil) }; window.center(); window.makeKeyAndOrderFront(nil) }
     private func refresh() {
         if closed { return }; if Date().timeIntervalSince(lastAt) >= 4 { image.image = nil; state.stringValue = "لا توجد صورة حديثة" }
         if busy { return }; busy = true
