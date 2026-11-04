@@ -1,0 +1,18 @@
+'use strict';
+const {test}=require('node:test');const assert=require('node:assert/strict');
+const {assess}=require('../windows/M85-Preview-Audit');
+const now=100000;const jpeg='/9j/AAAAAAAAAAAAAAAA';
+const status={mode:'live',features:{remoteControl:false},students:[{id:'PC-01',online:true,approved:true}]};
+const enrollment={devices:[{id:'PC-01',approved:true}]};
+const frames={frames:[{id:'PC-01',at:now-1000,jpeg}]};
+const run=(s=status,e=enrollment,f=frames,opts={})=>assess(s,e,f,{now,...opts});
+test('fresh approved frame passes and never includes image bytes',()=>{const r=run();assert.equal(r.passed,true);assert.equal(JSON.stringify(r).includes(jpeg),false);});
+test('missing frame fails',()=>assert.ok(run(status,enrollment,{frames:[]}).issues.includes('insufficient_approved_fresh_previews')));
+test('stale frame fails',()=>assert.ok(run(status,enrollment,{frames:[{id:'PC-01',at:now-6000,jpeg}]}).issues.includes('stale_or_future_frame')));
+test('unapproved device fails',()=>assert.ok(run(status,{devices:[{id:'PC-01',approved:false}]},frames).issues.includes('unapproved_or_offline_preview')));
+test('offline student fails',()=>assert.ok(run({...status,students:[{id:'PC-01',online:false,approved:true}]},enrollment,frames).issues.includes('unapproved_or_offline_preview')));
+test('duplicate frame fails',()=>assert.ok(run(status,enrollment,{frames:[...frames.frames,...frames.frames]}).issues.includes('invalid_or_duplicate_frame_id')));
+test('remote input must remain disabled',()=>assert.ok(run({...status,features:{remoteControl:true}}).issues.includes('remote_input_not_disabled')));
+test('invalid preview encoding fails',()=>assert.ok(run(status,enrollment,{frames:[{id:'PC-01',at:now,jpeg:'invalid'}]}).issues.includes('invalid_preview_encoding')));
+test('expected count enforced',()=>assert.ok(run(status,enrollment,frames,{expected:2}).issues.includes('insufficient_approved_fresh_previews')));
+test('reject demo mode',()=>assert.ok(run({...status,mode:'demo'}).issues.includes('not_live_mode')));

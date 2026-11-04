@@ -1,0 +1,13 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');
+const {CASES,evaluateTrace,review}=require('../windows/M66-Single-Student-Gate');
+const {template}=require('../windows/M63-Field-Evidence');
+test('all eight one-student simulation scenarios pass',()=>{const r=review();assert.equal(r.scenarioCount,8);assert.equal(r.passed,true);assert.ok(r.cases.every(c=>c.passed));});
+test('review never authorizes live input',()=>{const r=review();assert.equal(r.liveInputEnabled,false);assert.equal(r.readyForLiveInput,false);assert.equal(r.simulationOnly,true);});
+test('detects illicit accepted input',()=>{const failures=evaluateTrace(['input'],[{event:'input',accepted:true,connected:true,consent:true,preview:false,liveInputEnabled:false}]);assert.ok(failures.some(x=>x.includes('input accepted')));});
+test('detects preview without consent',()=>{const failures=evaluateTrace(['preview'],[{event:'preview',accepted:true,connected:true,consent:false,preview:true,liveInputEnabled:false}]);assert.ok(failures.length>=1);});
+test('detects reconnect retaining consent',()=>{const failures=evaluateTrace(['reconnect'],[{event:'reconnect',accepted:true,connected:true,consent:true,preview:false,liveInputEnabled:false}]);assert.ok(failures.some(x=>x.includes('reconnect')));});
+test('fails closed when native source is modified',()=>{const r=review({source:'class Unsafe {}'});assert.equal(r.passed,false);assert.equal(r.nativeInputIsolationPassed,false);});
+test('incomplete field evidence is rejected',()=>{const r=review({teacher:template('Teacher'),student:template('Student')});assert.equal(r.passed,false);assert.equal(r.fieldSafetyReviewPassed,false);});
+test('missing one role of field evidence is rejected',()=>{const r=review({teacher:template('Teacher')});assert.equal(r.passed,false);});
+test('all complete field observations pass safety review',()=>{const t=template('Teacher'),s=template('Student');for(const r of [t,s])for(const o of r.observations){o.status='PASS';o.note='Verified manually in laboratory';}const result=review({teacher:t,student:s});assert.equal(result.passed,true);assert.equal(result.fieldSafetyReviewPassed,true);});

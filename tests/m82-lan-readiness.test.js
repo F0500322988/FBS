@@ -1,0 +1,11 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');
+const {validFingerprint,normalizeFingerprint,validateConfig,probe}=require('../windows/M82-Lan-Readiness');
+const pin='ab'.repeat(32);
+test('M82 requires exact SHA256 certificate pin',()=>{assert.equal(validFingerprint(pin),true);assert.equal(validFingerprint('ab'),false);});
+test('M82 accepts colon-separated SHA256 fingerprint',()=>{assert.equal(normalizeFingerprint(('AB:').repeat(31)+'AB'),pin);});
+test('M82 rejects invalid host',()=>assert.ok(validateConfig({host:'bad host',fingerprint:pin}).includes('invalid_teacher_host')));
+test('M82 rejects invalid port',()=>assert.ok(validateConfig({host:'127.0.0.1',port:0,fingerprint:pin}).includes('invalid_teacher_port')));
+test('M82 rejects missing pin',()=>assert.ok(validateConfig({host:'127.0.0.1'}).includes('missing_or_invalid_certificate_pin')));
+test('M82 refuses unpinned network probe',async()=>{const r=await probe({host:'127.0.0.1',port:4180});assert.equal(r.connected,false);assert.equal(r.passed,false);});
+test('M82 reports refused local port without secrets',async()=>{const server=require('node:net').createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));const port=server.address().port;await new Promise(r=>server.close(r));const r=await probe({host:'127.0.0.1',port,fingerprint:pin,timeoutMs:1000});assert.equal(r.passed,false);assert.equal(r.connected,false);});

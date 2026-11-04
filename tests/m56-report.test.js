@@ -1,0 +1,14 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const {verify, required} = require('../windows/Verify-M56-Report');
+const now = Date.now();
+const good = () => ({stage:'M55',passed:true,osInputEnabled:false,machine:'TEST-PC',generatedAt:new Date(now).toISOString(),error:null,checks:required.map(name=>({name,passed:true,exitCode:0,durationMs:1}))});
+test('M56 accepts a complete recent M55 build report',()=>assert.equal(verify(good(),now).ok,true));
+test('M56 rejects missing safety tests',()=>{const r=good();r.checks.splice(2,1);assert.equal(verify(r,now).ok,false)});
+test('M56 rejects failed C# build even if top-level passed is true',()=>{const r=good();r.checks[3].exitCode=1;assert.equal(verify(r,now).ok,false)});
+test('M56 rejects stale reports',()=>{const r=good();r.generatedAt=new Date(now-8*86400000).toISOString();assert.equal(verify(r,now).ok,false)});
+test('M56 rejects input enabled flags',()=>{const r=good();r.osInputEnabled=true;assert.equal(verify(r,now).ok,false)});
+test('M56 rejects duplicate checks',()=>{const r=good();r.checks[4]=r.checks[3];assert.equal(verify(r,now).ok,false)});
+test('M56 Windows runner captures logs and fails on build errors',()=>{const s=fs.readFileSync(path.join(__dirname,'../windows/Test-M56-Windows.ps1'),'utf8');assert.match(s,/Test-M55-Windows-Build.ps1/);assert.match(s,/Verify-M56-Report.js/);assert.match(s,/Out-File/);assert.match(s,/\$buildExit -ne 0/)});

@@ -1,0 +1,11 @@
+const test=require('node:test');const assert=require('node:assert/strict');const view=require('../public/m114-seat-view');
+for(const n of [75,90,100,110,125,150])test('zoom accepts '+n,()=>assert.equal(view.zoom(n),n));
+test('zoom rejects invalid',()=>assert.equal(view.zoom(1000),100));
+test('zoom steps up',()=>assert.equal(view.next(100,1),110));
+test('zoom steps down',()=>assert.equal(view.next(100,-1),90));
+test('zoom clamps high',()=>assert.equal(view.next(150,1),150));
+test('zoom clamps low',()=>assert.equal(view.next(75,-1),75));
+test('focus matches exact id',()=>assert.equal(view.focus([{id:'PC-1'},{id:'PC-10'}],'PC-1').id,'PC-1'));
+test('focus absent',()=>assert.equal(view.focus([{id:'PC-1'}],'PC-2'),null));
+test('summary offline',()=>assert.match(view.summary({id:'PC-1',approved:true,online:false}),/غير متصل/));
+test('summary no selection',()=>assert.match(view.summary(null),/لم يتم/));

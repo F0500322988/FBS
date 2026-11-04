@@ -1,0 +1,15 @@
+const test=require('node:test');const assert=require('node:assert/strict');const map=require('../public/m110-seat-map');
+test('defaults to 21 seats',()=>{const x=map.layout([],{});assert.equal(x.capacity,21);assert.equal(x.slots.length,21);});
+test('bounds dimensions',()=>{assert.deepEqual([map.normalize({rows:99,columns:99}).rows,map.normalize({rows:99,columns:99}).columns],[8,10]);});
+test('fills seats in order',()=>{const x=map.layout([{id:'PC-01'},{id:'PC-02'}],{});assert.equal(x.slots[0].id,'PC-01');assert.equal(x.slots[1].id,'PC-02');});
+test('supports manual seat position',()=>{const cfg=map.place({},'PC-01',7);assert.equal(map.layout([{id:'PC-01'}],cfg).slots[6].id,'PC-01');});
+test('rejects out of range seat',()=>assert.deepEqual(map.place({},'PC-01',999).seats,{}));
+test('moves seat and clears prior assignment',()=>{const cfg=map.place(map.place({},'PC-01',1),'PC-02',1);assert.deepEqual(cfg.seats,{'PC-02':1});});
+test('preserves empty slots',()=>assert.equal(map.layout([{id:'PC-01'}],{}).slots.filter(Boolean).length,1));
+test('reports overflow',()=>{const x=map.layout([{id:'a'},{id:'b'}],{rows:1,columns:1});assert.equal(x.unplaced.length,1);});
+test('deduplicates student IDs',()=>assert.equal(map.layout([{id:'a'},{id:'a'}],{}).slots.filter(Boolean).length,1));
+test('does not mutate student objects',()=>{const d=Object.freeze({id:'a',online:true});map.layout([d],{});assert.equal(d.online,true);});
+test('ignores malformed assignments',()=>assert.deepEqual(map.normalize({seats:{a:'2'}}).seats,{}));
+test('ignores duplicate seat positions',()=>assert.equal(Object.keys(map.normalize({seats:{a:1,b:1}}).seats).length,1));
+test('supports 40 seats',()=>assert.equal(map.layout([],{rows:5,columns:8}).capacity,40));
+test('returns no remote input capabilities',()=>assert.equal(Object.keys(map).some(k=>/control|input|keyboard/i.test(k)),false));

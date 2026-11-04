@@ -1,0 +1,18 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const source = fs.readFileSync(path.join(root, 'windows/FBS.Student.Native/AuthenticatedEnrollmentService.cs'), 'utf8');
+const smoke = fs.readFileSync(path.join(root, 'windows/FBS.NativeSafety.Smoke/Program.cs'), 'utf8');
+const project = fs.readFileSync(path.join(root, 'windows/FBS.NativeSafety.Smoke/FBS.NativeSafety.Smoke.csproj'), 'utf8');
+test('M138 administrator credentials use PBKDF2 SHA256', () => assert.match(source, /Rfc2898DeriveBytes\.Pbkdf2/));
+test('M138 verifier uses constant time equality', () => assert.match(source, /CryptographicOperations\.FixedTimeEquals/));
+test('M138 service rate limits failed attempts', () => assert.match(source, /failures >= 5/));
+test('M138 lockout has bounded duration', () => assert.match(source, /AddMinutes\(5\)/));
+test('M138 service denies locked storage', () => assert.match(source, /enrollment\.IsLocked/));
+test('M138 credentials are required to provision', () => assert.match(source, /Provision\(string deviceId, byte\[\] publicKey, string password/));
+test('M138 credentials are required to revoke', () => assert.match(source, /Revoke\(string deviceId, string password/));
+test('M138 test project includes new service', () => assert.match(project, /AuthenticatedEnrollmentService\.cs/));
+test('M138 smoke exercises credential tests', () => assert.match(smoke, /TestAuthenticatedEnrollment\(\)/));
+test('M138 smoke checks lockout', () => assert.match(smoke, /lockout blocks valid credential/));

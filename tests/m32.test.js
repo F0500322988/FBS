@@ -1,0 +1,30 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {createControlLeases}=require('../control-lease');
+const {createControlCommands}=require('../control-commands');
+test('M32 command lifecycle: request, consent, poll once, stop, reject, new session',()=>{
+ let now=1000;const leases=createControlLeases({clock:()=>now});const commands=createControlCommands({clock:()=>now});
+ const initial=leases.request('PC-01');
+ assert.equal(commands.submit(leases.pending('PC-01'),{type:'key-preview',key:'A'}).ok,false);
+ assert.equal(leases.acknowledge('PC-01',initial.sessionId,true),true);
+ const active=leases.pending('PC-01');
+ assert.equal(commands.submit(active,{type:'key-preview',key:'A'}).ok,true);
+ assert.equal(commands.poll(active).length,1);
+ assert.equal(commands.poll(active).length,0);
+ commands.submit(active,{type:'pointer-preview',x:100,y:200});
+ assert.equal(leases.studentStop('PC-01',initial.sessionId),true);commands.clear('PC-01');
+ assert.equal(commands.poll(leases.pending('PC-01')).length,0);
+ assert.equal(commands.submit(leases.pending('PC-01'),{type:'key-preview',key:'A'}).ok,false);
+ const next=leases.request('PC-01');assert.notEqual(next.sessionId,initial.sessionId);
+ assert.equal(leases.acknowledge('PC-01',next.sessionId,true),true);
+ assert.equal(commands.poll(leases.pending('PC-01')).length,0);
+ now+=16000;assert.equal(commands.submit(leases.pending('PC-01'),{type:'key-preview',key:'B'}).ok,false);
+});
+test('M32 server purges commands on signed student stop and agent ignores stale commands',()=>{
+ const lan=fs.readFileSync(path.join(__dirname,'../teacher-lan.js'),'utf8');
+ const agent=fs.readFileSync(path.join(__dirname,'../student-agent.js'),'utf8');
+ assert.match(lan,/controlLeases\.studentStop\(body\.id,body\.sessionId\)/);
+ assert.match(lan,/controlCommands\?\.clear\(body\.id\)/);
+ assert.match(agent,/pendingControl\?\.status==='consented-no-input'/);
+ assert.match(agent,/cmd\.sessionId!==locallyStoppedSession/);
+});

@@ -1,0 +1,18 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {evaluate}=require('../windows/M102-Connection-Recovery');
+const good={stage:'M84',passed:true,expected:1,approvedOnline:1,issues:[]};
+const down={stage:'M84',passed:false,expected:1,approvedOnline:0,issues:['approved_online_below_expected']};
+const phases=()=>({baseline:[{...good},{...good}],disconnected:[{...down},{...down}],reconnected:[{...good},{...good}]});
+test('M102 healthy disconnect and recovery',()=>assert.equal(evaluate(phases()).passed,true));
+test('M102 rejects missing phases',()=>assert.equal(evaluate(null).passed,false));
+test('M102 rejects too few samples',()=>{let p=phases();p.baseline.pop();assert.equal(evaluate(p).passed,false)});
+test('M102 rejects invalid expected',()=>assert.equal(evaluate(phases(),{expected:41}).passed,false));
+test('M102 rejects failed baseline',()=>{let p=phases();p.baseline[0]=down;assert.equal(evaluate(p).passed,false)});
+test('M102 rejects outage not observed',()=>{let p=phases();p.disconnected[0]=good;assert.equal(evaluate(p).passed,false)});
+test('M102 rejects unknown outage count',()=>{let p=phases();p.disconnected[0]={...down,approvedOnline:null};assert.equal(evaluate(p).passed,false)});
+test('M102 rejects unsafe remote input flag',()=>{let p=phases();p.disconnected[0]={...down,issues:['remote_input_not_disabled']};assert.equal(evaluate(p).passed,false)});
+test('M102 rejects unstable recovery',()=>{let p=phases();p.reconnected[1]=down;assert.equal(evaluate(p).passed,false)});
+test('M102 rejects wrong expected count',()=>{let p=phases();p.baseline[0]={...good,expected:2};assert.equal(evaluate(p).passed,false)});
+test('M102 report contains no IDs or secrets',()=>{const r=evaluate(phases());assert.equal(r.remoteInputEnabled,false);assert.doesNotMatch(JSON.stringify(r),/password|studentId|cookie|token|ipAddress/i)});
+test('M102 rejects missing issue list',()=>{let p=phases();p.disconnected[0]={...down,issues:undefined};assert.equal(evaluate(p).passed,false)});

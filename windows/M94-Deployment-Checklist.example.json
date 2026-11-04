@@ -1,0 +1,10 @@
+{
+  "isolated_lab_network": false,
+  "teacher_static_ip": false,
+  "udp_4181_firewall_checked": false,
+  "tls_fingerprint_verified": false,
+  "student_consent_stop_verified": false,
+  "teacher_student_install_tested": false,
+  "uninstall_rollback_tested": false,
+  "operator_approved": false
+}

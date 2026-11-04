@@ -1,0 +1,14 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+const root=path.join(__dirname,'..','public');const html=fs.readFileSync(path.join(root,'index.html'),'utf8');const js=fs.readFileSync(path.join(root,'app.js'),'utf8');const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
+test('M104 navigation includes monitor',()=>assert.match(html,/data-page="monitor"/));
+test('M104 monitor panel exists',()=>assert.match(html,/id="monitor-panel"/));
+test('M104 monitor summary exists',()=>assert.match(html,/id="monitor-summary"/));
+test('M104 status classification uses approval',()=>assert.match(js,/s\.approved!==true/));
+test('M104 status classification uses online',()=>assert.match(js,/s\.online===true/));
+test('M104 monitor displays read-only cards',()=>assert.match(js,/function renderMonitor\(/));
+test('M104 monitors stale snapshots',()=>assert.match(js,/Date\.now\(\)-lastStatusAt<7000/));
+test('M104 clears stale data on failure',()=>assert.match(js,/lastStatusAt=0;roster=\[\]/));
+test('M104 has no new remote input enablement',()=>assert.doesNotMatch(js.slice(js.indexOf('// M104:')),/remoteControl\s*:\s*true/));
+test('M104 monitor styling exists',()=>assert.match(css,/\.monitor-device\.offline/));
+test('M104 refresh cadence remains two seconds',()=>assert.match(js,/setInterval\(refresh,2000\)/));
+test('M104 monitor UI is Arabic RTL',()=>assert.match(html,/lang="ar" dir="rtl"/));

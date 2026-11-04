@@ -1,0 +1,16 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');
+const {evaluate}=require('../windows/M97-Install-Report');
+const valid={stage:'M97',role:'Student',mode:'dry-run',passed:true,hashVerified:true,installerExitCode:null,issues:[],remoteInputEnabled:false};
+test('M97 dry run report valid',()=>assert.equal(evaluate(valid).passed,true));
+test('M97 execution required rejects dry run',()=>assert.equal(evaluate(valid,{requireExecution:true}).passed,false));
+test('M97 valid executed install',()=>assert.equal(evaluate({...valid,mode:'execute',installerExitCode:0},{requireExecution:true}).passed,true));
+test('M97 reject wrong role',()=>assert.equal(evaluate({...valid,role:'Other'}).passed,false));
+test('M97 reject hash not verified',()=>assert.equal(evaluate({...valid,hashVerified:false}).passed,false));
+test('M97 reject failed install',()=>assert.equal(evaluate({...valid,passed:false}).passed,false));
+test('M97 reject nonzero exit',()=>assert.equal(evaluate({...valid,mode:'execute',installerExitCode:5}).passed,false));
+test('M97 reject enabled remote input',()=>assert.equal(evaluate({...valid,remoteInputEnabled:true}).passed,false));
+test('M97 reject issues',()=>assert.equal(evaluate({...valid,issues:['problem']}).passed,false));
+test('M97 reject malformed report',()=>assert.equal(evaluate(null).passed,false));
+test('M97 reject unknown mode',()=>assert.equal(evaluate({...valid,mode:'remote'}).passed,false));
+test('M97 reject absent stage',()=>assert.equal(evaluate({...valid,stage:'M96'}).passed,false));

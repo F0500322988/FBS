@@ -1,0 +1,20 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const {verify}=require('../windows/M99-Verify-Report');
+const required=['install_directory','bundled_node','runtime_entry','node_version_runs','entry_syntax'];
+function sample(role='Teacher'){return {stage:'M99',role,passed:true,failedCount:0,remoteInputEnabled:false,scope:'bundled_node_version_and_entry_syntax_only',checks:required.map(name=>({name,passed:true,detail:''}))};}
+test('teacher report passes',()=>assert.equal(verify(sample()).passed,true));
+test('student report passes',()=>assert.equal(verify(sample('Student')).passed,true));
+test('missing check fails',()=>{const x=sample();x.checks.pop();assert.equal(verify(x).passed,false)});
+test('failed check fails',()=>{const x=sample();x.checks[0].passed=false;assert.equal(verify(x).passed,false)});
+test('duplicate check fails',()=>{const x=sample();x.checks.push(x.checks[0]);assert.equal(verify(x).passed,false)});
+test('wrong stage fails',()=>{const x=sample();x.stage='M98';assert.equal(verify(x).passed,false)});
+test('unknown role fails',()=>{const x=sample();x.role='Other';assert.equal(verify(x).passed,false)});
+test('remote input enabled fails',()=>{const x=sample();x.remoteInputEnabled=true;assert.equal(verify(x).passed,false)});
+test('incorrect failed count fails',()=>{const x=sample();x.failedCount=1;assert.equal(verify(x).passed,false)});
+test('incorrect scope fails',()=>{const x=sample();x.scope='gui_launched';assert.equal(verify(x).passed,false)});
+test('PowerShell runs only bundled node diagnostics',()=>{const s=fs.readFileSync(path.join(__dirname,'../windows/M99-Runtime-Smoke.ps1'),'utf8');assert.match(s,/--version/);assert.match(s,/--check/);assert.doesNotMatch(s,/Start-Process|Invoke-Expression|Remove-Item|Set-ItemProperty/)});
+test('PowerShell bounds runtime and includes safe timeout',()=>{const s=fs.readFileSync(path.join(__dirname,'../windows/M99-Runtime-Smoke.ps1'),'utf8');assert.match(s,/TimeoutSeconds -gt 60/);assert.match(s,/WaitForExit/)});

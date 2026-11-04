@@ -1,0 +1,41 @@
+name: macOS and iMac M175 preview
+on:
+  push:
+    branches: ['build/m175-macos']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.4'
+      - name: Shared JavaScript and real local TLS tests
+        run: node --test tests/*.test.js
+      - name: Build universal teacher and student applications, PKG and DMG
+        run: bash macos/build.sh "$RUNNER_TEMP/fbs-m175-macos-output"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FBS-Classroom-M175-macOS-Universal-Preview
+          path: ${{ runner.temp }}/fbs-m175-macos-output/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish downloadable development preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          fbs_release_tag="m175-macos-preview-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$fbs_release_tag" \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "FBS Classroom M175 — macOS / iMac — Intel + Apple Silicon" \
+            --notes-file M175-START-HERE.md \
+            "$RUNNER_TEMP"/fbs-m175-macos-output/*.pkg \
+            "$RUNNER_TEMP"/fbs-m175-macos-output/*.dmg \
+            "$RUNNER_TEMP"/fbs-m175-macos-output/*.json \
+            "$RUNNER_TEMP"/fbs-m175-macos-output/SHA256SUMS.txt
