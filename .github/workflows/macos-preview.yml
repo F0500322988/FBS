@@ -1,7 +1,7 @@
 name: macOS and iMac M175 preview
 on:
   push:
-    branches: ['build/m175-macos']
+    branches: ['build/m175-macos', 'build/m175-macos-*']
   workflow_dispatch:
 permissions:
   contents: read
