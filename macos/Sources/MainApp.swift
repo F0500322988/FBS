@@ -52,7 +52,12 @@ import AppKit
             }
             }
         }
-        let menu = NSMenu(), item = NSMenuItem(); menu.addItem(item); let appMenu = NSMenu(); appMenu.addItem(withTitle: "إنهاء FBS Classroom", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); item.submenu = appMenu; NSApp.mainMenu = menu
+        let menu = NSMenu(), item = NSMenuItem(); menu.addItem(item); let appMenu = NSMenu(); appMenu.addItem(withTitle: "إنهاء FBS Classroom", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); item.submenu = appMenu
+        let editItem = NSMenuItem(), editMenu = NSMenu(title: "تحرير")
+        for (title, action, key) in [("قص", #selector(NSText.cut(_:)), "x"), ("نسخ", #selector(NSText.copy(_:)), "c"), ("لصق", #selector(NSText.paste(_:)), "v"), ("تحديد الكل", #selector(NSText.selectAll(_:)), "a")] {
+            editMenu.addItem(withTitle: title, action: action, keyEquivalent: key)
+        }
+        editItem.submenu = editMenu; menu.addItem(editItem); NSApp.mainMenu = menu
         window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
     }
     @objc private func start() {
