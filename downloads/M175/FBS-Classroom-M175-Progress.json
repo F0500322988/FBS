@@ -1,0 +1,38 @@
+{
+  "stage": "M175",
+  "platform": "macOS",
+  "minimumOS": "13.0",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "nativeBuildPassed": true,
+  "selfCheckHostArchitecture": "x86_64",
+  "otherArchitectureExecuted": false,
+  "pkgPayloadVerified": true,
+  "dmgVerified": true,
+  "bundleAdHocSigned": true,
+  "developerIDSigned": false,
+  "notarized": false,
+  "guiTested": false,
+  "keychainTested": false,
+  "screenRecordingTested": false,
+  "twoMacLanTested": false,
+  "installedOnMacTested": true,
+  "uninstallOnIsolatedRunnerTested": true,
+  "files": [
+    "FBS-Classroom-Student-M175-macOS-Universal-PREVIEW.dmg",
+    "FBS-Classroom-Student-M175-macOS-Universal-PREVIEW.pkg",
+    "FBS-Classroom-Teacher-M175-macOS-Universal-PREVIEW.dmg",
+    "FBS-Classroom-Teacher-M175-macOS-Universal-PREVIEW.pkg"
+  ],
+  "release": "https://github.com/F0500322988/FBS/releases/tag/m175-macos-preview-6-1",
+  "sourceCommit": "7505dbd772ddcbea02c1ad0119960bb8a5dc35b7",
+  "workflowRun": 41838779678,
+  "downloadedInstallerSha256Verified": true,
+  "downloadedContainerHeadersVerified": true,
+  "swiftConfigurationChecksPassed": 23,
+  "pythonPayloadChecksPassed": 5,
+  "javascriptPassed": 1454,
+  "retryBranchWorkflowApprovalPending": false
+}

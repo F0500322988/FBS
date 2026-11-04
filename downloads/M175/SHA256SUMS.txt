@@ -1,0 +1,4 @@
+9af33756f6e9a61e5b1eb2b6327d6848c49996f3ace3b33f7ea50361dbd21393  ./FBS-Classroom-Student-M175-macOS-Universal-PREVIEW.pkg
+54f7062e21591339314aaa00685929f5dfe042ec864aa5712afc076f55aec2c4  ./FBS-Classroom-Teacher-M175-macOS-Universal-PREVIEW.pkg
+c0c3d94676e4458fa87c71d8980485a6b0047f87fc515b8176b78ce05b290ebb  ./FBS-Classroom-Student-M175-macOS-Universal-PREVIEW.dmg
+d8681fccbfc0395d8bcad01d4594c246b222eebf7b5a1657a27ffb1d3c445a65  ./FBS-Classroom-Teacher-M175-macOS-Universal-PREVIEW.dmg
