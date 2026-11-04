@@ -53,6 +53,8 @@ try
     command.Environment["FBS_TEST_EXPECTED"] = labKey; // Random disposable fixture, never printed.
     using var process = Process.Start(command)!;
     if (!process.WaitForExit(15000)) { process.Kill(true); throw new TimeoutException("PowerShell compatibility test timed out"); }
+    Console.WriteLine("PowerShell compatibility exit code: " + process.ExitCode);
+    if (process.ExitCode != 0) Console.Error.WriteLine("FAIL: PowerShell compatibility exit code " + process.ExitCode);
     Check(process.ExitCode == 0, "student key remains compatible with the legacy PowerShell launcher format");
     var damagedKey = Path.Combine(root, "damaged-pairing.dpapi");
     File.WriteAllText(damagedKey, new string('z', 128));
