@@ -1,0 +1,33 @@
+name: Windows M176 native and DPAPI checks
+on:
+  push:
+    branches: ['build/windows-m176-checks']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - name: Native safety, local TLS, DPAPI compatibility and atomic file save
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Path checks-output -Force | Out-Null
+          $projects = @('FBS.NativeGate.Tests','FBS.Setup.Tests','FBS.WindowsSetup.Tests','FBS.FileDelivery.Tests')
+          foreach ($project in $projects) {
+            $log = Join-Path 'checks-output' "$project.log"
+            & dotnet run --project "windows/$project/$project.csproj" -c Release 2>&1 | Tee-Object -FilePath $log
+            if ($LASTEXITCODE -ne 0) { throw "$project failed; no success report was written" }
+          }
+          @{ stage='M176'; platform='Windows'; nativeGatePassed=$true; localTlsPassed=$true; dpapiAndPowerShellCompatibilityPassed=$true; atomicFileSavePassed=$true; guiExecuted=$false; installerExecuted=$false } | ConvertTo-Json | Set-Content checks-output/Windows-validation.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FBS-M176-Windows-Checks
+          path: checks-output/*
+          if-no-files-found: error
