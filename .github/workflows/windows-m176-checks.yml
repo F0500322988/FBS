@@ -45,6 +45,9 @@ jobs:
           $results | ConvertTo-Json | Set-Content checks-output/Windows-project-results.json
           if ($failedProjects.Count -gt 0) { throw ('Failed projects: ' + ($failedProjects -join ', ')) }
           @{ stage='M178'; platform='Windows'; nativeGatePassed=$true; localTlsPassed=$true; dpapiAndPowerShellCompatibilityPassed=$true; atomicFileSavePassed=$true; isolatedWinFormsCiPassed=$true; actualStudentAppGuiExecuted=$false; guiExecuted=$false; installerExecuted=$false } | ConvertTo-Json | Set-Content checks-output/Windows-validation.json
+      - name: Install published previews, verify payload and runtime, then uninstall
+        shell: pwsh
+        run: ./windows/nsis/Test-M178-Installed.ps1
       - uses: actions/upload-artifact@v4
         if: always()
         with:

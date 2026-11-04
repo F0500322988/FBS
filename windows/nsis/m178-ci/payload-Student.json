@@ -1,0 +1,236 @@
+{
+  "role": "Student",
+  "version": "0.178.0-preview",
+  "files": [
+    {
+      "path": "Configure-Student.ps1",
+      "size": 751,
+      "sha256": "4c6b5d700c0bd31245ea713d641dd2375412808999b9c164c65140d8c588e004"
+    },
+    {
+      "path": "Runtime/LICENSE",
+      "size": 148217,
+      "sha256": "8cc9bb466b19fc7e7cc99d03e9df1132021fda8b01eea2624c58bb372dbef576"
+    },
+    {
+      "path": "Runtime/Start-Student-Agent.ps1",
+      "size": 654,
+      "sha256": "d6af9e0f8f6cc6fa2427110cc08ccb55418a10ead2caf0a7cb2e35ae712d5955"
+    },
+    {
+      "path": "Runtime/ThirdParty-Licenses/Node-LICENSE.txt",
+      "size": 148217,
+      "sha256": "8cc9bb466b19fc7e7cc99d03e9df1132021fda8b01eea2624c58bb372dbef576"
+    },
+    {
+      "path": "Runtime/ThirdParty-Licenses/microsoft.netcore.app.runtime.win-x64-8.0.33-LICENSE.TXT",
+      "size": 1139,
+      "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
+    },
+    {
+      "path": "Runtime/ThirdParty-Licenses/microsoft.netcore.app.runtime.win-x64-8.0.33-THIRD-PARTY-NOTICES.TXT",
+      "size": 68910,
+      "sha256": "b60b2912da28eaa6518593c9e2efb5334ee062d3c42e80d8fdfa806b3dc52977"
+    },
+    {
+      "path": "Runtime/ThirdParty-Licenses/microsoft.windowsdesktop.app.runtime.win-x64-8.0.33-LICENSE",
+      "size": 1137,
+      "sha256": "a89886665765362eb77e0f8e26602c924520041d1711b2eedc136434fe4d01ab"
+    },
+    {
+      "path": "Runtime/authenticated-preview-channel.js",
+      "size": 2327,
+      "sha256": "c27040512591581b243a214c5b4737be82053c38529be16241b6a25a6f35aa91"
+    },
+    {
+      "path": "Runtime/authenticated-preview-transport.js",
+      "size": 2053,
+      "sha256": "0d085efebea972dacc7b8c5efa734dc804062f1cd4d558fa2f648237b2b72b74"
+    },
+    {
+      "path": "Runtime/classroom-broadcast.js",
+      "size": 3869,
+      "sha256": "ed8c65b9e95b9d0207e886853b4128e1ec4ecd4d84416b6292bfcb8fca400118"
+    },
+    {
+      "path": "Runtime/classroom-files.js",
+      "size": 3229,
+      "sha256": "a64b3b9e014c442afd05a1dd26e5ef8d8a724dd96acbfb0d802728aebed4a7be"
+    },
+    {
+      "path": "Runtime/classroom-messages.js",
+      "size": 3944,
+      "sha256": "b46ee2acce746ad2dfaad458c6de1383fdd1a07e148057d47297abde9d203d51"
+    },
+    {
+      "path": "Runtime/classroom-pause.js",
+      "size": 3562,
+      "sha256": "f6b03c223afb34a04e42b5aabc2bc0d2559b7eecb7c6c86ff3e41edd6f5b6a0d"
+    },
+    {
+      "path": "Runtime/control-commands.js",
+      "size": 1641,
+      "sha256": "6333cd510aaf3ee9186484772f7feaae37b509d0c3371311c87675b90f136a08"
+    },
+    {
+      "path": "Runtime/control-lease.js",
+      "size": 1580,
+      "sha256": "fcf019784d95e14fdc666d36cc2b01b6bcdbf3433e8ac148917079931cb0713a"
+    },
+    {
+      "path": "Runtime/control-session-state.js",
+      "size": 1368,
+      "sha256": "c8cf3e255998c10cb005fe9997c3c3ded19f01e13d8e60ac0a6edbd8ce5be3ec"
+    },
+    {
+      "path": "Runtime/device-identity.js",
+      "size": 1877,
+      "sha256": "cc2bc2b882fb6ea7217d870ed8c83197173a563deaba087e913dd868f2c62c00"
+    },
+    {
+      "path": "Runtime/enrollment.js",
+      "size": 1106,
+      "sha256": "4ebe044a68602e4b6c1ed4e7122365e7eeadd8890d57c3e15a6f895e998a339c"
+    },
+    {
+      "path": "Runtime/lab-settings.js",
+      "size": 3491,
+      "sha256": "9278828359b5c099e0d1364ff4665a6c8cd0d34f6d469254cf68166cbc57df92"
+    },
+    {
+      "path": "Runtime/lan.js",
+      "size": 570,
+      "sha256": "d23bce53bf059bbc56ad34a5066c7118bbe7845a24901394952d38f5c3f0fe70"
+    },
+    {
+      "path": "Runtime/local-control-auth.js",
+      "size": 692,
+      "sha256": "841e0f4648d57487518b7f66df7eeaa931701d86911742e9b85fdd50edbdf93b"
+    },
+    {
+      "path": "Runtime/node.exe",
+      "size": 87034184,
+      "sha256": "dccc52de28d8df2ee22d2062424f8c563070d95d8ad70c54c4bf01d590dec14f"
+    },
+    {
+      "path": "Runtime/one-student-rehearsal.js",
+      "size": 2259,
+      "sha256": "f45040adf18834f86589bb660bef685bf130f01f59b5b73043430e013e0a7d43"
+    },
+    {
+      "path": "Runtime/pinned-https.js",
+      "size": 2128,
+      "sha256": "f742c6f93b0354dd366525689553caf351ac6f93556948e6411aecfadc250d0b"
+    },
+    {
+      "path": "Runtime/preview-validation.js",
+      "size": 1073,
+      "sha256": "8ef27cd99cc6002d6d09d4ee70a40d301362410d351655790d6cf9a165e31dc1"
+    },
+    {
+      "path": "Runtime/public/app.js",
+      "size": 55351,
+      "sha256": "281a2f19704066c708216969a6bf8a12510f1f92d731568049d9ef8a86218ed4"
+    },
+    {
+      "path": "Runtime/public/index.html",
+      "size": 15855,
+      "sha256": "4d8e230ccb2d988ca70f811d98afea42fd2ccf5825ad37baf7a218e577b767a1"
+    },
+    {
+      "path": "Runtime/public/m105-events.js",
+      "size": 1490,
+      "sha256": "1ecf4a4c9b2a174273d655039e7a579b801e985716a0fc322fd19117d226a931"
+    },
+    {
+      "path": "Runtime/public/m106-alerts.js",
+      "size": 1251,
+      "sha256": "4669d7a4c91d80f3f18e0d02953806ed82b2440442d058fa8828a32f219e4acc"
+    },
+    {
+      "path": "Runtime/public/m107-priority.js",
+      "size": 1564,
+      "sha256": "5bd6bb410bd12f924ce581c16bb25cf41f6c6a4c834831b026630eddf7a71112"
+    },
+    {
+      "path": "Runtime/public/m108-groups.js",
+      "size": 1408,
+      "sha256": "b1cdf7006e5e1d43a66569f67b7f9bcd9eebf88111a3dfa74dd47c43e0cc865e"
+    },
+    {
+      "path": "Runtime/public/m109-custom-groups.js",
+      "size": 1709,
+      "sha256": "9e6729525b24c86769e22162da245f08fb2540b420cd1e606f7855dcefff559c"
+    },
+    {
+      "path": "Runtime/public/m110-seat-map.js",
+      "size": 1786,
+      "sha256": "1b36be193de782359eb7ec43b0a62d84252692585af998b4f995b54b0c61bf84"
+    },
+    {
+      "path": "Runtime/public/m111-seat-transfer.js",
+      "size": 1919,
+      "sha256": "2f41b728a8ecde429abcaacd36d8dde9d4a05cf34f0db5cbfb48a3a84308c5df"
+    },
+    {
+      "path": "Runtime/public/m112-seat-management.js",
+      "size": 1352,
+      "sha256": "55718b6edb77f9b9dda226ab74957de1ee4e92d93acce81b871c638a65f795ee"
+    },
+    {
+      "path": "Runtime/public/m113-seat-drag.js",
+      "size": 1156,
+      "sha256": "e6a2bdde2243bf389b9feabe52361e33b8600e47c5fb58ce186c580652b7a892"
+    },
+    {
+      "path": "Runtime/public/m114-seat-view.js",
+      "size": 990,
+      "sha256": "c2fb8573e1460fcb3b3cd304b66bb8aab31a928390b822edffba15d9616fb189"
+    },
+    {
+      "path": "Runtime/public/style.css",
+      "size": 16742,
+      "sha256": "95984c73af5960ff896304a244f304490677594fbabe7b0f83b0d5ba19a46b14"
+    },
+    {
+      "path": "Runtime/readiness-evidence.js",
+      "size": 1485,
+      "sha256": "910817136471419edb87926f287a20aad8bffbbd3cbf96e1c9cec2d11fc9c729"
+    },
+    {
+      "path": "Runtime/server.js",
+      "size": 17237,
+      "sha256": "6f5ce8e50fd48d74dbb3eaa698d4e026b9f10e4474a946f4363100e0ab7011ec"
+    },
+    {
+      "path": "Runtime/single-device-preflight.js",
+      "size": 2456,
+      "sha256": "1437e741c98a2c56f188da8aba86e4ed41302837941d48d5d4355dc33350f320"
+    },
+    {
+      "path": "Runtime/student-agent.js",
+      "size": 19239,
+      "sha256": "da7840b0995ee512dc442f8630852ffa1289462f97abb9bd79dfee946263d60d"
+    },
+    {
+      "path": "Runtime/teacher-endpoint.js",
+      "size": 1062,
+      "sha256": "badce7ce60a9511240edc1184243d0b900d820740c8d1dcc840147f4bdc83ede"
+    },
+    {
+      "path": "Runtime/teacher-lan.js",
+      "size": 8689,
+      "sha256": "f99f42774e2355cd8478aecb51e198a9e98310b2f2e4b29d6b8fca1ea1bf5976"
+    },
+    {
+      "path": "Student/FBS.Student.Native.exe",
+      "size": 161847914,
+      "sha256": "e826fb62b0386ef317a07dd039307ee98a4c87e67bd53c55fbf9bed5be376ada"
+    },
+    {
+      "path": "Student/FBS.Student.Native.pdb",
+      "size": 46008,
+      "sha256": "a7f53080abbfc4fc36a0df0ba0adbafed4a645a83bf182e5adccaa50528d6d7d"
+    }
+  ]
+}
