@@ -1,0 +1,39 @@
+{
+  "stage": "M174",
+  "applicationVersion": "0.174.0-preview",
+  "javascript": {
+    "passed": 1454,
+    "failed": 0,
+    "skipped": 0
+  },
+  "browser": {
+    "engine": "Chromium",
+    "passed": true,
+    "source": "Canvas MediaStream",
+    "displayPickerMocked": true,
+    "jpegUploadVerified": true,
+    "stopCancelNavigationFailureCleanupVerified": true
+  },
+  "tlsBroadcastIntegration": {
+    "passed": true,
+    "platform": "Linux",
+    "realTeacherAndStudentProcesses": true,
+    "jpegDelivered": true,
+    "stopAndRevocationVerified": true
+  },
+  "dotnet": {
+    "setupTlsPassed": 48,
+    "nativeGatePassed": 80,
+    "platform": "Linux",
+    "windowsTeacherPublishPassed": true,
+    "windowsStudentPublishPassed": true,
+    "buildWarnings": 0
+  },
+  "windowsNativeViewerExecuted": false,
+  "actualWindowsDesktopCaptured": false,
+  "windowsInstallExecuted": false,
+  "windowsUninstallExecuted": false,
+  "windowsDpapiExecuted": false,
+  "twoPcLanTested": false,
+  "fortyDeviceLoadTested": false
+}
