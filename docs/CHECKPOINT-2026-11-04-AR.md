@@ -1,4 +1,4 @@
-# نقطة الاستئناف — M174 — 4 نوفمبر 2026
+# نقطة الاستئناف — M175 — 4 نوفمبر 2026
 
 - المصدر الحالي `/workspace/FBS`؛ لا تُعد استخراج الأرشيف القديم فوقه.
 - تم إنتاج مثبّت EXE مستقل للمعلم وآخر للطالب باستخدام NSIS؛ إصدار التطبيق الداخلي 0.170.0-preview، ومرحلة التغليف M171.
@@ -40,3 +40,29 @@
 - تجهيز M174 في /workspace/setup/m174-installer-stage وبناؤه إلى /workspace/setup/m174-installers.
 
 - اكتمل بناء مثبّتي M174 وفحص87 ملفًا مستخرجًا؛ الناتجان والتقرير في /workspace/outputs.
+
+## تحديث M175 — macOS / iMac
+
+- أكد المستخدم دعم iMac Intel وApple Silicon معًا، وأذن صراحة برفع المصدر وتشغيل بناء macOS ونشر حزم PKG/DMG تجريبية.
+- أُضيف macos/Sources لتطبيقي AppKit، وحفظ الإعداد في Keychain، وتشغيل Node المضمن، ورسائل الطالب وعرض شاشة المعلم. أضيف macos/build.sh وverify-payload.py واختبارات إعداد Swift وقفل بصمات Node22.23.4 الرسميتين. الحد الأدنى المستهدف macOS13.
+- نُشر المصدر الأولي في build/m175-macos عند68c5c330c1bfbb16e1879d50408d53dc9ce9825e. مهمة GitHub41818786658 نجحت في اختبارات JavaScript وفشلت في تجميع Swift. لم تُنتج PKG/DMG أو يُنشر إصدار Mac بعد.
+- عُدلت عزلة MainActor ومؤقتات واجهة Mac وحماية الردود القديمة واسم معمل Mac. التصحيحات محفوظة محليًا في /workspace/FBS، ونسخة الرفع /workspace/setup/github-delivery-m171 عند11e5bd2. تحديث الفرع فشل عدة مرات بخطأ GitHub الداخلي commit_refs/Internal Server Error. لا force ولا حذف فروع.
+- مُنع تلقائيًا توسيع فروع workflow إلىbuild/m175-macos-*؛ سُئل المستخدم صراحة عن هذا النطاق وما زالت الموافقة مطلوبة عند كتابة النقطة. ملف workflow المحلي مُعدّ للمراجعة فقط؛ لا تنشره أو تشغّل فرعًا إضافيًا حتى تصل الموافقة.
+- تحقق محلي:1454 JavaScript ناجحًا،5 اختبارات Python لمطابقة الحمولة ناجحة، وصياغة bash صحيحة. رفض سكربت Mac التنفيذ على Linux ولم ينشئ حزمة وهمية. تجميع AppKit واختبارات Keychain/GUI على Mac لم تنجح أو تُنفذ بعد.
+- آخر نسخة Windows قابلة للتنزيل M174 في downloads/m174-preview. لم تُغير main ولم تنشر إعداد البيئة.
+
+### متابعة موافقة المستخدم وبناء Mac
+
+- وافق المستخدم صراحة لاحقًا: «نعم موافقة كاملة على جميع الخطوات التالية» بعد سؤال نطاق build/m175-macos-*. لم تعد موافقة فروع إعادة البناء معلقة؛ لا تطلبها مجددًا.
+- نُشرت فروعr2 وr3 وr4 ضمن النطاق الموافق عليه. مشغّلARM فيr2 بقي queued؛ نُقل البناء إلىmacos-15-intel فيr3، مع بقاء الملف Universal للمعالجين.
+- نجح تجميع Swift للمعالجين فعليًا على مشغّلIntel في41833907902؛ فشل فحصlipo بسبب ترتيب المعاملات، ثم صُحح في4a4abef ورُفعbuild/m175-macos-r4.
+- نجحت23 فحوص إعداد Swift محليًا في حاويةSwift6.2، ونجح فحص صياغة ملفاتSwift كلها. هذه ليست اختبارات AppKit أوKeychain على جهاز مستخدم.
+- تقرير Mac يذكر معالجSelf-check الفعلي ولا يدّعي تشغيل المعالج الآخر. لا تدّعِ إنتاجPKG/DMG حتى نجاحr4 أو أحدث وظهور الملفات.
+
+### M175 مكتملة كحزم Mac تجريبية
+
+- نجحr5 كاملًا في41836081806: تجميعUniversal وفحوص المصدر والحزم ومونتDMG وتثبيت/إزالةالتطبيقين وفحصالمثبتعلىMacIntel.
+- الإصدارالحالي https://github.com/F0500322988/FBS/releases/tag/m175-macos-preview-5-1 ؛ آخرمصدرNativeمختبر3d9dc17. PKGحوالي75.5MBوDMGحوالي84.9MBلكلدور. نُزلتالأربعةإلى/workspace/outputsوطابقتSHA256ورؤوسXAR/UDIF.
+- تقاريرمؤكدة: installedOnMacTested=true وuninstallOnIsolatedRunnerTested=true وnativeBundleSelfCheck=true وloopbackHTTPTested=true. GUI/Keychain/ScreenRecording/TwoMacLan=false. selfCheckHostArchitecture=x86_64 وotherArchitectureExecuted=false.
+- 23 SwiftConfigChecksو5PythonPayloadChecksناجحةعلىMac؛1454JSمشتركةناجحة. توقيعAd-hocفقط،وليسDeveloperIDأوNotarization.
+- الموافقاتمكتملةلكلالبناءوالنشرالتجريبيولفروعbuild/m175-macos-*؛لاتعدطلبها. لا تغييرmainأونشرإعدادالبيئة.

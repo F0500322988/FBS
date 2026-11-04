@@ -3,11 +3,11 @@
 Local-network classroom management software for separate Windows and macOS labs, targeting up to 40 student endpoints per lab.
 
 ## Status
-Windows development preview, application version `0.174.0-preview`. M174 adds explicit teacher screen/window sharing as JPEG snapshots (about 1 fps, no audio) to selected approved students over pinned TLS. Students open a separate Windows viewer. Read [M174-START-HERE.md](M174-START-HERE.md) for usage, limits and validation. Messaging and the grid/list workspace remain included.
+Windows preview M174 remains available. macOS/iMac preview M175 now includes separate universal Teacher and Student applications for Intel and Apple Silicon, targeting macOS 13+. Download PKG or DMG from [the verified Mac preview release](https://github.com/F0500322988/FBS/releases/tag/m175-macos-preview-5-1). See [M175-START-HERE.md](M175-START-HERE.md) for exact evidence and limits.
 
-1454 JavaScript tests, browser acceptance with a Canvas MediaStream and a mocked display picker, actual local teacher/student TLS broadcast integration, 48 portable .NET setup/TLS checks and 80 NativeGate checks passed. Both Windows x64 applications published without warnings. Actual Windows desktop capture, the native viewer, installation, removal, DPAPI and two-PC acceptance remain unrun; installers are unsigned previews.
+Mac native compilation, package extraction/hash verification, DMG mounting, isolated Intel installation/removal, bundled Node and local HTTP self-checks passed. The 1454 shared JavaScript tests, 23 Swift configuration checks and 5 Python payload checks passed. macOS GUI, Keychain interaction, screen recording and native Apple Silicon execution remain untested. Apps are ad-hoc signed, without Developer ID signing or notarization. Windows physical GUI/installation acceptance remains separate from these Mac checks.
 
-Remote input remains disabled. Locking, file delivery, persistent lab management, full visual matching and macOS remain incomplete. Older milestone notes are historical.
+Remote input remains disabled. Locking, file delivery, persistent lab management and full visual matching remain incomplete. Older milestone notes are historical.
 
 ## Components
 - `src/shared`: protocol contracts and security requirements
