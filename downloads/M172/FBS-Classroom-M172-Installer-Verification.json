@@ -1,0 +1,33 @@
+{
+  "stage": "M172",
+  "applicationVersion": "0.170.0-preview",
+  "buildTool": "NSIS native Linux compiler / signed Debian packages",
+  "buildPassed": true,
+  "allPayloadSha256Verified": true,
+  "unexpectedPayloadRejected": true,
+  "windowsInstallExecuted": false,
+  "windowsGuiExecuted": false,
+  "twoPcLanTested": false,
+  "installers": [
+    {
+      "role": "Teacher",
+      "file": "FBS-Classroom-Teacher-M172-Setup-PREVIEW.exe",
+      "size": 69282361,
+      "sha256": "259db01beeb091733efedb51143283ded4c6d16eb6c9c5c3493b874fbc21388d",
+      "payloadFilesVerified": 42,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    },
+    {
+      "role": "Student",
+      "file": "FBS-Classroom-Student-M172-Setup-PREVIEW.exe",
+      "size": 69242856,
+      "sha256": "1ae577e2e7ec0f6a267c99eb8a759e9badd113d4c097f2b8c187fcae30f9817a",
+      "payloadFilesVerified": 41,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    }
+  ]
+}
