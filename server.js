@@ -10,7 +10,8 @@ const {createControlCommands} = require('./control-commands');
 const PORT = Number(process.env.PORT || 4177);
 const HOST = '127.0.0.1'; // loopback only: demo is not a LAN-ready security implementation
 const students = new Map();
-const lab = {name:process.platform==='darwin'?'معمل Mac':'معمل ويندوز 11', capacity:40};
+const labSettings=require('./lab-settings').createLabSettings(process.env.FBS_LAB_SETTINGS_FILE||path.join(path.dirname(process.env.FBS_ENROLLMENT_FILE||path.join(__dirname,'data','enrollment.json')),'lab-settings.json'));
+function labStatus(){try{const s=labSettings.snapshot();return {name:s.name,platform:s.platform,capacity:40,settingsAvailable:true};}catch{return {name:'المعمل — تعذر قراءة الإعدادات',capacity:40,settingsAvailable:false};}}
 const demo = process.env.FBS_DEMO === '1';
 const lan = !demo && process.env.FBS_PAIRING_KEY ? createTeacherLan({secret:process.env.FBS_PAIRING_KEY,port:Number(process.env.FBS_AGENT_PORT||4180),discoveryPort:Number(process.env.FBS_DISCOVERY_PORT||4181),discoveryEnabled:process.env.FBS_DISCOVERY_ENABLED!=='0'}) : null;
 if (demo) for(let i=1;i<=21;i++) students.set(`PC-${String(i).padStart(2,'0')}`, {id:`PC-${String(i).padStart(2,'0')}`,online:i!==17,os:'Windows 11',lastSeen:Date.now()- (i===17?120000:Math.round(Math.random()*9000)), demo:true});
@@ -145,6 +146,13 @@ const server=http.createServer((req,res)=>{
    }catch(e){return send(res,409,{error:e.message});}
   }).catch(()=>send(res,400,{error:'Invalid broadcast request'}));
  }
+ if(url.pathname==='/api/lab-settings'){
+  if(!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
+  if(req.method==='GET'){try{return send(res,200,labSettings.snapshot());}catch(e){return send(res,e.status||503,{error:e.message});}}
+  if(req.method!=='PUT')return send(res,405,{error:'Method not allowed'});
+  if(!teacherOriginAllowed(req))return send(res,403,{error:'Origin rejected'});
+  return readJson(req,65536).then(body=>{try{return send(res,200,labSettings.save(body));}catch(e){return send(res,e.status||503,{error:e.message});}}).catch(()=>{if(!res.headersSent)send(res,400,{error:'Invalid lab settings request'});});
+ }
  if(url.pathname==='/api/files'){
   if(!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
   if(req.method==='GET')return send(res,200,{files:fileStore.snapshot()});
@@ -173,7 +181,7 @@ const server=http.createServer((req,res)=>{
  }
  if(url.pathname==='/api/auth')return send(res,200,{required:!!teacherPassword,authenticated:isAuthenticated(req),startupId});
  if((url.pathname==='/api/status'||url.pathname==='/api/frames')&&!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
- if(req.method==='GET' && url.pathname==='/api/status') return send(res,200,{lab,mode:demo?'demo':lan?'live':'unconfigured',students:[...(demo?students:lan?lan.devices:new Map()).values()].map(s=>({...s,online:s.demo?s.online:Date.now()-s.lastSeen<20000,approved:enrollment.approved.has(s.id)&&enrollment.keys.get(s.id)===s.publicKey})),features:{screenView:true,remoteControl:false,screenBroadcast:true,fileTransfer:true,messages:true}});
+ if(req.method==='GET' && url.pathname==='/api/status') return send(res,200,{lab:labStatus(),mode:demo?'demo':lan?'live':'unconfigured',students:[...(demo?students:lan?lan.devices:new Map()).values()].map(s=>({...s,online:s.demo?s.online:Date.now()-s.lastSeen<20000,approved:enrollment.approved.has(s.id)&&enrollment.keys.get(s.id)===s.publicKey})),features:{screenView:true,remoteControl:false,screenBroadcast:true,fileTransfer:true,messages:true,labManagement:true}});
  if(req.method==='GET' && url.pathname==='/api/frames') return send(res,200,{frames:lan?[...lan.frames.entries()].filter(([id,v])=>Date.now()-v.at<5000&&lan.devices.has(id)&&enrollment.approved.has(id)&&enrollment.keys.get(id)===lan.devices.get(id).publicKey).map(([id,v])=>({id,jpeg:v.jpeg,at:v.at})):[]});
  if(req.method==='GET' && (url.pathname==='/' || url.pathname==='/app.js' || url.pathname==='/style.css' || /^\/m1(?:0[5-9]|1[0-4])-[a-z-]+\.js$/.test(url.pathname))) {
   const file=url.pathname==='/'?'index.html':url.pathname.slice(1);

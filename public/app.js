@@ -17,7 +17,7 @@ let previousMonitorSnapshot=null,monitorHistory=[],monitorInterrupted=false;let 
 const labels={home:'الرئيسية',screens:'عرض الشاشات',broadcast:'مشاركة الشاشة',control:'التحكم عن بُعد',lock:'قفل الأجهزة',files:'توزيع الملفات',messages:'الرسائل',labs:'إدارة المعمل',monitor:'مراقبة الأجهزة',enrollment:'اعتماد الأجهزة'};
 const el=id=>document.getElementById(id);
 let deviceView='grid',refreshBusy=false,previewUnavailable=false;
-const plannedPages=new Set(['control','lock','labs']);
+const plannedPages=new Set(['control','lock']);
 function updatePageNotice(){
  const notice=el('notice');
  notice.hidden=true;
@@ -28,6 +28,8 @@ function updatePageNotice(){
 function render(){
  const custom=pageNow==='monitor'||pageNow==='enrollment';
  el('view-toolbar').hidden=custom||plannedPages.has(pageNow)||pageNow==='messages';
+ el('labs-panel').hidden=pageNow!=='labs';
+ if(pageNow==='labs'){el('view-toolbar').hidden=true;el('files-panel').hidden=true;el('messages-panel').hidden=true;el('broadcast-panel').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;return;}
  el('files-panel').hidden=pageNow!=='files';
  if(pageNow==='files'){el('view-toolbar').hidden=true;el('messages-panel').hidden=true;el('broadcast-panel').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;renderFileRecipients();return;}
  el('broadcast-panel').hidden=pageNow!=='broadcast';
@@ -40,7 +42,7 @@ function render(){
  if(pageNow==='enrollment'){renderEnrollment();return;}
  if(plannedPages.has(pageNow)){el('devices').replaceChildren();return;}
  const q=el('search').value.trim().toLowerCase();
- const filtered=roster.filter(s=>s.id.toLowerCase().includes(q));
+ const filtered=groupRoster().filter(s=>s.id.toLowerCase().includes(q));
  el('visible-count').textContent=`عرض ${filtered.length} من ${roster.length} جهاز`;
  el('empty-state').hidden=filtered.length>0;
  el('empty-state').textContent=lastStatusAt===0?'بيانات الأجهزة غير متاحة حاليًا':roster.length===0?'لا توجد أجهزة مسجلة بعد. شغّل تطبيق الطالب واتصل بالمعلم، ثم راجع صفحة اعتماد الأجهزة.':'لا توجد أجهزة تطابق البحث';
@@ -68,6 +70,7 @@ async function refresh(){
   if(!r.ok)throw new Error('HTTP '+r.status);
   const data=await r.json();roster=Array.isArray(data.students)?data.students:[];
   lastStatusMode=data.mode;lastStatusAt=Date.now();recordMonitorSnapshot(roster,data.mode);
+  await refreshLabSettings();
   frames.clear();previewUnavailable=false;
   if(pageNow==='screens'){
    try{
@@ -284,7 +287,7 @@ const oldRenderMonitor=renderMonitor;renderMonitor=function(){refreshSeatFocusOp
 // M173: plain-text teacher messages; no remote command execution.
 const messageSelection=new Set();let messageSending=false,messageHistoryBusy=false,messageRecipientsKey='';
 function renderMessageRecipients(){
- const available=roster.filter(s=>s.online===true&&s.approved===true);
+ const available=groupRoster().filter(s=>s.online===true&&s.approved===true);
  const ids=new Set(available.map(s=>s.id));for(const id of messageSelection)if(!ids.has(id))messageSelection.delete(id);
  const key=JSON.stringify(available.map(s=>s.id));
  if(key!==messageRecipientsKey){
@@ -329,12 +332,13 @@ async function loadMessageHistory(){
 // M174: explicit browser display selection and key-bound, short-lived JPEG broadcast.
 const broadcastSelection=new Set();let broadcastRecipientsKey='',broadcastStream=null,broadcastSession=null,broadcastTimer=null,broadcastBusy=false,broadcastSending=false,broadcastGeneration=0,broadcastSequence=0,broadcastStateBusy=false;
 function updateBroadcastButtons(){
+ el('lab-group-filter').disabled=broadcastBusy||!!broadcastSession;
  el('broadcast-start').disabled=broadcastBusy||!!broadcastSession||!broadcastSelection.size;
  el('broadcast-stop').disabled=!broadcastBusy&&!broadcastSession;
  for(const input of el('broadcast-recipients').querySelectorAll('input'))input.disabled=broadcastBusy||!!broadcastSession;
 }
 function renderBroadcastRecipients(){
- const available=roster.filter(s=>s.online===true&&s.approved===true),ids=new Set(available.map(s=>s.id));
+ const available=groupRoster().filter(s=>s.online===true&&s.approved===true),ids=new Set(available.map(s=>s.id));
  for(const id of broadcastSelection)if(!ids.has(id))broadcastSelection.delete(id);
  const key=JSON.stringify(available.map(s=>s.id));
  if(key!==broadcastRecipientsKey){
@@ -411,7 +415,7 @@ window.addEventListener('pagehide',()=>{const stopped=broadcastSession;broadcast
 const fileSelection=new Set();let fileRecipientsKey='',fileSending=false,fileHistoryBusy=false;
 function updateFileSend(){el('file-send').disabled=fileSending||!fileSelection.size||!el('file-input').files.length;}
 function renderFileRecipients(){
- const available=roster.filter(s=>s.online===true&&s.approved===true),ids=new Set(available.map(s=>s.id));for(const id of fileSelection)if(!ids.has(id))fileSelection.delete(id);
+ const available=groupRoster().filter(s=>s.online===true&&s.approved===true),ids=new Set(available.map(s=>s.id));for(const id of fileSelection)if(!ids.has(id))fileSelection.delete(id);
  const key=JSON.stringify(available.map(s=>s.id));if(key!==fileRecipientsKey){fileRecipientsKey=key;el('file-recipients').replaceChildren(...available.map(s=>{const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=s.id;input.checked=fileSelection.has(s.id);input.addEventListener('change',()=>{if(input.checked)fileSelection.add(s.id);else fileSelection.delete(s.id);updateFileSend();});label.append(input,document.createTextNode(s.id));return label;}));if(!available.length)el('file-recipients').textContent='لا توجد أجهزة متصلة ومعتمدة';}updateFileSend();
 }
 el('file-input').addEventListener('change',updateFileSend);el('file-all').addEventListener('click',()=>{for(const input of el('file-recipients').querySelectorAll('input')){input.checked=true;fileSelection.add(input.value);}updateFileSend();});
@@ -434,3 +438,54 @@ async function loadFileHistory(){
   el('file-history').replaceChildren(...result.files.map(f=>{const card=document.createElement('article');card.className='message-card';const title=document.createElement('strong');title.textContent=f.name+' — '+Math.ceil(f.size/1024)+' كيلوبايت';card.append(title);for(const r of f.recipients){const item=document.createElement('small');item.textContent=r.id+' — '+(states[r.state]||'غير معروف');card.append(item);}return card;}));if(!result.files.length)el('file-history').textContent='لم تُرسل ملفات في هذه الجلسة';
  }catch{el('file-history').textContent='تعذر تحديث سجل الملفات؛ لا يوجد تأكيد حديث';}finally{fileHistoryBusy=false;}
 }
+
+// M177: persisted organization only. Groups never grant enrollment or input permissions.
+let labSnapshot=null,labDraft=null,labDirty=false,labBusy=false,labSaving=false,labGroupId='',labGeneration=0;
+function groupRoster(){if(!labGroupId)return roster;const group=labSnapshot?.groups.find(g=>g.id===labGroupId);return group?roster.filter(s=>group.deviceIds.includes(s.id)):[];}
+function updateLabFilter(){
+ const select=el('lab-group-filter');const options=[new Option('جميع الأجهزة','')];
+ for(const g of labSnapshot?.groups||[])options.push(new Option(g.name,g.id));
+ if(labGroupId&&!options.some(o=>o.value===labGroupId))options.push(new Option('المجموعة غير متاحة — أعد الاختيار',labGroupId));
+ select.replaceChildren(...options);select.value=labGroupId;
+}
+function markLabDirty(){labDirty=true;el('lab-save').disabled=labSaving||!labDraft;el('lab-result').textContent='توجد تعديلات غير محفوظة';}
+function drawLabDraft(){
+ if(!labDraft)return;
+ el('lab-title').value=labDraft.name;el('lab-platform').value=labDraft.platform;
+ el('lab-groups').replaceChildren(...labDraft.groups.map(g=>{
+  const row=document.createElement('fieldset'),legend=document.createElement('legend');legend.textContent='مجموعة أجهزة';
+  const name=document.createElement('input');name.value=g.name;name.maxLength=60;name.required=true;name.setAttribute('aria-label','اسم المجموعة');name.addEventListener('input',()=>{g.name=name.value;markLabDirty();});
+  const members=document.createElement('textarea');members.value=g.deviceIds.join(', ');members.setAttribute('aria-label','معرّفات أجهزة المجموعة');members.placeholder='PC-01, PC-02';members.maxLength=3000;members.addEventListener('input',()=>{g.deviceIds=members.value.split(/[,،\n]/).map(s=>s.trim()).filter(Boolean);markLabDirty();});
+  const remove=document.createElement('button');remove.type='button';remove.textContent='حذف المجموعة';remove.addEventListener('click',()=>{labDraft.groups=labDraft.groups.filter(x=>x.id!==g.id);markLabDirty();drawLabDraft();});row.append(legend,name,members,remove);return row;
+ }));
+ el('lab-add-group').disabled=labSaving||labDraft.groups.length>=20;el('lab-save').disabled=labSaving||!labDirty;
+}
+async function refreshLabSettings(force=false){
+ if(labBusy||labSaving)return;labBusy=true;const generation=++labGeneration;
+ try{
+  const r=await fetch('/api/lab-settings',{cache:'no-store',signal:AbortSignal.timeout(4000)});if(!r.ok)throw Error();const data=await r.json();if(generation!==labGeneration)return;if(!Array.isArray(data.groups)||!Number.isSafeInteger(data.revision))throw Error();
+  const changed=!labSnapshot||labSnapshot.revision!==data.revision;labSnapshot=data;updateLabFilter();
+  if(force||!labDirty&&(!labDraft||changed)){labDraft=structuredClone(data);labDirty=false;drawLabDraft();el('lab-result').textContent='الإعدادات المحفوظة جاهزة';}
+  else if(labDirty&&labDraft.revision!==data.revision)el('lab-result').textContent='تغيرت الإعدادات في نافذة أخرى؛ أعد تحميل المحفوظ قبل الحفظ';
+ }catch{if(generation!==labGeneration)return;labSnapshot=null;updateLabFilter();el('lab-result').textContent='تعذر قراءة إعدادات المعمل؛ لم تُستبدل الإعدادات الموجودة. تحقق من التخزين ثم أعد التحميل.';el('lab-save').disabled=true;}
+ finally{labBusy=false;}
+}
+el('lab-title').addEventListener('input',()=>{if(labDraft){labDraft.name=el('lab-title').value;markLabDirty();}});
+el('lab-platform').addEventListener('change',()=>{if(labDraft){labDraft.platform=el('lab-platform').value;markLabDirty();}});
+el('lab-add-group').addEventListener('click',()=>{if(!labDraft||labSaving||labDraft.groups.length>=20)return;labDraft.groups.push({id:crypto.randomUUID(),name:'',deviceIds:[]});markLabDirty();drawLabDraft();});
+el('lab-reload').addEventListener('click',()=>{if(labDirty&&!confirm('تجاهل التعديلات غير المحفوظة وإعادة تحميل المحفوظ؟'))return;refreshLabSettings(true);});
+el('lab-group-filter').addEventListener('change',()=>{
+ if(broadcastBusy||broadcastSession){el('lab-group-filter').value=labGroupId;return;}
+ labGroupId=el('lab-group-filter').value;messageSelection.clear();fileSelection.clear();
+ if(!broadcastBusy&&!broadcastSession)broadcastSelection.clear();
+ messageRecipientsKey='';fileRecipientsKey='';broadcastRecipientsKey='';render();
+});
+el('lab-form').addEventListener('submit',async event=>{
+ event.preventDefault();if(!labDraft||!labDirty||labSaving)return;labSaving=true;labGeneration++;for(const node of el('lab-form').querySelectorAll('input,select,textarea,button'))node.disabled=true;
+ try{
+  const r=await fetch('/api/lab-settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(labDraft),signal:AbortSignal.timeout(6000)});
+  if(!r.ok)throw Error(r.status===409?'تغيرت الإعدادات؛ أعد تحميل المحفوظ قبل الحفظ':r.status===400?'تحقق من الأسماء ومعرّفات الأجهزة: حتى20 مجموعة و40 جهازًا لكل مجموعة، دون أسماء أو معرّفات مكررة':'تعذر حفظ الإعدادات؛ بقي الملف السابق محفوظًا');
+  const saved=await r.json();labSnapshot=saved;labDraft=structuredClone(saved);labDirty=false;drawLabDraft();updateLabFilter();el('lab-name').textContent=saved.name;el('lab-result').textContent='حُفظت إعدادات المعمل والمجموعات';
+ }catch(error){el('lab-result').textContent=error.name==='TimeoutError'?'لم يصل تأكيد الحفظ؛ أعد تحميل المحفوظ قبل المحاولة مجددًا':error.message;}
+ finally{labSaving=false;for(const node of el('lab-form').querySelectorAll('input,select,textarea,button'))node.disabled=false;drawLabDraft();}
+});

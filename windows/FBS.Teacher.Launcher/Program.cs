@@ -64,6 +64,8 @@ internal static class Program
             Directory.CreateDirectory(stateDirectory);
             if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FBS_ENROLLMENT_FILE")))
                 startInfo.Environment["FBS_ENROLLMENT_FILE"] = Path.Combine(stateDirectory, "enrollment.json");
+            if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FBS_LAB_SETTINGS_FILE")))
+                startInfo.Environment["FBS_LAB_SETTINGS_FILE"] = Path.Combine(stateDirectory, "lab-settings.json");
             startInfo.Environment["PORT"] = "4177";
             var startupId = Guid.NewGuid().ToString("N");
             startInfo.Environment["FBS_STARTUP_ID"] = startupId;
