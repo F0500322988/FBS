@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
@@ -44,7 +44,7 @@ jobs:
           }
           $results | ConvertTo-Json | Set-Content checks-output/Windows-project-results.json
           if ($failedProjects.Count -gt 0) { throw ('Failed projects: ' + ($failedProjects -join ', ')) }
-          @{ stage='M178'; platform='Windows'; nativeGatePassed=$true; localTlsPassed=$true; dpapiAndPowerShellCompatibilityPassed=$true; atomicFileSavePassed=$true; guiExecuted=$false; installerExecuted=$false } | ConvertTo-Json | Set-Content checks-output/Windows-validation.json
+          @{ stage='M178'; platform='Windows'; nativeGatePassed=$true; localTlsPassed=$true; dpapiAndPowerShellCompatibilityPassed=$true; atomicFileSavePassed=$true; isolatedWinFormsCiPassed=$true; actualStudentAppGuiExecuted=$false; guiExecuted=$false; installerExecuted=$false } | ConvertTo-Json | Set-Content checks-output/Windows-validation.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
