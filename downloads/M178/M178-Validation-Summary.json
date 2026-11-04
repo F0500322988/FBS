@@ -30,17 +30,26 @@
     "signed": false
   },
   "windowsCI": {
-    "status": "queued-at-last-check",
-    "winFormsCiTestExecuted": false,
-    "currentVersionDpapiTestExecuted": false,
-    "run": "https://github.com/F0500322988/FBS/actions/runs/41865123015"
+    "status": "passed",
+    "dotnetChecks": 155,
+    "isolatedWinFormsChecks": 7,
+    "winFormsCiTestExecuted": true,
+    "currentVersionDpapiTestExecuted": true,
+    "installerExecutionAndUninstallPassed": true,
+    "installedPayloadFilesVerified": 93,
+    "bundledNodeExecuted": true,
+    "unknownFilePreservedOnUninstall": true,
+    "actualStudentAppGuiTested": false,
+    "physicalKeyboardTested": false,
+    "run": "https://github.com/F0500322988/FBS/actions/runs/41867613957"
   },
   "macOS": {
     "swiftSyntaxParsePassedOnLinux": true,
     "nativeBuildPassed": null,
     "status": "queued-at-last-check",
-    "correctedBuildRun": "https://github.com/F0500322988/FBS/actions/runs/41865372433",
+    "correctedBuildRun": "https://github.com/F0500322988/FBS/actions/runs/41866918307",
     "guiTested": false,
-    "nativeArmExecution": false
+    "nativeArmExecution": false,
+    "appleSiliconBuildRun": "https://github.com/F0500322988/FBS/actions/runs/41867962273"
   }
 }

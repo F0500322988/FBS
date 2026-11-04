@@ -110,3 +110,12 @@
 - مصدرWindowsfeature c5c16b6؛ فرعbuild/windows-m176-checks-m178-r1/run41865123015 فيالانتظار. يتضمنFBS.ScreenPause.WindowsTests بسبعةتحققاتلنوافذWinFormsمعfixtureمحلي؛ لمينفذبعدعندآخرمراجعة.
 - Macr1/run41865192141 مصدرهSwiftالقديم؛ استخدمالمصدرالمصححb49f215/فرعbuild/m175-macos-m178-r2/run41865372433. لميرفعmainولمتنشرإعداداتالبيئة.
 - MacM177Intel/ARM بقياqueued فيآخرمراجعة. WindowsM177run41860885504 نجحسابقًا؛ لاتنقلنتيجتهإلىM178.
+
+## M178 — دليل تشغيل Windows المكتمل
+
+- Windows2022 بديلًا عنwindows-latest نجح:run41866859733 اجتاز155فحص.NET، منهاWinForms7. run41867613957/job126705834349 اجتازالمشاريعالخمسةوفحصالتثبيتوالإزالةTest-M178-Installed.ps1.
+- نُزل مثبّتاM178 المنشوران بالبصماتالمثبتة، وثُبّتا داخلRUNNER_TEMP، وتحققت93حمولةمثبتةوسجلالإزالة، وشُغّلNodeالمرفقوفُحصت3سكربتات، ثمأزيلا وحُفظملفغيرمعروضمنالاختبار. لمتُجربواجهةالطالبالكاملةأولوحةمفاتيحأوحساباتحقيقية.
+- مصدرالتثبيتwindows/nsis/Test-M178-Installed.ps1 وwindows/nsis/m178-ci/payload-{Teacher,Student}.json؛ commit8d85839.
+- MacM177Intel/ARM فشلرسميًا:jobnotacquiredaftermultipleattempts وARMcapacityconstraints. Mac14أُزيلمنGitHubActions بتاريخ2026-11-02 وفقrunner-images/issues/15226؛ ليسبديلًاصالحًا.
+- Intel26run41866918307/job126703353360 وARM26run41867962273/job126707023826 queued؛ ARMينشرUniversalPKG/DMGإذااجتاز1480JS والبناءوالتثبيتوالإزالة، commit1c759e5. لاتدعنجاحNativeMac قبلالنتائج.
+- mainلميتغيروإعداداتالبيئةلمتُنشر. source9f7be26 لبدائلالصور،8d85839لفحصتثبيتWindows،1c759e5لنشرARM.
