@@ -1,4 +1,4 @@
-name: macOS M178 Apple Silicon validation
+name: macOS M178 Apple Silicon build and preview
 on:
   push:
     branches: ['build/m175-macos-m177-arm-*', 'build/m175-macos-m178-arm-*']
@@ -7,6 +7,8 @@ permissions:
   contents: read
 jobs:
   arm64:
+    permissions:
+      contents: write
     runs-on: macos-26
     timeout-minutes: 40
     steps:
@@ -14,8 +16,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22.23.4'
-      - name: Persistent lab settings on Apple Silicon
-        run: node --test tests/m177-lab-settings.test.js tests/m177-lab-api.test.js tests/m178-screen-pause.test.js
+      - name: Shared JavaScript and real TLS checks on Apple Silicon
+        run: node --test tests/*.test.js
       - name: Universal apps, native runtime, file save, installed PKG and DMG checks
         run: |
           set +e
@@ -43,3 +45,16 @@ jobs:
             ${{ runner.temp }}/fbs-m178-arm-output/SHA256SUMS.txt
           if-no-files-found: warn
           retention-days: 30
+      - name: Publish universal preview built and checked on Apple Silicon
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          fbs_release_tag="m178-macos-arm-preview-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$fbs_release_tag" \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "FBS Classroom M178 — macOS / iMac — Universal — Apple Silicon validated" \
+            --notes-file M178-START-HERE.md \
+            "$RUNNER_TEMP"/fbs-m178-arm-output/*.pkg \
+            "$RUNNER_TEMP"/fbs-m178-arm-output/*.dmg \
+            "$RUNNER_TEMP"/fbs-m178-arm-output/*.json \
+            "$RUNNER_TEMP"/fbs-m178-arm-output/SHA256SUMS.txt
