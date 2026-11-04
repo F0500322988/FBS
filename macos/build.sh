@@ -14,7 +14,7 @@ for fbs_arch in arm64 x86_64; do
     -framework AppKit -framework Security -framework CryptoKit "$fbs_mac_root"/macos/Sources/*.swift -o "$fbs_mac_work/FBS-$fbs_arch"
 done
 xcrun lipo -create "$fbs_mac_work/FBS-arm64" "$fbs_mac_work/FBS-x86_64" -output "$fbs_mac_work/FBSClassroom"
-xcrun lipo -verify_arch arm64 x86_64 "$fbs_mac_work/FBSClassroom"
+xcrun lipo "$fbs_mac_work/FBSClassroom" -verify_arch arm64 x86_64
 python3 "$fbs_mac_root/macos/Tests/test_payload.py"
 xcrun swiftc -swift-version 5 "$fbs_mac_root/macos/Sources/ConnectionConfig.swift" "$fbs_mac_root/macos/Tests/ConfigTests.swift" -o "$fbs_mac_work/config-tests"
 "$fbs_mac_work/config-tests" | tee "$fbs_mac_output/swift-config-tests.json"
