@@ -21,7 +21,27 @@ final class RuntimeHost {
         for file in files where !fm.fileExists(atPath: runtime.appendingPathComponent(file).path) { throw ConfigurationError.invalid("Missing bundled runtime: " + file) }
         let version = try PlatformServices.run(node.path, ["--version"])
         guard String(data: version, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) == "v22.23.4" else { throw ConfigurationError.invalid("Unexpected Node runtime version") }
-        print("{\"nativeBundleSelfCheck\":true,\"guiExecuted\":false,\"keychainAccessed\":false,\"nodeVersion\":\"22.23.4\"}")
+        try loopbackSelfCheck()
+        print("{\"nativeBundleSelfCheck\":true,\"guiExecuted\":false,\"keychainAccessed\":false,\"nodeVersion\":\"22.23.4\",\"loopbackHTTPTested\":true}")
+    }
+    private final class ProbeResult: @unchecked Sendable { let lock = NSLock(); var passed = false }
+    private static func loopbackSelfCheck() throws {
+        let task = Process(), pipe = Pipe(), token = try PlatformServices.randomToken()
+        task.executableURL = node
+        task.arguments = ["-e", "const h=require('node:http');const s=h.createServer((q,r)=>{r.writeHead(q.headers['x-fbs-probe']===process.env.FBS_PROBE_TOKEN?200:403);r.end('fbs-loopback-probe')});s.listen(0,'127.0.0.1',()=>console.log(s.address().port));setTimeout(()=>process.exit(1),10000).unref()"]
+        var env = ProcessInfo.processInfo.environment; env["FBS_PROBE_TOKEN"] = token; task.environment = env; task.standardOutput = pipe; task.standardError = FileHandle.nullDevice
+        try task.run(); defer { if task.isRunning { task.terminate() } }
+        let raw = pipe.fileHandleForReading.availableData
+        guard let text = String(data: raw, encoding: .utf8), let port = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)), let url = URL(string: "http://127.0.0.1:\(port)/") else { throw ConfigurationError.invalid("Loopback probe startup failed") }
+        let configuration = URLSessionConfiguration.ephemeral; configuration.connectionProxyDictionary = [:]
+        let session = URLSession(configuration: configuration), semaphore = DispatchSemaphore(value: 0), result = ProbeResult()
+        var request = URLRequest(url: url); request.timeoutInterval = 3; request.setValue(token, forHTTPHeaderField: "X-FBS-Probe")
+        session.dataTask(with: request) { data, response, error in
+            result.lock.lock(); result.passed = error == nil && (response as? HTTPURLResponse)?.statusCode == 200 && data == Data("fbs-loopback-probe".utf8); result.lock.unlock(); semaphore.signal()
+        }.resume()
+        let completed = semaphore.wait(timeout: .now() + 5) == .success
+        session.invalidateAndCancel(); result.lock.lock(); let passed = result.passed; result.lock.unlock()
+        guard completed && passed else { throw ConfigurationError.invalid("Native loopback HTTP probe failed") }
     }
     func start(_ config: ConnectionConfig) throws -> String? {
         guard process == nil else { throw ConfigurationError.invalid("التطبيق يعمل بالفعل؛ أوقفه قبل تغيير الاتصال") }
