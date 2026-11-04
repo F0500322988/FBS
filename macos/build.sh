@@ -60,6 +60,6 @@ PY
 done
 (cd "$fbs_mac_output" && shasum -a 256 ./*.pkg ./*.dmg > SHA256SUMS.txt)
 python3 - "$fbs_mac_output" <<'PY'
-import json,pathlib,sys
-out=pathlib.Path(sys.argv[1]);report={'stage':'M175','platform':'macOS','minimumOS':'13.0','architectures':['arm64','x86_64'],'nativeBuildPassed':True,'pkgPayloadVerified':True,'dmgVerified':True,'bundleAdHocSigned':True,'developerIDSigned':False,'notarized':False,'guiTested':False,'keychainTested':False,'screenRecordingTested':False,'twoMacLanTested':False,'installedOnMacTested':False,'files':[p.name for p in sorted(out.glob('*')) if p.suffix in ('.pkg','.dmg')]};(out/'macOS-validation.json').write_text(json.dumps(report,indent=2)+'\n')
+import json,pathlib,sys,platform
+out=pathlib.Path(sys.argv[1]);report={'stage':'M175','platform':'macOS','minimumOS':'13.0','architectures':['arm64','x86_64'],'nativeBuildPassed':True,'selfCheckHostArchitecture':platform.machine(),'otherArchitectureExecuted':False,'pkgPayloadVerified':True,'dmgVerified':True,'bundleAdHocSigned':True,'developerIDSigned':False,'notarized':False,'guiTested':False,'keychainTested':False,'screenRecordingTested':False,'twoMacLanTested':False,'installedOnMacTested':False,'files':[p.name for p in sorted(out.glob('*')) if p.suffix in ('.pkg','.dmg')]};(out/'macOS-validation.json').write_text(json.dumps(report,indent=2)+'\n')
 PY

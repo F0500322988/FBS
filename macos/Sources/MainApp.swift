@@ -77,7 +77,7 @@ import AppKit
 @main @MainActor struct Main {
     static func main() {
         if CommandLine.arguments.contains("--self-check") {
-            do { try RuntimeHost.selfCheck(); exit(0) } catch { fputs("Bundle self-check failed\n", stderr); exit(1) }
+            do { try RuntimeHost.selfCheck(); exit(0) } catch { fputs("Bundle self-check failed: \(error.localizedDescription)\n", stderr); exit(1) }
         }
         let app = NSApplication.shared; app.setActivationPolicy(.regular); let delegate = ClassroomApp(); app.delegate = delegate
         withExtendedLifetime(delegate) { app.run() }
