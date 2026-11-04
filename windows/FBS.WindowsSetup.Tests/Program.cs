@@ -46,13 +46,14 @@ try
     rejected = false;
     try { StudentPairingKeyStore.SaveNew(pairingFile, labKey); } catch (IOException) { rejected = true; }
     Check(rejected, "student pairing key is never overwritten implicitly");
-    var command = new ProcessStartInfo("powershell.exe") { UseShellExecute = false, CreateNoWindow = true };
+    var command = new ProcessStartInfo("powershell.exe") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
     command.ArgumentList.Add("-NoProfile"); command.ArgumentList.Add("-NonInteractive"); command.ArgumentList.Add("-Command");
     command.ArgumentList.Add("try { $ErrorActionPreference='Stop'; $s=(Get-Content -LiteralPath $env:FBS_TEST_KEY_FILE -Raw).Trim() | ConvertTo-SecureString; $p=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($s); try { if ([Runtime.InteropServices.Marshal]::PtrToStringBSTR($p) -cne $env:FBS_TEST_EXPECTED) { exit 2 } } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($p) } } catch { [Console]::Error.WriteLine(\"FAIL: PowerShell error category \" + $_.CategoryInfo.Category + \" type \" + $_.Exception.GetType().FullName); exit 3 }");
     command.Environment["FBS_TEST_KEY_FILE"] = pairingFile;
     command.Environment["FBS_TEST_EXPECTED"] = labKey; // Random disposable fixture, never printed.
     using var process = Process.Start(command)!;
     if (!process.WaitForExit(15000)) { process.Kill(true); throw new TimeoutException("PowerShell compatibility test timed out"); }
+    Console.Error.WriteLine(process.StandardError.ReadToEnd());
     Console.WriteLine("PowerShell compatibility exit code: " + process.ExitCode);
     if (process.ExitCode != 0) Console.Error.WriteLine("FAIL: PowerShell compatibility exit code " + process.ExitCode);
     Check(process.ExitCode == 0, "student key remains compatible with the legacy PowerShell launcher format");
