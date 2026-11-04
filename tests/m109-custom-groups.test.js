@@ -1,0 +1,13 @@
+const test=require('node:test');const assert=require('node:assert/strict');const m=require('../public/m109-custom-groups');
+test('normalizes names and assignments',()=>{assert.deepEqual(m.normalize({names:[' A ','A','B'],assignments:{PC1:'A',PC2:'X'}}),{names:['A','B'],assignments:{PC1:'A'}})});
+test('ignores invalid config',()=>{assert.deepEqual(m.normalize(null),{names:[],assignments:{}})});
+test('limits names',()=>{assert.equal(m.normalize({names:Array.from({length:20},(_,i)=>String(i))}).names.length,8)});
+test('trims and bounds names',()=>{assert.equal(m.cleanName('  abc  '),'abc');assert.equal(m.cleanName('x'.repeat(100)).length,40)});
+test('assigns known group',()=>{assert.equal(m.assign({names:['Row A']},'PC1','Row A').assignments.PC1,'Row A')});
+test('rejects unknown group',()=>{assert.deepEqual(m.assign({names:['A']},'PC1','B').assignments,{})});
+test('unassigns group',()=>{assert.deepEqual(m.assign({names:['A'],assignments:{PC1:'A'}},'PC1','').assignments,{})});
+test('rejects invalid id',()=>{assert.deepEqual(m.assign({names:['A']},'','A').assignments,{})});
+test('groups by assignment',()=>{const r=m.group([{id:'PC1',online:true,approved:true},{id:'PC2',online:false,approved:true}],{names:['A'],assignments:{PC1:'A'}});assert.deepEqual(r.map(x=>x.label),['A','غير موزعة']);assert.equal(r[0].online,1);assert.equal(r[1].attention,1)});
+test('empty buckets omitted',()=>{assert.equal(m.group([],{names:['A']}).length,0)});
+test('unknown assignment is unassigned',()=>{assert.equal(m.group([{id:'PC1'}],{names:['A'],assignments:{PC1:'B'}})[0].label,'غير موزعة')});
+test('assignments limited to 40',()=>{const assignments=Object.fromEntries(Array.from({length:50},(_,i)=>['PC'+i,'A']));assert.equal(Object.keys(m.normalize({names:['A'],assignments}).assignments).length,40)});

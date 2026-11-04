@@ -1,0 +1,14 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const {analyze}=require('../windows/Analyze-M58-Build');
+const base={stage:'M57',passed:false,checks:[{name:'.NET SDK 8 installed',passed:false,detail:'.NET 8 SDK is missing'}]};
+test('M58 classifies missing .NET SDK and remains not ready',()=>{const r=analyze(base);assert.equal(r.ready,false);assert.equal(r.liveInputEnabled,false);assert.equal(r.findings[0].id,'missing-dotnet')});
+test('M58 recognizes C# compiler errors',()=>assert.ok(analyze({...base,checks:[]},'error CS0246: missing type').findings.some(f=>f.id==='csharp-compiler')));
+test('M58 recognizes NuGet restore errors',()=>assert.ok(analyze({...base,checks:[]},'error NU1301: Unable to load the service index').findings.some(f=>f.id==='nuget-restore')));
+test('M58 recognizes missing Node',()=>assert.ok(analyze({...base,checks:[{name:'Node installed',passed:false,detail:'node not recognized'}]}).findings.some(f=>f.id==='missing-node')));
+test('M58 successful report has no findings',()=>{const r=analyze({stage:'M57',passed:true,checks:[{name:'Windows host',passed:true,detail:'Windows'}]});assert.equal(r.ready,true);assert.deepEqual(r.findings,[])});
+test('M58 rejects malformed report',()=>assert.throws(()=>analyze({stage:'M57',checks:null}),/Invalid/));
+test('M58 never includes raw diagnostic detail in shared output',()=>{const r=analyze({...base,checks:[{name:'Node installed',passed:false,detail:'secret=DO_NOT_LEAK node not found'}]});assert.doesNotMatch(JSON.stringify(r),/DO_NOT_LEAK/)});
+test('M58 script runs M57 and preserves failure status',()=>{const s=fs.readFileSync(path.join(__dirname,'../windows/Test-M58-Diagnostics.ps1'),'utf8');assert.match(s,/Test-M57-Diagnostics\.ps1/);assert.match(s,/if \(\$m57Exit -ne 0\) \{ exit 1 \}/)});

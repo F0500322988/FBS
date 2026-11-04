@@ -1,0 +1,3 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const {run}=require('../windows/M62-Runtime-Smoke');
+test('M62 launches real teacher server and validates auth and disabled input',async()=>{const r=await run();assert.equal(r.passed,true);assert.equal(r.liveInputEnabled,false);assert.ok(r.checks.length>=10);assert.ok(r.checks.every(c=>c.passed));});
+test('M62 Windows field script requires manual real-device checks',()=>{const s=fs.readFileSync(path.join(__dirname,'../windows/Test-M62-Two-PC.ps1'),'utf8');assert.match(s,/fieldTestsCompleted=\$false/);assert.match(s,/readyForLiveInput=\$false/);assert.match(s,/stop-and-disconnect/);});

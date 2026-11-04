@@ -1,0 +1,42 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto'),https=require('node:https');
+const {execFileSync}=require('node:child_process');
+const {createTeacherLan}=require('../teacher-lan');
+const {createControlLeases}=require('../control-lease');
+const {createControlCommands}=require('../control-commands');
+const {signMessage}=require('../device-identity');
+function post(port,endpoint,key,packet){return new Promise((resolve,reject)=>{const raw=JSON.stringify(packet);const req=https.request({hostname:'127.0.0.1',port,path:endpoint,method:'POST',rejectUnauthorized:false,headers:{'X-FBS-Key':key,'Content-Type':'application/json','Content-Length':Buffer.byteLength(raw)}},res=>{let body='';res.on('data',c=>body+=c);res.on('end',()=>resolve({status:res.statusCode,body:body?JSON.parse(body):null}));});req.on('error',reject);req.end(raw);});}
+test('M35 real TLS signed heartbeat -> approval -> consent -> command -> student stop',async t=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'fbs-m35-'));
+ t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const cert=path.join(dir,'test.crt'),key=path.join(dir,'test.key');
+ try{execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout',key,'-out',cert,'-subj','/CN=localhost','-days','1'],{stdio:'ignore'});}catch{t.skip('OpenSSL is not installed');return;}
+ const previousCert=process.env.FBS_TLS_CERT,previousKey=process.env.FBS_TLS_KEY;
+ process.env.FBS_TLS_CERT=cert;process.env.FBS_TLS_KEY=key;
+ t.after(()=>{if(previousCert===undefined)delete process.env.FBS_TLS_CERT;else process.env.FBS_TLS_CERT=previousCert;if(previousKey===undefined)delete process.env.FBS_TLS_KEY;else process.env.FBS_TLS_KEY=previousKey;});
+ const secret='m35-integration-secret-very-long';
+ const lan=createTeacherLan({secret,port:0,discoveryPort:49999});
+ const leases=createControlLeases(),commands=createControlCommands();
+ const approved=new Map();lan.setApprovedKeys(approved);lan.setControlLeases(leases);lan.setControlCommands(commands);
+ await new Promise((resolve,reject)=>{lan.server.once('error',reject);lan.server.listen(0,'127.0.0.1',resolve);});
+ t.after(()=>new Promise(resolve=>lan.server.close(resolve)));
+ const port=lan.server.address().port;
+ const pair=crypto.generateKeyPairSync('ed25519');const identity={privateKey:pair.privateKey.export({type:'pkcs8',format:'pem'}),publicKey:pair.publicKey.export({type:'spki',format:'pem'})};
+ const body={id:'LAB-PC-01',platform:'win32'};const sign=extra=>signMessage(identity,{...body,...extra});
+ const first=sign();assert.equal((await post(port,'/heartbeat',secret,first)).status,204);
+ assert.equal((await post(port,'/heartbeat',secret,first)).status,400,'replayed signed heartbeat rejected');
+ assert.equal((await post(port,'/control/poll',secret,sign())).status,400,'unapproved device denied');
+ approved.set(body.id,identity.publicKey);
+ const session=leases.request(body.id);assert.ok(session?.sessionId);
+ const poll=await post(port,'/control/poll',secret,sign());assert.equal(poll.status,200);assert.equal(poll.body.session.status,'pending-native-consent');
+ assert.equal((await post(port,'/control/ack',secret,sign({sessionId:session.sessionId,approved:true}))).status,204);
+ assert.equal(leases.pending(body.id).status,'consented-no-input');
+ assert.equal(commands.submit(leases.pending(body.id),{type:'pointer-preview',x:120,y:240}).ok,true);
+ const command=await post(port,'/control/commands',secret,sign());assert.equal(command.status,200);assert.equal(command.body.executed,false);assert.equal(command.body.commands.length,1);
+ assert.equal((await post(port,'/control/commands',secret,sign())).body.commands.length,0);
+ assert.equal((await post(port,'/control/stop',secret,sign({sessionId:session.sessionId}))).status,204);
+ assert.equal(leases.pending(body.id),null);
+ assert.equal((await post(port,'/control/commands',secret,sign())).body.commands.length,0);
+ assert.equal((await post(port,'/control/stop',secret,sign({sessionId:session.sessionId}))).status,400,'stopped session cannot be stopped twice');
+});

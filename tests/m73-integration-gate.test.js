@@ -1,0 +1,12 @@
+'use strict';
+const {test}=require('node:test');const assert=require('node:assert/strict');
+const {evaluate,run}=require('../windows/M73-Integration-Gate');
+const goodServer={stage:'M62',passed:true,mode:'local-demo-only',liveInputEnabled:false,checks:Array.from({length:10},(_,i)=>({name:String(i),passed:true}))};
+const goodTrace={stage:'M72',passed:true,liveInputEnabled:false,approvedForLiveInput:false};
+test('M73 accepts complete safe local evidence',()=>assert.equal(evaluate(goodServer,goodTrace).passed,true));
+test('M73 fails closed on missing server',()=>assert.equal(evaluate(null,goodTrace).passed,false));
+test('M73 fails on failing server check',()=>assert.equal(evaluate({...goodServer,checks:[...goodServer.checks,{passed:false}]},goodTrace).passed,false));
+test('M73 fails on enabled server input',()=>assert.equal(evaluate({...goodServer,liveInputEnabled:true},goodTrace).passed,false));
+test('M73 fails on missing trace',()=>assert.equal(evaluate(goodServer,null).passed,false));
+test('M73 fails on live input approval',()=>assert.equal(evaluate(goodServer,{...goodTrace,approvedForLiveInput:true}).passed,false));
+test('M73 integration runs real local server smoke',async()=>{const r=await run();assert.equal(r.passed,true);assert.equal(r.twoPcTested,false);});

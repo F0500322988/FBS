@@ -1,0 +1,11 @@
+'use strict';
+const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+const src=fs.readFileSync(path.join(__dirname,'../windows/Test-M81-First-Run.ps1'),'utf8');
+test('M81 audits both teacher and student roles',()=>{assert.match(src,/ValidateSet\('Teacher','Student'\)/);assert.match(src,/\$Role -eq 'Student'/)});
+test('M81 verifies installed executable and bundled node',()=>{assert.match(src,/installed_executable/);assert.match(src,/bundled_node/)});
+test('M81 checks student DPAPI under current account',()=>{assert.match(src,/ConvertTo-SecureString/);assert.match(src,/current_user_dpapi_key/)});
+test('M81 clears decrypted BSTR',()=>assert.match(src,/ZeroFreeBSTR/));
+test('M81 checks teacher TLS and password environment',()=>{assert.match(src,/FBS_TLS_CERT/);assert.match(src,/FBS_TLS_KEY/);assert.match(src,/FBS_TEACHER_PASSWORD/)});
+test('M81 does not serialize secrets to report',()=>{assert.doesNotMatch(src,/pairingKey\s*=/i);assert.match(src,/checks=@\(\$checks\)/)});
+test('M81 fails closed on missing prerequisites',()=>{assert.match(src,/if\(\$failed.Count -gt 0\)\{exit 1\}/)});
+test('M81 does not launch applications or open network connections',()=>{assert.doesNotMatch(src,/Start-Process|Invoke-WebRequest|TcpClient|Invoke-RestMethod/)});

@@ -1,0 +1,18 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');
+const {evaluate}=require('../windows/M88-Reconnect-Consent-Audit');
+const id='private-student',stoppedAt=100000,reconnectedAt=102000;
+const sample=(at,approved=false,online=true)=>({status:{mode:'live',features:{remoteControl:false},students:[{id,online,approved}]},frames:{frames:at===null?[]:[{id,at,jpeg:'secret-image'}]}});
+const run=(before=sample(99000,true),after=[sample(99000),sample(null)],opts={})=>evaluate(before,after,{target:id,stoppedAt,reconnectedAt,...opts});
+test('passes reconnect without new consent',()=>assert.equal(run().passed,true));
+test('rejects approval remaining active after reconnect',()=>assert.ok(run(undefined,[sample(null,true),sample(null)]).issues.some(x=>x.includes('approval_active'))));
+test('rejects new frames after grace',()=>assert.ok(run(undefined,[sample(null),sample(108000)]).issues.some(x=>x.includes('new_preview'))));
+test('accepts stale cached frame',()=>assert.equal(run(undefined,[sample(99000),sample(99000)]).passed,true));
+test('requires reconnect observation',()=>assert.ok(run(undefined,[sample(null,false,false),sample(null,false,false)]).issues.includes('reconnect_not_observed')));
+test('requires active baseline',()=>assert.ok(run(sample(null,true)).issues.includes('no_active_preview_before_stop')));
+test('rejects remote input enabled',()=>{const s=sample(null);s.status.features.remoteControl=true;assert.equal(run(undefined,[s,s]).passed,false);});
+test('rejects invalid event order',()=>assert.equal(run(undefined,undefined,{reconnectedAt:99000}).passed,false));
+test('rejects insufficient samples',()=>assert.equal(run(undefined,[sample(null)]).passed,false));
+test('redacts student IDs and images',()=>{const report=JSON.stringify(run());assert.ok(!report.includes(id));assert.ok(!report.includes('secret-image'));});
+test('rejects missing target',()=>assert.equal(evaluate(sample(99000,true),[sample(null),sample(null)],{stoppedAt,reconnectedAt}).passed,false));
+test('rejects invalid grace',()=>assert.equal(run(undefined,undefined,{graceMs:100}).passed,false));

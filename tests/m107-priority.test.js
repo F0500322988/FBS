@@ -1,0 +1,18 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');
+const {state,attention,select}=require('../public/m107-priority');
+const data=[{id:'PC-10',approved:true,online:true},{id:'PC-2',approved:true,online:false},{id:'PC-1',approved:false,online:true},{id:'PC-3',approved:true,online:true}];
+test('offline state',()=>assert.equal(state(data[1]),'offline'));
+test('online state',()=>assert.equal(state(data[0]),'online'));
+test('unapproved state',()=>assert.equal(state(data[2]),'unapproved'));
+test('invalid state',()=>assert.equal(state({id:''}),'invalid'));
+test('attention excludes online',()=>assert.equal(attention(data[0]),false));
+test('attention includes unapproved',()=>assert.equal(attention(data[2]),true));
+test('default puts offline first',()=>assert.equal(select(data)[0].id,'PC-2'));
+test('name sorting is numeric',()=>assert.deepEqual(select(data,{sort:'name'}).map(x=>x.id),['PC-1','PC-2','PC-3','PC-10']));
+test('online sorting puts online first',()=>assert.equal(select(data,{sort:'online'})[0].id,'PC-3'));
+test('offline sorting puts offline first',()=>assert.equal(select(data,{sort:'offline'})[0].id,'PC-2'));
+test('attention filter',()=>assert.deepEqual(select(data,{onlyAttention:true}).map(x=>x.id),['PC-2','PC-1']));
+test('query filter case insensitive',()=>assert.equal(select(data,{query:'pc-10'}).length,1));
+test('input remains unchanged',()=>{const before=JSON.stringify(data);select(data);assert.equal(JSON.stringify(data),before)});
+test('invalid array safely returns empty',()=>assert.deepEqual(select(null),[]));

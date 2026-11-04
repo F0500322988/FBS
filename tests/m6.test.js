@@ -1,0 +1,3 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+test('M6 zoom dialog and keyboard accessibility are present',()=>{const html=fs.readFileSync(path.join(__dirname,'../public/index.html'),'utf8');const js=fs.readFileSync(path.join(__dirname,'../public/app.js'),'utf8');assert.match(html,/id="screen-dialog"/);assert.match(js,/function openScreen/);assert.match(js,/e.key==='Enter'/);assert.match(js,/function updateLargeScreen/);});
+test('M6 does not claim native remote control',()=>{const server=fs.readFileSync(path.join(__dirname,'../server.js'),'utf8');assert.match(server,/remoteControl:false/);});

@@ -1,0 +1,11 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');const {assess}=require('../windows/M84-Enrollment-Visibility');
+const make=(n=21)=>({status:{mode:'live',features:{remoteControl:false},students:Array.from({length:n},(_,i)=>({id:'PC-'+i,online:true,approved:true}))},enrollment:{devices:Array.from({length:n},(_,i)=>({id:'PC-'+i,approved:true}))}});
+test('M84 accepts 21 live approved and registered students',()=>{const x=make();assert.equal(assess(x.status,x.enrollment).passed,true);});
+test('M84 supports capacity 40',()=>{const x=make(40);assert.equal(assess(x.status,x.enrollment,{expected:40}).passed,true);});
+test('M84 rejects missing students',()=>{const x=make(20);assert.ok(assess(x.status,x.enrollment).issues.includes('student_count_below_expected'));});
+test('M84 rejects demo mode',()=>{const x=make();x.status.mode='demo';assert.equal(assess(x.status,x.enrollment).passed,false);});
+test('M84 rejects unapproved students',()=>{const x=make();x.status.students[0].approved=false;assert.ok(assess(x.status,x.enrollment).issues.includes('approved_online_below_expected'));});
+test('M84 rejects mismatched enrollment',()=>{const x=make();x.enrollment.devices.pop();assert.ok(assess(x.status,x.enrollment).issues.includes('approved_device_missing_from_enrollment'));});
+test('M84 rejects duplicate ids',()=>{const x=make();x.status.students[1].id=x.status.students[0].id;assert.ok(assess(x.status,x.enrollment).issues.includes('invalid_or_duplicate_student_id'));});
+test('M84 rejects enabled remote input',()=>{const x=make();x.status.features.remoteControl=true;assert.ok(assess(x.status,x.enrollment).issues.includes('remote_input_not_disabled'));});

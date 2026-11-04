@@ -1,0 +1,11 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {validPreview,acceptPreview}=require('../preview-validation');
+const now=1700000000000;
+const base={sessionId:'s1',sequence:1,at:now,type:'pointer-preview',x:40,y:60};
+test('M39 accepts bounded preview payload',()=>assert.equal(validPreview(base,'s1',now),true));
+test('M39 rejects other session',()=>assert.equal(validPreview(base,'s2',now),false));
+test('M39 rejects expired or future commands',()=>{assert.equal(validPreview({...base,at:now-10001},'s1',now),false);assert.equal(validPreview({...base,at:now+2001},'s1',now),false)});
+test('M39 rejects out-of-bounds pointer',()=>assert.equal(validPreview({...base,x:-1},'s1',now),false));
+test('M39 rejects special keys',()=>assert.equal(validPreview({...base,type:'key-preview',key:'Enter'},'s1',now),false));
+test('M39 rejects duplicate and reordered commands',()=>{assert.equal(acceptPreview([base],base,'s1',now),false);assert.equal(acceptPreview([base],{...base,sequence:0},'s1',now),false);assert.equal(acceptPreview([base],{...base,sequence:2},'s1',now),true)});
+test('M39 native UI validates payload and injection stays off',()=>{const p=fs.readFileSync(path.join(__dirname,'../windows/FBS.Student.Native/Program.cs'),'utf8');assert.match(p,/verifiedPipeline\.Preview/);const decision=fs.readFileSync(path.join(__dirname,'../windows/FBS.Student.Native/InputDryRun.cs'),'utf8');assert.match(decision,/PreviewPayloadPolicy.Valid/);const a=fs.readFileSync(path.join(__dirname,'../windows/FBS.Student.Native/WindowsInputAdapter.cs'),'utf8');assert.match(a,/enabled = false;/)});

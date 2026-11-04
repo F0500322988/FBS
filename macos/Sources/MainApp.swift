@@ -1,0 +1,85 @@
+import AppKit
+
+@MainActor final class ClassroomApp: NSObject, NSApplicationDelegate {
+    private var window: NSWindow!, role = ClassroomRole.student
+    private var config: ConnectionConfig!, host = RuntimeHost(), messages: MessagesWindow?, broadcast: BroadcastWindow?
+    private let key = NSSecureTextField(), password = NSSecureTextField(), address = NSTextField(), port = NSTextField(), pin = NSTextField(), device = NSTextField()
+    private let discovery = NSButton(checkboxWithTitle: "اكتشاف المعلم تلقائيًا داخل الشبكة", target: nil, action: nil)
+    private let state = NSTextField(wrappingLabelWithString: "التحكم عن بُعد غير مفعّل في هذه النسخة")
+    private let connection = NSTextField(wrappingLabelWithString: "")
+    private let startButton = NSButton(title: "حفظ الإعداد وتشغيل البرنامج", target: nil, action: nil)
+    private let messageButton = NSButton(title: "رسائل المعلم", target: nil, action: nil), viewButton = NSButton(title: "عرض شاشة المعلم", target: nil, action: nil), shareButton = NSButton(title: "مشاركة شاشة الطالب بموافقته", target: nil, action: nil)
+    private var loaded = false, pollTimer: Timer?
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: "FBSRole") as? String, let parsed = ClassroomRole(rawValue: value) else { showError(ConfigurationError.invalid("دور التطبيق غير صالح")); NSApp.terminate(nil); return }; role = parsed
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: role == .teacher ? 580 : 780), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        window.title = "FBS Classroom — " + (role == .teacher ? "المعلم" : "الطالب") + " — macOS Preview"
+        window.isReleasedWhenClosed = false
+        let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .trailing; stack.spacing = 8
+        let title = NSTextField(labelWithString: "🎓 FBS Classroom — macOS / iMac"); title.font = .boldSystemFont(ofSize: 22); stack.addArrangedSubview(title)
+        func field(_ label: String, _ input: NSTextField) { let text = NSTextField(labelWithString: label); text.alignment = .right; stack.addArrangedSubview(text); stack.addArrangedSubview(input); input.widthAnchor.constraint(equalToConstant: 670).isActive = true; input.font = .systemFont(ofSize: 15) }
+        field("مفتاح المعمل المشترك — 16 محرفًا على الأقل", key)
+        if role == .teacher { field("كلمة مرور لوحة المعلم — 12 محرفًا على الأقل", password) }
+        else {
+            field("اسم الجهاز بالإنجليزية", device); stack.addArrangedSubview(discovery)
+            field("عنوان المعلم IP أو اسم الجهاز", address); field("منفذ المعلم", port); field("بصمة شهادة المعلم SHA-256 — 64 رمزًا", pin)
+        }
+        startButton.target = self; startButton.action = #selector(start); stack.addArrangedSubview(startButton)
+        let stop = NSButton(title: "إيقاف التطبيق محليًا", target: self, action: #selector(stopHost)); stack.addArrangedSubview(stop)
+        if role == .teacher { stack.addArrangedSubview(NSButton(title: "فتح لوحة المعلم", target: self, action: #selector(openTeacher))) }
+        else {
+            messageButton.target = self; messageButton.action = #selector(openMessages); viewButton.target = self; viewButton.action = #selector(openBroadcast); shareButton.target = self; shareButton.action = #selector(openShare)
+            for button in [messageButton, viewButton, shareButton] { button.isEnabled = false; stack.addArrangedSubview(button) }
+        }
+        connection.isSelectable = true; connection.alignment = .right; state.alignment = .right
+        stack.addArrangedSubview(connection); stack.addArrangedSubview(state)
+        stack.translatesAutoresizingMaskIntoConstraints = false; window.contentView!.addSubview(stack)
+        NSLayoutConstraint.activate([stack.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor, constant: 25), stack.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -25), stack.topAnchor.constraint(equalTo: window.contentView!.topAnchor, constant: 20)])
+        host.status = { [weak self] message in self?.state.stringValue = message }
+        host.ready = { [weak self] url in
+            guard let self = self else { return }
+            if self.role == .teacher { NSWorkspace.shared.open(url) }
+            else { self.messageButton.isEnabled = true; self.viewButton.isEnabled = true; self.shareButton.isEnabled = true }
+        }
+        do { config = try PlatformServices.load(role) ?? ConnectionConfig(role: role, pairingKey: ""); loaded = true; key.stringValue = config.pairingKey; password.stringValue = config.teacherPassword; address.stringValue = config.teacherHost; port.stringValue = String(config.teacherPort); pin.stringValue = config.fingerprint; device.stringValue = config.deviceName; discovery.state = config.discovery ? .on : .off }
+        catch { startButton.isEnabled = false; showError(error) }
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+            guard let self = self, self.role == .student, self.host.process?.isRunning == true else { return }
+            self.host.get("/control/local") { [weak self] result in
+                guard let self = self else { return }
+                if case .success(let json) = result { self.messageButton.title = "رسائل المعلم (\(json["unreadMessages"] as? Int ?? 0) غير مقروءة)"; self.viewButton.title = json["broadcastAvailable"] as? Bool == true ? "● شاشة المعلم متاحة — فتح العرض" : "عرض شاشة المعلم" }
+            }
+            }
+        }
+        let menu = NSMenu(), item = NSMenuItem(); menu.addItem(item); let appMenu = NSMenu(); appMenu.addItem(withTitle: "إنهاء FBS Classroom", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); item.submenu = appMenu; NSApp.mainMenu = menu
+        window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+    }
+    @objc private func start() {
+        guard loaded, host.process == nil else { return }
+        do {
+            let updated = ConnectionConfig(role: role, pairingKey: key.stringValue, teacherPassword: password.stringValue, teacherHost: address.stringValue, teacherPort: Int(port.stringValue) ?? 0, fingerprint: pin.stringValue, discovery: discovery.state == .on, deviceName: device.stringValue)
+            try updated.validate(); try PlatformServices.save(updated); config = updated
+            let fingerprint = try host.start(updated)
+            if let fingerprint = fingerprint { connection.stringValue = "عنوان الشبكة: \(PlatformServices.ipv4())\nالمنفذ: 4180\nبصمة المعلم: \(fingerprint)" }
+            else { connection.stringValue = "اسم الجهاز: \(updated.deviceName) — مشاركة الشاشة والرسائل تتطلب اعتماد المعلم" }
+        } catch { showError(error) }
+    }
+    @objc private func stopHost() { host.stop(); messages?.window.close(); broadcast?.window.close(); for button in [messageButton, viewButton, shareButton] { button.isEnabled = false }; state.stringValue = "توقف التطبيق محليًا — التحكم غير مفعّل" }
+    @objc private func openTeacher() { if let url = host.baseURL, host.process?.isRunning == true { NSWorkspace.shared.open(url) } }
+    @objc private func openMessages() { if messages?.window.isVisible != true { messages = MessagesWindow(host) }; messages?.show() }
+    @objc private func openBroadcast() { if broadcast?.window.isVisible != true { broadcast = BroadcastWindow(host) }; broadcast?.show() }
+    @objc private func openShare() { if let url = host.baseURL { NSWorkspace.shared.open(url) } }
+    private func showError(_ error: Error) { let alert = NSAlert(); alert.messageText = "FBS Classroom"; alert.informativeText = error.localizedDescription; alert.runModal() }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    func applicationWillTerminate(_ notification: Notification) { pollTimer?.invalidate(); host.stop() }
+}
+@main @MainActor struct Main {
+    static func main() {
+        if CommandLine.arguments.contains("--self-check") {
+            do { try RuntimeHost.selfCheck(); exit(0) } catch { fputs("Bundle self-check failed: \(error.localizedDescription)\n", stderr); exit(1) }
+        }
+        let app = NSApplication.shared; app.setActivationPolicy(.regular); let delegate = ClassroomApp(); app.delegate = delegate
+        withExtendedLifetime(delegate) { app.run() }
+    }
+}

@@ -1,0 +1,14 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const dir = path.join(__dirname, '..', 'windows', 'FBS.Student.Native');
+const banner = fs.readFileSync(path.join(dir, 'ControlSessionBanner.cs'), 'utf8');
+const program = fs.readFileSync(path.join(dir, 'Program.cs'), 'utf8');
+test('banner is topmost and visible in taskbar', () => { assert.match(banner, /TopMost = true/); assert.match(banner, /ShowInTaskbar = true/); });
+test('banner has student emergency stop', () => { assert.match(banner, /إيقاف الجلسة فورًا/); assert.match(banner, /EmergencyStopRequested\?\.Invoke/); });
+test('banner cannot be dismissed using window close', () => assert.match(banner, /ControlBox = false/));
+test('banner distinguishes pending and preview-only states', () => { assert.match(banner, /pending-native-consent/); assert.match(banner, /consented-no-input/); });
+test('banner is wired to local stop before network acknowledgement', () => assert.match(program, /sessionBanner\.EmergencyStopRequested \+= \(_, _\) => StopControl\(\)/));
+test('banner is shown for active session and hidden on clear', () => { assert.match(program, /sessionBanner\.UpdateSession\(state/); assert.match(program, /ClearPending\(\) \{ verifiedPipeline\.Stop\(\); nativeInput\.Disable\(\); inputGate\.Deactivate\(\); sessionBanner\.EndSession\(\)/); });
+test('no input activation is introduced by banner', () => assert.doesNotMatch(banner, /SendInput|WindowsInputAdapter|Enable\(/));

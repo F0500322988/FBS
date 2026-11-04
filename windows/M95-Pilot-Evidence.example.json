@@ -1,0 +1,9 @@
+{
+  "operatorApproved": false,
+  "remoteInputEnabled": false,
+  "devices": [
+    {"id":"teacher-01","role":"Teacher","installed":false,"launch_verified":false,"lan_connected":false,"tls_verified":false,"consent_verified":false,"stop_verified":false,"uninstall_verified":false,"rollback_verified":false},
+    {"id":"student-01","role":"Student","installed":false,"launch_verified":false,"lan_connected":false,"tls_verified":false,"consent_verified":false,"stop_verified":false,"uninstall_verified":false,"rollback_verified":false},
+    {"id":"student-02","role":"Student","installed":false,"launch_verified":false,"lan_connected":false,"tls_verified":false,"consent_verified":false,"stop_verified":false,"uninstall_verified":false,"rollback_verified":false}
+  ]
+}

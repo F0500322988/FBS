@@ -1,0 +1,17 @@
+'use strict';
+const {test}=require('node:test');const assert=require('node:assert/strict');
+const {assess,parseArgs,loadReports}=require('../windows/M93-Lab-Readiness');
+const fs=require('node:fs');const os=require('node:os');const path=require('node:path');
+const good=()=>({M84:{stage:'M84',passed:true,expected:21,approvedOnline:21,onlineLive:21},M91:{stage:'M91',passed:true,expected:21,progressingCount:19,remoteInputEnabled:false},M92:{stage:'M92',passed:true,expected:21,continuousUpdatingDevices:19,p95LatencyMs:120,remoteInputEnabled:false}});
+test('accepts complete consistent reports',()=>assert.equal(assess(21,good()).passed,true));
+test('rejects missing mandatory report',()=>{const r=good();delete r.M92;assert.ok(assess(21,r).issues.includes('missing_M92'));});
+test('rejects failed report',()=>{const r=good();r.M91.passed=false;assert.ok(assess(21,r).issues.includes('failed_M91'));});
+test('rejects capacity mismatch',()=>assert.ok(assess(40,good()).issues.includes('capacity_mismatch_M84')));
+test('rejects insufficient enrollment',()=>{const r=good();r.M84.approvedOnline=20;assert.ok(assess(21,r).issues.includes('insufficient_enrolled_devices'));});
+test('rejects insufficient updating',()=>{const r=good();r.M92.continuousUpdatingDevices=2;assert.ok(assess(21,r).issues.includes('insufficient_performance_evidence'));});
+test('rejects remote input enabled',()=>{const r=good();r.M91.remoteInputEnabled=true;assert.ok(assess(21,r).issues.includes('unsafe_remote_input_M91'));});
+test('rejects malformed optional report',()=>{const r=good();r.M85={stage:'M85',passed:'yes'};assert.ok(assess(21,r).issues.includes('invalid_M85'));});
+test('accepts valid optional report',()=>{const r=good();r.M83={stage:'M83',passed:true};assert.equal(assess(21,r).passed,true);});
+test('rejects invalid capacity',()=>assert.ok(assess(41,good()).issues.includes('invalid_expected_capacity')));
+test('parses flags and rejects duplicates',()=>{assert.equal(parseArgs(['21','out.json','--m84','a.json']).files.M84,'a.json');assert.throws(()=>parseArgs(['21','out.json','--m84','a','--m84','b']));});
+test('reads JSON from files',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'m93-'));try{const f=path.join(dir,'report.json');fs.writeFileSync(f,JSON.stringify(good().M84));assert.equal(loadReports({M84:f}).M84.expected,21);}finally{fs.rmSync(dir,{recursive:true,force:true});}});

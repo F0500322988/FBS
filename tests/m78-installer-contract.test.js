@@ -1,0 +1,18 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const {verify,verifyScript}=require('../windows/M78-Installer-Contract');
+const {required}=require('../windows/M76-Package-Check');
+const root=path.resolve(__dirname,'..');
+const read=role=>fs.readFileSync(path.join(root,'windows','installer',`M76-${role}.iss`),'utf8');
+test('M78 validates both real installer scripts',()=>assert.equal(verify(root).passed,true));
+test('M78 rejects post-install executable launch',()=>assert.equal(verifyScript(read('Teacher')+'\nFilename: "cmd.exe"\n','Teacher').passed,false));
+test('M78 rejects startup shortcuts',()=>assert.equal(verifyScript(read('Student').replace('[Run]','Name: "{userstartup}\\FBS"; Filename: "x"\n[Run]'),'Student').passed,false));
+test('M78 rejects missing Runtime files',()=>assert.equal(verifyScript(read('Teacher').replace('DestDir: "{app}\\Runtime"','DestDir: "{app}\\Other"'),'Teacher').passed,false));
+test('M78 rejects missing student configuration',()=>assert.equal(verifyScript(read('Student').replace('Configure-Student.ps1','not-here.ps1'),'Student').passed,false));
+test('M78 rejects missing StageRoot guard',()=>assert.equal(verifyScript(read('Teacher').replace('#ifndef StageRoot','#ifndef Other'),'Teacher').passed,false));
+test('M78 rejects incomplete distribution',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'m78-'));try{assert.equal(verify(root,dir).passed,false)}finally{fs.rmSync(dir,{recursive:true,force:true})}});
+test('M78 accepts complete staged distribution',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'m78-'));try{for(const role of ['Teacher','Student'])for(const rel of required[role]){const f=path.join(dir,role,rel);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,'fixture')}assert.equal(verify(root,dir).passed,true)}finally{fs.rmSync(dir,{recursive:true,force:true})}});

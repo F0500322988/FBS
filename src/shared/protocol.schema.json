@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FBS Classroom control envelope v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "messageId", "type", "deviceId", "timestamp"],
+  "properties": {
+    "version": {"const": 1},
+    "messageId": {"type": "string", "format": "uuid"},
+    "type": {"enum": ["heartbeat", "device_status", "enroll_request", "enroll_response", "ack"]},
+    "deviceId": {"type": "string", "minLength": 1, "maxLength": 128},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "payload": {"type": "object"}
+  }
+}

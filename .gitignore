@@ -1,0 +1,6 @@
+**/bin/
+**/obj/
+node_modules/
+macos-dist/
+**/__pycache__/
+*.pyc

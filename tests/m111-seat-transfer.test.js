@@ -1,0 +1,16 @@
+const test=require('node:test');const assert=require('node:assert/strict');const x=require('../public/m111-seat-transfer');
+const sample={rows:3,columns:7,seats:{'PC-01':1,'PC-21':21}};
+test('roundtrip seat map',()=>assert.deepEqual(x.parse(x.serialize(sample)),sample));
+test('contains format and version',()=>{const d=JSON.parse(x.serialize(sample));assert.equal(d.version,1);assert.equal(d.format,'fbs-classroom-seat-map');});
+test('rejects invalid JSON',()=>assert.throws(()=>x.parse('{')));
+test('rejects arbitrary JSON',()=>assert.throws(()=>x.parse('{}')));
+test('rejects wrong version',()=>assert.throws(()=>x.parse(JSON.stringify({format:'fbs-classroom-seat-map',version:2,layout:sample}))));
+test('rejects oversize',()=>assert.throws(()=>x.parse('x'.repeat(x.MAX_BYTES+1))));
+test('rejects invalid rows',()=>assert.throws(()=>x.serialize({...sample,rows:9})));
+test('rejects invalid columns',()=>assert.throws(()=>x.serialize({...sample,columns:0})));
+test('rejects duplicate positions',()=>assert.throws(()=>x.serialize({rows:2,columns:2,seats:{a:1,b:1}})));
+test('rejects out of range positions',()=>assert.throws(()=>x.serialize({rows:2,columns:2,seats:{a:5}})));
+test('rejects more than 40 assignments',()=>assert.throws(()=>x.serialize({rows:8,columns:10,seats:Object.fromEntries(Array.from({length:41},(_,i)=>['d'+i,i+1]))})));
+test('rejects prototype pollution keys',()=>assert.throws(()=>x.parse('{"format":"fbs-classroom-seat-map","version":1,"layout":{"rows":1,"columns":1,"seats":{"__proto__":1}}}')));
+test('supports 40 seats',()=>assert.equal(Object.keys(x.parse(x.serialize({rows:5,columns:8,seats:Object.fromEntries(Array.from({length:40},(_,i)=>['PC-'+i,i+1]))})).seats).length,40));
+test('exports no remote control functions',()=>assert.equal(Object.keys(x).some(k=>/control|keyboard|mouse/i.test(k)),false));

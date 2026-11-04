@@ -1,0 +1,13 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { evaluateEvidence, REQUIRED } = require('../readiness-evidence');
+const now = Date.now();
+const valid = () => ({ stage: 'M46', timestamp: new Date(now).toISOString(), realWindowsTwoPc: true, ...Object.fromEntries(REQUIRED.map(k => [k, 'passed'])) });
+test('M46 complete evidence passes review but does not authorize input', () => { const result = evaluateEvidence(valid(), now); assert.equal(result.ready, true); assert.match(result.note, /never authorizes/); });
+test('M46 absent two-PC evidence blocks readiness', () => { const x=valid(); x.realWindowsTwoPc=false; assert.equal(evaluateEvidence(x,now).ready,false); });
+test('M46 missing native build blocks readiness', () => { const x=valid(); delete x.nativeTests; assert.match(evaluateEvidence(x,now).problems.join(','),/nativeTests/); });
+test('M46 failed stop observation blocks readiness', () => { const x=valid(); x.studentStopObserved='failed'; assert.equal(evaluateEvidence(x,now).ready,false); });
+test('M46 old report blocks readiness', () => { const x=valid(); x.timestamp=new Date(now-2*86400000).toISOString(); assert.equal(evaluateEvidence(x,now).ready,false); });
+test('M46 future report blocks readiness', () => { const x=valid(); x.timestamp=new Date(now+300000).toISOString(); assert.equal(evaluateEvidence(x,now).ready,false); });
+test('M46 malformed report blocks readiness', () => assert.equal(evaluateEvidence(null,now).ready,false));
+test('M46 all mandatory evidence fields are required', () => { for (const key of REQUIRED) { const x=valid(); delete x[key]; assert.equal(evaluateEvidence(x,now).ready,false,key); } });

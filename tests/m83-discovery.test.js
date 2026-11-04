@@ -1,0 +1,14 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {inspect}=require('../windows/M83-Discovery-Probe');
+const {signature}=require('../lan');
+const secret='test-secret-123456789';
+const now=Date.now();
+const make=(changes={},key=secret)=>{const payload=JSON.stringify({type:'fbs-teacher-v1',port:4180,fingerprint:'a'.repeat(64),nonce:'b'.repeat(24),timestamp:now,...changes});return Buffer.from(JSON.stringify({payload,mac:signature(key,payload)}));};
+test('M83 accepts authentic fresh announcement',()=>assert.equal(inspect(make(),secret,now).valid,true));
+test('M83 rejects wrong signing key',()=>assert.equal(inspect(make({},'different-secret-12345'),secret,now).valid,false));
+test('M83 rejects expired timestamp',()=>assert.equal(inspect(make({timestamp:now-16000}),secret,now).valid,false));
+test('M83 rejects wrong type',()=>assert.equal(inspect(make({type:'other'}),secret,now).valid,false));
+test('M83 rejects malformed data',()=>assert.equal(inspect(Buffer.from('not-json'),secret,now).valid,false));
+test('M83 rejects invalid certificate fingerprint',()=>assert.equal(inspect(make({fingerprint:'xyz'}),secret,now).valid,false));
+test('M83 rejects oversize packets',()=>assert.equal(inspect(Buffer.alloc(5000),secret,now).valid,false));

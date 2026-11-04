@@ -1,0 +1,15 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {assessPreflight,evaluate}=require('../windows/M67-Field-Readiness');
+const {template}=require('../windows/M63-Field-Evidence');
+const goodPreflight=role=>({stage:'M62',role,automatedChecksPassed:true,readyForLiveInput:false,checks:[{name:'teacher-http-smoke',status:'PASS'},{name:'m61-network-and-integrity',status:'PASS'},{name:'device-discovery',status:'MANUAL'}]});
+const evidence=role=>{const e=template(role);e.observations.forEach(o=>{o.status='PASS';o.note='Observed on the physical Windows test device';});return e;};
+test('M67 rejects absent and invalid preflight',()=>{assert.equal(assessPreflight(null,'Teacher').passed,false);assert.equal(assessPreflight({},'Teacher').passed,false);});
+test('M67 requires exact unique successful automatic checks',()=>{const p=goodPreflight('Teacher');assert.equal(assessPreflight(p,'Teacher').passed,true);p.checks.push({...p.checks[0]});assert.equal(assessPreflight(p,'Teacher').passed,false);});
+test('M67 rejects role confusion and failed checks',()=>{const p=goodPreflight('Teacher');assert.equal(assessPreflight(p,'Student').passed,false);p.checks.push({name:'extra',status:'FAIL'});assert.equal(assessPreflight(p,'Teacher').passed,false);});
+test('M67 review passes only supplied full evidence and never enables native input',()=>{const r=evaluate(goodPreflight('Teacher'),goodPreflight('Student'),evidence('Teacher'),evidence('Student'));assert.equal(r.reviewPassed,true);assert.equal(r.readyForLiveInput,false);assert.equal(r.liveInputEnabled,false);assert.equal(r.requiresHumanFieldReview,true);});
+test('M67 rejects incomplete manual observations',()=>{const e=evidence('Student');e.observations[0].status='NOT_TESTED';const r=evaluate(goodPreflight('Teacher'),goodPreflight('Student'),evidence('Teacher'),e);assert.equal(r.reviewPassed,false);});
+test('M67 rejects native safety adapter alteration',()=>{const r=evaluate(goodPreflight('Teacher'),goodPreflight('Student'),evidence('Teacher'),evidence('Student'),'');assert.equal(r.reviewPassed,false);assert.equal(r.simulationPassed,false);});
+test('M67 helper and Windows runner exist',()=>{assert.ok(fs.readFileSync(require('node:path').join(__dirname,'../windows/Test-M67-Field-Readiness.ps1'),'utf8').includes('Test-M62-Two-PC.ps1'));});

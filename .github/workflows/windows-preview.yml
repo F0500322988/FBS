@@ -1,0 +1,61 @@
+name: Windows preview installers
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Require OpenSSL for real TLS integration tests
+        shell: pwsh
+        run: |
+          $openssl = Get-Command openssl.exe -ErrorAction SilentlyContinue
+          if (-not $openssl) {
+            $candidate = 'C:\Program Files\Git\usr\bin\openssl.exe'
+            if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+              throw 'OpenSSL is required for TLS integration tests; tests must not be silently skipped.'
+            }
+            (Split-Path -Parent $candidate) | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+            & $candidate version
+          } else { & $openssl.Source version }
+          if ($LASTEXITCODE -ne 0) { throw 'OpenSSL prerequisite check failed' }
+      - name: JavaScript tests
+        shell: pwsh
+        run: node --test
+      - name: Native logic tests
+        shell: pwsh
+        run: dotnet run --project windows/FBS.NativeGate.Tests/FBS.NativeGate.Tests.csproj -c Release
+      - name: Certificate and local TLS tests
+        shell: pwsh
+        run: dotnet run --project windows/FBS.Setup.Tests/FBS.Setup.Tests.csproj -c Release
+      - name: Windows DPAPI and PowerShell compatibility tests
+        shell: pwsh
+        run: dotnet run --project windows/FBS.WindowsSetup.Tests/FBS.WindowsSetup.Tests.csproj -c Release
+      - name: Build preview installers
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path -LiteralPath $compiler)) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed' }
+          }
+          ./windows/Build-Installers.ps1 -InnoCompiler $compiler
+      - name: Install, smoke test, and uninstall on the isolated runner
+        shell: pwsh
+        run: ./windows/Test-M168-Installed.ps1 -InstallerDirectory ./release-packages
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FBS-Classroom-Windows-M170-Preview
+          path: |
+            release-packages/*-Setup-PREVIEW.exe
+            release-packages/*report.json
+          if-no-files-found: error

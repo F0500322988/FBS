@@ -1,0 +1,14 @@
+'use strict';
+const {test}=require('node:test');const assert=require('node:assert/strict');
+const {validate,template}=require('../windows/M72-Session-Trace-Gate');
+const prior={stage:'M71',passed:true,liveInputEnabled:false,readyForLiveInput:false,approvedForLiveInput:false};
+const check=t=>validate(t,prior);
+test('M72 valid preview then student stop',()=>assert.equal(check(template()).passed,true));
+test('M72 rejects missing prior review',()=>assert.equal(validate(template(),null).passed,false));
+test('M72 rejects preview before consent',()=>{const t=template();t.events.splice(1,1);assert.equal(check(t).passed,false)});
+test('M72 rejects duplicate or reversed timestamps',()=>{const t=template();t.events[2].atMs=2000;assert.equal(check(t).passed,false)});
+test('M72 rejects input attempts',()=>{const t=template();t.events[2].type='input-attempt';assert.equal(check(t).passed,false)});
+test('M72 rejects enabled input',()=>{const t=template();t.events[0].liveInputEnabled=true;assert.equal(check(t).passed,false)});
+test('M72 rejects changed student identity',()=>{const t=template();t.events[1].studentId='OTHER';assert.equal(check(t).passed,false)});
+test('M72 rejects missing stop',()=>{const t=template();t.events.pop();assert.equal(check(t).passed,false)});
+test('M72 rejects reconnect without new consent',()=>{const t=template();t.events.push({type:'disconnect',atMs:5000,studentId:t.studentId,liveInputEnabled:false},{type:'reconnect',atMs:6000,studentId:t.studentId,liveInputEnabled:false},{type:'preview-start',atMs:7000,studentId:t.studentId,liveInputEnabled:false});assert.equal(check(t).passed,false)});

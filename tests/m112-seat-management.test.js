@@ -1,0 +1,14 @@
+const test=require('node:test');const assert=require('node:assert/strict');const m=require('../public/m112-seat-management');
+test('unassigned returns devices without manual seats',()=>assert.deepEqual(m.unassigned([{id:'a'},{id:'b'}],{seats:{a:1}}).map(x=>x.id),['b']));
+test('empty list',()=>assert.deepEqual(m.unassigned([],{}),[]));
+test('malformed list',()=>assert.deepEqual(m.unassigned(null,{}),[]));
+test('deduplicates IDs',()=>assert.equal(m.unassigned([{id:'a'},{id:'a'}],{}).length,1));
+test('ignores invalid IDs',()=>assert.equal(m.unassigned([{},null,{id:''}],{}).length,0));
+test('handles prototype keys safely',()=>assert.equal(m.unassigned([{id:'toString'}],{seats:{}}).length,1));
+test('reset preserves dimensions',()=>assert.deepEqual(m.reset({rows:5,columns:8,seats:{a:1}}),{rows:5,columns:8,seats:{}}));
+test('reset bounds dimensions',()=>assert.deepEqual(m.reset({rows:99,columns:0}),{rows:8,columns:1,seats:{}}));
+test('reset defaults',()=>assert.deepEqual(m.reset(null),{rows:3,columns:7,seats:{}}));
+test('remove a single assignment',()=>assert.deepEqual(m.remove({rows:2,columns:2,seats:{a:1,b:2}},'a').seats,{b:2}));
+test('remove does not mutate input',()=>{const x={rows:2,columns:2,seats:{a:1}};m.remove(x,'a');assert.equal(x.seats.a,1);});
+test('remove ignores invalid seat positions',()=>assert.deepEqual(m.remove({rows:1,columns:1,seats:{a:2}},'b').seats,{}));
+test('no remote control methods',()=>assert.equal(Object.keys(m).some(k=>/keyboard|mouse|remote|control/i.test(k)),false));

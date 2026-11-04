@@ -1,0 +1,16 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');
+const {evaluate}=require('../windows/M87-Student-Stop-Audit');
+const target='student-private-01',stopAt=100000;
+const sample=(at,approved=true)=>({status:{mode:'live',features:{remoteControl:false},students:[{id:target,online:true,approved}]},frames:{frames:at===null?[]:[{id:target,at,jpeg:'/9j/test'}]}});
+const run=(before=sample(99000),after=[sample(99000,false),sample(null,false)],opts={})=>evaluate(before,after,{target,stopAt,...opts});
+test('passes no frames after stop',()=>assert.equal(run().passed,true));
+test('fails resumed frames after grace',()=>assert.ok(run(sample(99000),[sample(107000),sample(108000)]).issues.includes('preview_present_after_grace')));
+test('fails frame advancing after stop',()=>assert.ok(run(sample(99000),[sample(99000),sample(107000)]).issues.some(x=>x.includes('frame_advanced'))));
+test('fails absent baseline preview',()=>assert.ok(run(sample(null)).issues.includes('no_active_preview_before_stop')));
+test('fails insufficient after samples',()=>assert.equal(run(sample(99000),[sample(null)]).passed,false));
+test('fails unsafe remote input',()=>{const s=sample(null);s.status.features.remoteControl=true;assert.equal(run(sample(99000),[s,s]).passed,false);});
+test('fails invalid grace',()=>assert.equal(run(undefined,undefined,{graceMs:20}).passed,false));
+test('does not expose target or images',()=>{const report=JSON.stringify(run());assert.ok(!report.includes(target));assert.ok(!report.includes('jpeg'));});
+test('fails missing target',()=>assert.equal(evaluate(sample(99000),[sample(null),sample(null)],{stopAt}).passed,false));
+test('allows stale retained frame metadata',()=>assert.equal(run(sample(99000),[sample(99000,false),sample(99000,false)]).passed,true));

@@ -1,0 +1,17 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+const api=require('../public/m106-alerts');const root=path.join(__dirname,'../public');const html=fs.readFileSync(path.join(root,'index.html'),'utf8');const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+const online={id:'PC-01',approved:true,online:true},offline={id:'PC-02',approved:true,online:false};
+test('M106 warns about offline approved devices',()=>assert.equal(api.offlineSummary([online,offline],true).count,1));
+test('M106 does not warn for all-online roster',()=>assert.equal(api.offlineSummary([online],true).kind,'none'));
+test('M106 excludes unapproved devices from offline warning',()=>assert.equal(api.offlineSummary([{...offline,approved:false}],true).count,0));
+test('M106 fails closed on stale status',()=>assert.equal(api.offlineSummary([offline],false).kind,'stale'));
+test('M106 fails closed on invalid roster',()=>assert.equal(api.offlineSummary(null,true).kind,'stale'));
+test('M106 counts offline devices without IDs only if valid',()=>assert.equal(api.offlineSummary([{approved:true,online:false}],true).count,0));
+test('M106 filters disconnection events',()=>assert.deepEqual(api.filterEvents([{type:'disconnected'},{type:'reconnected'}],'disconnected'),[{type:'disconnected'}]));
+test('M106 supports all events',()=>assert.equal(api.filterEvents([{type:'disconnected'},{type:'reconnected'}],'all').length,2));
+test('M106 rejects unknown filters',()=>assert.equal(api.filterEvents([{type:'disconnected'}],'bad').length,0));
+test('M106 handles malformed event list',()=>assert.deepEqual(api.filterEvents(null,'all'),[]));
+test('M106 includes warning region',()=>assert.match(html,/id="monitor-alert"/));
+test('M106 includes filter select',()=>assert.match(html,/id="monitor-filter"/));
+test('M106 loads helper before app',()=>assert.ok(html.indexOf('m106-alerts.js')<html.indexOf('app.js')));
+test('M106 app uses safe textContent for alert',()=>assert.match(app,/alert.textContent=active.message/));

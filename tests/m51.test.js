@@ -1,0 +1,11 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const ui = fs.readFileSync(path.join(__dirname, '../windows/FBS.Student.Native/Program.cs'), 'utf8');
+const pipeline = fs.readFileSync(path.join(__dirname, '../windows/FBS.Student.Native/VerifiedPreviewPipeline.cs'), 'utf8');
+test('native UI dispatches previews through verified pipeline', () => { assert.match(ui, /verifiedPipeline\.Preview\(/); assert.doesNotMatch(ui, /dryRun\.Evaluate\(/); });
+test('agent polling supplies heartbeat', () => assert.match(ui, /verifiedPipeline\.Heartbeat\(/));
+test('local stop suppresses delayed session response', () => { assert.match(ui, /id == locallyStoppedSession/); assert.match(ui, /locallyStoppedSession = id/); });
+test('pipeline rejects rearm of stopped session', () => { assert.match(pipeline, /sessionId == lastStoppedSession/); assert.match(pipeline, /lastStoppedSession = activeSession/); });
+test('input injection remains disabled', () => { assert.match(pipeline, /MayInjectInput => false/); assert.doesNotMatch(ui, /nativeInput\.EnableForVerifiedSession\(/); });
