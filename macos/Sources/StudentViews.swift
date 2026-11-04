@@ -1,6 +1,6 @@
 import AppKit
 
-final class MessagesWindow: NSObject, NSWindowDelegate {
+@MainActor final class MessagesWindow: NSObject, NSWindowDelegate {
     let window: NSWindow
     private let host: RuntimeHost
     private let choices = NSPopUpButton(frame: .zero, pullsDown: false)
@@ -53,7 +53,7 @@ final class MessagesWindow: NSObject, NSWindowDelegate {
         NSLayoutConstraint.activate([stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20), stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20), stack.topAnchor.constraint(equalTo: view.topAnchor, constant: 20), stack.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20)])
     }
 }
-final class BroadcastWindow: NSObject, NSWindowDelegate {
+@MainActor final class BroadcastWindow: NSObject, NSWindowDelegate {
     let window: NSWindow
     private let host: RuntimeHost, image = NSImageView(), state = NSTextField(wrappingLabelWithString: "انتظار شاشة المعلم...")
     private var timer: Timer?, busy = false, closed = false, lastAt = Date.distantPast, lastSession = "", lastSequence = 0

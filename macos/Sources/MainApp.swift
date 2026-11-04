@@ -1,6 +1,6 @@
 import AppKit
 
-final class ClassroomApp: NSObject, NSApplicationDelegate {
+@MainActor final class ClassroomApp: NSObject, NSApplicationDelegate {
     private var window: NSWindow!, role = ClassroomRole.student
     private var config: ConnectionConfig!, host = RuntimeHost(), messages: MessagesWindow?, broadcast: BroadcastWindow?
     private let key = NSSecureTextField(), password = NSSecureTextField(), address = NSTextField(), port = NSTextField(), pin = NSTextField(), device = NSTextField()
@@ -72,7 +72,7 @@ final class ClassroomApp: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationWillTerminate(_ notification: Notification) { pollTimer?.invalidate(); host.stop() }
 }
-@main struct Main {
+@main @MainActor struct Main {
     static func main() {
         if CommandLine.arguments.contains("--self-check") {
             do { try RuntimeHost.selfCheck(); exit(0) } catch { fputs("Bundle self-check failed\n", stderr); exit(1) }
