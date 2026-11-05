@@ -70,7 +70,7 @@ function render(){
    screen.append(img);screen.classList.add('has-preview');screen.tabIndex=0;screen.setAttribute('role','button');screen.setAttribute('aria-label','تكبير شاشة '+s.id);
    screen.addEventListener('click',()=>openScreen(s.id));screen.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openScreen(s.id);}});
   }else{screen.classList.add('no-preview');screen.textContent=pageNow==='screens'?'لا توجد مشاركة نشطة':'▣';screen.setAttribute('aria-label','رمز جهاز — ليست صورة شاشة فعلية');}
-  c.append(screen,name,detail,status);return c;
+  const caption=document.createElement('div');caption.className='device-caption';caption.append(status,name);c.append(screen,caption,detail);return c;
  }));
 }
 async function refresh(){
@@ -480,7 +480,7 @@ async function refreshLabSettings(force=false){
   if(force||!labDirty&&(!labDraft||changed)){labDraft=structuredClone(data);labDirty=false;drawLabDraft();el('lab-result').textContent='الإعدادات المحفوظة جاهزة';}
   else if(labDirty&&labDraft.revision!==data.revision)el('lab-result').textContent='تغيرت الإعدادات في نافذة أخرى؛ أعد تحميل المحفوظ قبل الحفظ';
  }catch{if(generation!==labGeneration)return;labSnapshot=null;updateLabFilter();el('lab-result').textContent='تعذر قراءة إعدادات المعمل؛ لم تُستبدل الإعدادات الموجودة. تحقق من التخزين ثم أعد التحميل.';el('lab-save').disabled=true;}
- finally{labBusy=false;if(pageNow==='labs')refreshLabProfiles();}
+ finally{labBusy=false;if(['labs','settings'].includes(pageNow))refreshLabProfiles();}
 }
 el('lab-title').addEventListener('input',()=>{if(labDraft){labDraft.name=el('lab-title').value;markLabDirty();}});
 el('lab-platform').addEventListener('change',()=>{if(labDraft){labDraft.platform=el('lab-platform').value;markLabDirty();}});
@@ -642,7 +642,7 @@ setInterval(()=>{if(pageNow==='control')loadAssistanceState();},1000);setInterva
 window.addEventListener('pagehide',()=>{const id=assistSession;assistGeneration++;assistToken=null;if(id)navigator.sendBeacon('/api/assist/stop',JSON.stringify({sessionId:id}));});
 
 // M181 desktop commands are available only with negotiated v2 capability and explicit consent.
-for(const b of document.querySelectorAll('[data-go]'))b.addEventListener('click',()=>document.querySelector('nav [data-page="'+b.dataset.go+'"]').click());
+for(const b of document.querySelectorAll('[data-go]'))b.addEventListener('click',()=>{document.getElementById('teacher-tools')?.removeAttribute('open');document.querySelector('nav [data-page="'+b.dataset.go+'"]').click();});
 for(const b of document.querySelectorAll('#desktop-actions [data-button]'))b.addEventListener('click',()=>{if(assistDesktop)sendAssistance({type:'click',button:b.dataset.button});});
 for(const b of document.querySelectorAll('#desktop-actions [data-scroll]'))b.addEventListener('click',()=>{if(assistDesktop)sendAssistance({type:'scroll',steps:Number(b.dataset.scroll)});});
 el('desktop-send-key').addEventListener('click',()=>{if(!assistDesktop)return;const modifiers=['primary','shift','alt'].filter(m=>el('desktop-'+m).checked);if(modifiers.length>2){el('assist-receipt').textContent='اختر مفتاحي تعديل كحد أقصى';return;}sendAssistance({type:'key',key:el('desktop-key').value,modifiers});});

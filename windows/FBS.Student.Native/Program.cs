@@ -244,6 +244,9 @@ public sealed class StudentStatusForm : Form
                 MessageBox.Show(this, "تعذر قراءة إعداد الاتصال. راجع مسؤول المعمل؛ لن يُحذف الإعداد أو يُستبدل تلقائيًا.", "FBS Classroom");
             }
         };
+        var connectionButton = new Button { Text = "إعداد الاتصال بالمعلم", Dock = DockStyle.Bottom, Height = 36 };
+        connectionButton.Click += (_, _) => editConnection.PerformClick();
+        advancedWindow?.Controls.Add(connectionButton);
         connectionMenu.Items.Add(editConnection);
         tray.ContextMenuStrip = connectionMenu;
         FormClosed += (_, _) => connectionMenu.Dispose();
