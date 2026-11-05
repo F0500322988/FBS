@@ -36,3 +36,12 @@
 - نجح1499JS في/tmp/fbs-m180-js-release.log. آخر إعادة أثناء ضغطNSIS فشلت في مهلة اختبار الرسائلM173 فقط:1498/1499؛ السبب غير محسوم، ويجب إعادة الاختبار بعد اكتمال التغليف دون تغيير المهلة أو تجاهل الفشل. اختبارM180TLS الأخير10/10نجح.
 - MacIntel المصححrun41982973174/127097094899 وARMrun41983173466/127097725340؛ راجع النتيجة الفعلية قبل تسليم الحزم. لا يُفترض اختبارCGEvent الحقيقي أوAccessibility من مجرد نجاح البناء.
 - يجريNSIS تحت/workspace/setup/m180-installers والحمولة تحت/workspace/setup/m180-installer-stage. لا تسلّم قبل فحص البصمات والتثبيت الفعلي.
+
+## التسليم المتحقق M180
+
+- نجح Windows النهائي run41983722170/job127099478943 بكل الخطوات:185.NET، واختباراتAPI/TLS، وتثبيت وإزالة المثبّتين، وفحص584ملفًا مثبتًا، وتشغيلNode والحفاظ على الملف غير المملوك.
+- ملفاتEXE فيdownloads/m180-preview تحتdownloads/M180؛ SHA المعلم0c96e4eabcd1853cc51939295f17deb39ba0c17df59c963aa8f691ceff9d9239 والطالبa1e5628accff1ca8d91793c529de3b66696bccb695372c4842462acd44a777c1. أُعيد تنزيلهما والتحقق من الحجم والبصمة.
+- نجح MacIntel النهائيrun41982973174 وARMrun41983173466. Intelrelease m180-macos-preview-22-1 عند1debb36؛ ARMrelease m180-macos-arm-preview-7-1 عند3114a4c. الفرق اختبار فقط، وكودالتطبيق واحد. لا تسلمpreview-21-1 الأقدم.
+- نُزلت حزمIntelالأربع وتحققتSHAوصيغxar/koly. تقاريرIntel/ARM في/workspace/outputs/M180-Mac-final؛ كل منهمايثبت بنيةالمضيف والتثبيتوالإزالةوالـloopback، ولا يثبتCGEvent الفعلي أوأذوناتAccessibility.
+- إعادةJS النهائية بعدNSIS نجحت1499/1499 بلا تخطٍّ في/tmp/fbs-m180-complete-retry.log؛ السبب الدقيق لمهلةM173 السابقة غير مؤكد. Chromiumالنهائي نجح في/tmp/fbs-m180-browser-release.log.
+- التقرير العربيdocs/M180-RESULTS-AR.md والدليلdocs/M180-ASSISTANCE-AR.md. المرحلة ما زالتPreview؛ لا نقر أواختصارات أوتحكمكامل أوقفلحسابنظام، ولا اختبارمعملفعلي.

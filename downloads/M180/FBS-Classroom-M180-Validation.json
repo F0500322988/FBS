@@ -1,0 +1,78 @@
+{
+  "stage": "M180",
+  "releaseKind": "unsigned development preview",
+  "finalProduct": false,
+  "applicationSource": "1debb36a5bce0776edd7ae77f40a9ee529c4d6a4",
+  "transportTestSource": "3114a4cf3e1a084669acf16c89c5cbdd94f3ef1e",
+  "javascript": {
+    "tests": 1499,
+    "passed": 1499,
+    "failed": 0,
+    "skipped": 0,
+    "log": "fbs-m180-complete-retry.log",
+    "earlierRun": {
+      "passed": 1498,
+      "failed": 1,
+      "failure": "M173 real TLS message state timeout",
+      "concurrentNsisBuild": true,
+      "causeConfirmed": false,
+      "retryChangedApplicationCode": false
+    }
+  },
+  "browser": {
+    "chromiumAcceptancePassed": true,
+    "covers": [
+      "assistance consent and ownership",
+      "fresh decoded monitor image",
+      "relative movement and text",
+      "stop and expired lease",
+      "messages",
+      "files",
+      "broadcast",
+      "pause",
+      "lab settings",
+      "profiles",
+      "mobile layout"
+    ]
+  },
+  "windows": {
+    "run": "https://github.com/F0500322988/FBS/actions/runs/41983722170",
+    "nativeChecks": 185,
+    "ownedFixtureOSInput": true,
+    "actualTeacherStudentAppGuiTested": false,
+    "fullNetworkToNativeInputTested": false,
+    "twoPcLanTested": false,
+    "installerExecutionPassed": true,
+    "installedFilesVerified": 584,
+    "uninstallAndUnknownFilePreservationPassed": true,
+    "signed": false
+  },
+  "macos": {
+    "intelRun": "https://github.com/F0500322988/FBS/actions/runs/41982973174",
+    "appleSiliconRun": "https://github.com/F0500322988/FBS/actions/runs/41983173466",
+    "release": "https://github.com/F0500322988/FBS/releases/tag/m180-macos-preview-22-1",
+    "armRelease": "https://github.com/F0500322988/FBS/releases/tag/m180-macos-arm-preview-7-1",
+    "minimumOS": "13.0",
+    "architectures": [
+      "x86_64",
+      "arm64"
+    ],
+    "bothHostBuildsPassed": true,
+    "pkgDmgHashAndMagicVerified": true,
+    "isolatedInstallAndRemovePassed": true,
+    "loopbackRuntimePassed": true,
+    "accessibilityAndCGEventEmissionTested": false,
+    "studentAppGuiTested": false,
+    "keychainAndScreenPermissionGuiTested": false,
+    "developerIDSigned": false,
+    "notarized": false
+  },
+  "limitations": [
+    "No clicks, shortcuts or Enter in assistance",
+    "No full remote control",
+    "Screen pause is an overlay, not an OS account lock",
+    "No physical mixed-device LAN or 40-device acceptance",
+    "Final visual design is incomplete",
+    "Unsigned Windows and ad-hoc Mac previews"
+  ]
+}
