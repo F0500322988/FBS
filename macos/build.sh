@@ -58,7 +58,20 @@ PY
   # Reserve filesystem overhead explicitly; automatic sizing can under-allocate the image.
   fbs_mac_dmg_kib="$(du -sk "$fbs_mac_work/$fbs_role-dmg" | awk '{print $1}')"
   fbs_mac_dmg_mib="$(( (fbs_mac_dmg_kib + 1023) / 1024 + 128 ))"
-  hdiutil create -size "${fbs_mac_dmg_mib}m" -fs HFS+ -srcfolder "$fbs_mac_work/$fbs_role-dmg" -volname "FBS Classroom $fbs_role M181" -format UDZO "$fbs_mac_dmg"
+  for fbs_mac_dmg_attempt in 1 2 3; do
+    fbs_mac_dmg_candidate="$fbs_mac_work/$fbs_role-disk-$fbs_mac_dmg_attempt.dmg"
+    fbs_mac_dmg_log="$fbs_mac_work/$fbs_role-disk-$fbs_mac_dmg_attempt.log"
+    if hdiutil create -size "${fbs_mac_dmg_mib}m" -fs HFS+ -srcfolder "$fbs_mac_work/$fbs_role-dmg" -volname "FBS Classroom $fbs_role M181" -format UDZO "$fbs_mac_dmg_candidate" > "$fbs_mac_dmg_log" 2>&1; then
+      cat "$fbs_mac_dmg_log"
+      mv "$fbs_mac_dmg_candidate" "$fbs_mac_dmg"
+      break
+    else
+      fbs_mac_dmg_status=$?
+      cat "$fbs_mac_dmg_log"
+      if ! grep -q 'Resource busy' "$fbs_mac_dmg_log" || [[ "$fbs_mac_dmg_attempt" == 3 ]]; then exit "$fbs_mac_dmg_status"; fi
+      sleep 3
+    fi
+  done
   hdiutil verify "$fbs_mac_dmg"
   pkgutil --expand-full "$fbs_mac_pkg" "$fbs_mac_work/$fbs_role-expanded"
   python3 "$fbs_mac_root/macos/verify-payload.py" "$fbs_mac_app" "$fbs_mac_work/$fbs_role-expanded" "$fbs_mac_output/$fbs_role-payload-verification.json"
