@@ -9,7 +9,7 @@ enum ProvisioningChecks {
         func reject(_ name:String,_ action:() throws -> Void) throws { var failed=false;do {try action()}catch {failed=true};try check(failed,name) }
         let root=FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("fbs-kit-fixture-"+UUID().uuidString)
         try KitIO.privateDirectory(root)
-        let store=StudentKeychain(service:"com.fbsclassroom.provisioning-test."+UUID().uuidString)
+        let store=StudentKeychain(service:"com.fbsclassroom.provisioning-test."+UUID().uuidString,consumerExecutable:CommandLine.arguments[0])
         defer { SecItemDelete(store.query as CFDictionary) }
         let profile=LabProfile(teacherHost:"192.168.50.2",fingerprint:String(repeating:"a",count:64),pairingKey:"fixture-only-pairing-key-184")
         let file=root.appendingPathComponent("lab-profile.json");try profile.writeNew(file)

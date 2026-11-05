@@ -4,3 +4,7 @@ node_modules/
 macos-dist/
 **/__pycache__/
 *.pyc
+
+# Private deployment profiles must remain on administrator-controlled devices.
+lab-profile.json
+FBS-Student-Kit-*/

@@ -13,6 +13,6 @@ for fbs_kit_arch in arm64 x86_64; do
 done
 lipo -create "$fbs_kit_work/FBS-LabSetup-arm64" "$fbs_kit_work/FBS-LabSetup-x86_64" -output "$fbs_kit_output/FBS-LabSetup-Mac"
 codesign --force --sign - --timestamp=none "$fbs_kit_output/FBS-LabSetup-Mac"
-lipo -verify_arch arm64 x86_64 "$fbs_kit_output/FBS-LabSetup-Mac"
+lipo "$fbs_kit_output/FBS-LabSetup-Mac" -verify_arch arm64 x86_64
 codesign --verify --strict "$fbs_kit_output/FBS-LabSetup-Mac"
 "$fbs_kit_output/FBS-LabSetup-Mac" self-test | tee "$fbs_kit_output/Mac-provisioning-checks.log"

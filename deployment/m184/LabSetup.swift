@@ -81,7 +81,8 @@ enum KitIO {
 
 struct StudentKeychain {
     let service:String
-    init(service:String = "com.fbsclassroom.macos.preview") { self.service=service }
+    let consumerExecutable:String?
+    init(service:String = "com.fbsclassroom.macos.preview",consumerExecutable:String? = nil) { self.service=service;self.consumerExecutable=consumerExecutable }
     var query:[String:Any] { [kSecClass as String:kSecClassGenericPassword,kSecAttrService as String:service,kSecAttrAccount as String:"student"] }
     func load() throws -> ConnectionConfig? {
         var q=query;q[kSecReturnData as String]=true;q[kSecMatchLimit as String]=kSecMatchLimitOne
@@ -93,7 +94,16 @@ struct StudentKeychain {
     func apply(_ profile:LabProfile) throws -> String {
         try profile.validate()
         if let old=try load() { guard profile.matches(old) else { throw ConfigurationError.invalid("Existing student settings differ; nothing replaced") };return "unchanged" }
-        let config=profile.configuration();var q=query;q[kSecValueData as String]=try JSONEncoder().encode(config);q[kSecAttrAccessible as String]=kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        let config=profile.configuration();var q=query;q[kSecValueData as String]=try JSONEncoder().encode(config)
+        if let path=consumerExecutable {
+            var current:SecTrustedApplication?, consumer:SecTrustedApplication?, access:SecAccess?
+            guard SecTrustedApplicationCreateFromPath(nil,&current) == errSecSuccess,
+                  SecTrustedApplicationCreateFromPath(path,&consumer) == errSecSuccess,
+                  let current=current,let consumer=consumer,
+                  SecAccessCreate("FBS Classroom student connection" as CFString,[current,consumer] as CFArray,&access) == errSecSuccess,
+                  let access=access else { throw ConfigurationError.invalid("Cannot authorize the installed student to read its own credential") }
+            q[kSecAttrAccess as String]=access
+        }
         // Add-only: a concurrent importer cannot replace an existing identity/configuration.
         guard SecItemAdd(q as CFDictionary,nil) == errSecSuccess else { throw ConfigurationError.invalid("Student configuration already exists or Keychain refused the import") }
         return "configured"
@@ -134,7 +144,7 @@ struct StudentKeychain {
                 let app=URL(fileURLWithPath:"/Applications/FBS Classroom Student.app")
                 guard let bundle=Bundle(url:app),bundle.object(forInfoDictionaryKey:"CFBundleShortVersionString") as? String == "0.183.0",bundle.bundleIdentifier == "com.fbsclassroom.student.preview" else { throw ConfigurationError.invalid("Install Student M183 first") }
                 guard NSRunningApplication.runningApplications(withBundleIdentifier:"com.fbsclassroom.student.preview").isEmpty else { throw ConfigurationError.invalid("Close student app first") }
-                let outcome=try StudentKeychain().apply(profile)
+                let outcome=try StudentKeychain(consumerExecutable:app.appendingPathComponent("Contents/MacOS/FBSClassroom").path).apply(profile)
                 print("إعداد الطالب: \(outcome) | المعلم: \(profile.teacherHost):\(profile.teacherPort)")
                 print("اعتمد هوية الجهاز من لوحة المعلم. أذونات macOS المطلوبة تُمنح محليًا؛ لم يُمنح التحكم تلقائيًا.")
                 _ = try PlatformServices.run("/usr/bin/open",[app.path]);return
