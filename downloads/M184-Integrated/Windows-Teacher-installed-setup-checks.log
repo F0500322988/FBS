@@ -1,0 +1,40 @@
+PASS: portable profile round trip
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject port
+PASS: reject port
+PASS: reject fingerprint
+PASS: reject short key
+PASS: cross-platform key bound
+PASS: no control characters
+PASS: no device identity in portable profile
+PASS: duplicate fields rejected
+PASS: oversized profile rejected
+PASS: import into fresh student state
+PASS: native student decrypts imported DPAPI key
+PASS: native student loads exact pinned endpoint
+PASS: no clear key in persisted DPAPI file
+PASS: same profile import is idempotent
+PASS: existing device identity preserved
+PASS: different key cannot replace current lab
+PASS: different teacher cannot replace current lab
+PASS: rejected imports preserve key bytes
+PASS: concurrent import cannot acquire lock
+PASS: partial existing state is not overwritten
+PASS: teacher export uses actual certificate SHA256
+PASS: teacher password and private certificate material excluded
+PASS: complete private student kit export
+PASS: export never replaces an existing folder
+PASS: incomplete template rejected before export
+{"stage":"M184","windowsProvisioningChecks":39,"dpapiRoundTripPassed":true,"nativeStudentCompatibilityPassed":true,"actualUserLabTested":false,"secretsPrinted":false}

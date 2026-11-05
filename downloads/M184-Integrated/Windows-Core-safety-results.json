@@ -1,0 +1,12 @@
+{
+  "FBS.WindowsSetup.Tests": true,
+  "FBS.Assistance.Tests": true,
+  "FBS.FileDelivery.Tests": true,
+  "FBS.Broadcast.WindowsTests": true,
+  "FBS.ScreenPause.WindowsTests": true,
+  "FBS.Setup.Tests": true,
+  "FBS.Power.Tests": true,
+  "FBS.Appearance.WindowsTests": true,
+  "FBS.Assistance.WindowsTests": true,
+  "FBS.NativeGate.Tests": true
+}

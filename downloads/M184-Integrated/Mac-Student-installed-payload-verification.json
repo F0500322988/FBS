@@ -1,0 +1,240 @@
+{
+  "application": "FBS Classroom Student.app",
+  "allPayloadHashesVerified": true,
+  "filesVerified": 58,
+  "installExecuted": false,
+  "files": {
+    "Contents/Info.plist": {
+      "size": 1185,
+      "sha256": "c04500572747eb2036903343613973d57a68b0fd60c08f05651dac6b96e689c5"
+    },
+    "Contents/_CodeSignature/CodeResources": {
+      "size": 16740,
+      "sha256": "9ca96e4f03dc5d7928fca20ff199c40407bf51285ba6a3c531a2b06d73cb6746"
+    },
+    "Contents/MacOS/FBSClassroom": {
+      "size": 966608,
+      "sha256": "a60864875feda6b9bdc13ac960b4d1a8fedf593cccfc86a9783e7ca6dd8aa8e5"
+    },
+    "Contents/Resources/Runtime/control-session-state.js": {
+      "size": 1368,
+      "sha256": "c8cf3e255998c10cb005fe9997c3c3ded19f01e13d8e60ac0a6edbd8ce5be3ec"
+    },
+    "Contents/Resources/Runtime/readiness-evidence.js": {
+      "size": 1485,
+      "sha256": "910817136471419edb87926f287a20aad8bffbbd3cbf96e1c9cec2d11fc9c729"
+    },
+    "Contents/Resources/Runtime/local-control-auth.js": {
+      "size": 692,
+      "sha256": "841e0f4648d57487518b7f66df7eeaa931701d86911742e9b85fdd50edbdf93b"
+    },
+    "Contents/Resources/Runtime/teacher-lan.js": {
+      "size": 10819,
+      "sha256": "b7dc5897ca67994a19b2e6758a7d18ff001d8bd9790959227013e927d14b772f"
+    },
+    "Contents/Resources/Runtime/one-student-rehearsal.js": {
+      "size": 2259,
+      "sha256": "f45040adf18834f86589bb660bef685bf130f01f59b5b73043430e013e0a7d43"
+    },
+    "Contents/Resources/Runtime/authenticated-preview-channel.js": {
+      "size": 2327,
+      "sha256": "c27040512591581b243a214c5b4737be82053c38529be16241b6a25a6f35aa91"
+    },
+    "Contents/Resources/Runtime/lan.js": {
+      "size": 570,
+      "sha256": "d23bce53bf059bbc56ad34a5066c7118bbe7845a24901394952d38f5c3f0fe70"
+    },
+    "Contents/Resources/Runtime/preview-validation.js": {
+      "size": 1073,
+      "sha256": "8ef27cd99cc6002d6d09d4ee70a40d301362410d351655790d6cf9a165e31dc1"
+    },
+    "Contents/Resources/Runtime/classroom-power.js": {
+      "size": 7555,
+      "sha256": "3e1a9eca7eb574eceeafba980c838b99492a11d4c123c9f3da1f2e6e7162f50b"
+    },
+    "Contents/Resources/Runtime/student-agent.js": {
+      "size": 26882,
+      "sha256": "6388ad59e42501d26d96e4d48664f2ec8d3ee36a82387689806a2962bc81aedb"
+    },
+    "Contents/Resources/Runtime/atomic-json-store.js": {
+      "size": 2213,
+      "sha256": "c80f2877c4078180dfc95ac46926e55f753b4ad2f175db5333baf3fa9e7be731"
+    },
+    "Contents/Resources/Runtime/server.js": {
+      "size": 21964,
+      "sha256": "bb7f38db74267b9ed20e3cb257196fd15570317bf871038e7ff144417bc711ab"
+    },
+    "Contents/Resources/Runtime/node-arm64": {
+      "size": 112345936,
+      "sha256": "c736db128166e662716b997476ae9b15bebfce30f329c4c8900dc38d60890185"
+    },
+    "Contents/Resources/Runtime/node-x64": {
+      "size": 115497600,
+      "sha256": "6c91b9f2821f86e26fa5856fedafc84117b6fff8443f00e604a4c132d9c10f07"
+    },
+    "Contents/Resources/Runtime/classroom-assistance.js": {
+      "size": 7250,
+      "sha256": "bee89bee81b16325b130ab7eeca8b9e2ef755d0714c890f3c60fe5e67726a384"
+    },
+    "Contents/Resources/Runtime/classroom-pause.js": {
+      "size": 3562,
+      "sha256": "f6b03c223afb34a04e42b5aabc2bc0d2559b7eecb7c6c86ff3e41edd6f5b6a0d"
+    },
+    "Contents/Resources/Runtime/lab-profiles.js": {
+      "size": 1246,
+      "sha256": "f1bce37ee979c00af01f363647824729a04131c9ce196ee96c967f73f8ded4bc"
+    },
+    "Contents/Resources/Runtime/control-lease.js": {
+      "size": 1580,
+      "sha256": "fcf019784d95e14fdc666d36cc2b01b6bcdbf3433e8ac148917079931cb0713a"
+    },
+    "Contents/Resources/Runtime/control-commands.js": {
+      "size": 1641,
+      "sha256": "6333cd510aaf3ee9186484772f7feaae37b509d0c3371311c87675b90f136a08"
+    },
+    "Contents/Resources/Runtime/pinned-https.js": {
+      "size": 2128,
+      "sha256": "f742c6f93b0354dd366525689553caf351ac6f93556948e6411aecfadc250d0b"
+    },
+    "Contents/Resources/Runtime/teacher-endpoint.js": {
+      "size": 1062,
+      "sha256": "badce7ce60a9511240edc1184243d0b900d820740c8d1dcc840147f4bdc83ede"
+    },
+    "Contents/Resources/Runtime/Node-LICENSE.txt": {
+      "size": 145485,
+      "sha256": "c738ae413cf561f174e34f6961f8ca458aae2369a73640dda6234c629b98bcc4"
+    },
+    "Contents/Resources/Runtime/classroom-broadcast.js": {
+      "size": 3869,
+      "sha256": "ed8c65b9e95b9d0207e886853b4128e1ec4ecd4d84416b6292bfcb8fca400118"
+    },
+    "Contents/Resources/Runtime/classroom-files.js": {
+      "size": 3229,
+      "sha256": "a64b3b9e014c442afd05a1dd26e5ef8d8a724dd96acbfb0d802728aebed4a7be"
+    },
+    "Contents/Resources/Runtime/classroom-messages.js": {
+      "size": 3944,
+      "sha256": "b46ee2acce746ad2dfaad458c6de1383fdd1a07e148057d47297abde9d203d51"
+    },
+    "Contents/Resources/Runtime/lab-settings.js": {
+      "size": 1642,
+      "sha256": "ea5302b4204517d0ee81a2f87ff2143f2b579ff2729006c961ed8016db488f37"
+    },
+    "Contents/Resources/Runtime/enrollment.js": {
+      "size": 1106,
+      "sha256": "4ebe044a68602e4b6c1ed4e7122365e7eeadd8890d57c3e15a6f895e998a339c"
+    },
+    "Contents/Resources/Runtime/device-identity.js": {
+      "size": 1877,
+      "sha256": "cc2bc2b882fb6ea7217d870ed8c83197173a563deaba087e913dd868f2c62c00"
+    },
+    "Contents/Resources/Runtime/single-device-preflight.js": {
+      "size": 2456,
+      "sha256": "1437e741c98a2c56f188da8aba86e4ed41302837941d48d5d4355dc33350f320"
+    },
+    "Contents/Resources/Runtime/authenticated-preview-transport.js": {
+      "size": 2053,
+      "sha256": "0d085efebea972dacc7b8c5efa734dc804062f1cd4d558fa2f648237b2b72b74"
+    },
+    "Contents/Resources/SetupKit/FBS-LabSetup-Windows.exe": {
+      "size": 161746004,
+      "sha256": "0bc8c280605c60c0f480abf63674b60030bcd4b75c5abbc790427a7b0ac6d46d"
+    },
+    "Contents/Resources/SetupKit/Setup-Student-Mac.command": {
+      "size": 387,
+      "sha256": "b55d22e5a791a314c97b6d4130f6f17722a03bf3480055a5e62b19635406b17f"
+    },
+    "Contents/Resources/SetupKit/INTEGRATED-START-HERE-AR.md": {
+      "size": 3813,
+      "sha256": "ced3dbcca846887816a553190b9f8648e4af1063e08528991e2b4795efff94c9"
+    },
+    "Contents/Resources/SetupKit/FBS-LabSetup-Mac": {
+      "size": 708432,
+      "sha256": "a227514df5cf83d467044067c5ee854c8cb2c34bbfe4ef98e48a09ad379c1e8d"
+    },
+    "Contents/Resources/SetupKit/Prepare-Teacher-Mac.command": {
+      "size": 329,
+      "sha256": "70f0406469a3a25639ce7edce9b0dcf0e27625a42652465e2532e5f42a483147"
+    },
+    "Contents/Resources/SetupKit/Prepare-Teacher-Windows.cmd": {
+      "size": 273,
+      "sha256": "024dc8a7b25337734a42b7bca3790764eb0efb4ca5e0bb4e1adbacc683a68e78"
+    },
+    "Contents/Resources/SetupKit/README-AR.md": {
+      "size": 6500,
+      "sha256": "3d8efb6ed8b4027d0b8862b8c3e76dc1354ee0ca8577e1d0fcfa7bf5bb02814b"
+    },
+    "Contents/Resources/SetupKit/Import-Student-Mac.command": {
+      "size": 449,
+      "sha256": "bf51b4e640ebde0d07f794e0156008dde2bb06f53f984a52ae72c265d22bf8bd"
+    },
+    "Contents/Resources/SetupKit/Setup-Student-Windows.cmd": {
+      "size": 330,
+      "sha256": "1a7d335a617709e685d9b7c358a0608c35465ddd8383ac46367aa5563ff71ccc"
+    },
+    "Contents/Resources/SetupKit/Tests/Windows-provisioning-checks.log": {
+      "size": 1735,
+      "sha256": "3baee3d12314f0f90c3a47aa09fcf90f1fd5d0cead3b7b68dfda539101428aa1"
+    },
+    "Contents/Resources/SetupKit/Tests/Mac-provisioning-checks.log": {
+      "size": 1794,
+      "sha256": "a3feff95f22b9d76b51f525a4e1b8e9c5ffa15f38960386de2414fa373cc2671"
+    },
+    "Contents/Resources/Runtime/public/m112-seat-management.js": {
+      "size": 1352,
+      "sha256": "55718b6edb77f9b9dda226ab74957de1ee4e92d93acce81b871c638a65f795ee"
+    },
+    "Contents/Resources/Runtime/public/m107-priority.js": {
+      "size": 1564,
+      "sha256": "5bd6bb410bd12f924ce581c16bb25cf41f6c6a4c834831b026630eddf7a71112"
+    },
+    "Contents/Resources/Runtime/public/m113-seat-drag.js": {
+      "size": 1156,
+      "sha256": "e6a2bdde2243bf389b9feabe52361e33b8600e47c5fb58ce186c580652b7a892"
+    },
+    "Contents/Resources/Runtime/public/index.html": {
+      "size": 37635,
+      "sha256": "1705cb41e518452d3d8b961bf1ef186586801145e1547cd201d8a02fb6e0c7fe"
+    },
+    "Contents/Resources/Runtime/public/m106-alerts.js": {
+      "size": 1251,
+      "sha256": "4669d7a4c91d80f3f18e0d02953806ed82b2440442d058fa8828a32f219e4acc"
+    },
+    "Contents/Resources/Runtime/public/m110-seat-map.js": {
+      "size": 1786,
+      "sha256": "1b36be193de782359eb7ec43b0a62d84252692585af998b4f995b54b0c61bf84"
+    },
+    "Contents/Resources/Runtime/public/reference-theme.css": {
+      "size": 17374,
+      "sha256": "96a8e10d1d3f0855e05ddd259fb1f37db6df352266b444f1e148645fa24429aa"
+    },
+    "Contents/Resources/Runtime/public/m108-groups.js": {
+      "size": 1408,
+      "sha256": "b1cdf7006e5e1d43a66569f67b7f9bcd9eebf88111a3dfa74dd47c43e0cc865e"
+    },
+    "Contents/Resources/Runtime/public/style.css": {
+      "size": 22198,
+      "sha256": "58cdc9cf96b05156631487e1b99ff1021dadbdf31b2ae7ebf63e1ff680f7ce66"
+    },
+    "Contents/Resources/Runtime/public/m105-events.js": {
+      "size": 1490,
+      "sha256": "1ecf4a4c9b2a174273d655039e7a579b801e985716a0fc322fd19117d226a931"
+    },
+    "Contents/Resources/Runtime/public/m111-seat-transfer.js": {
+      "size": 1919,
+      "sha256": "2f41b728a8ecde429abcaacd36d8dde9d4a05cf34f0db5cbfb48a3a84308c5df"
+    },
+    "Contents/Resources/Runtime/public/m109-custom-groups.js": {
+      "size": 1709,
+      "sha256": "9e6729525b24c86769e22162da245f08fb2540b420cd1e606f7855dcefff559c"
+    },
+    "Contents/Resources/Runtime/public/app.js": {
+      "size": 86173,
+      "sha256": "26b4df8486f9db24eb79488a12763fe6fa918f32e7f7b800dfe995ed78ace080"
+    },
+    "Contents/Resources/Runtime/public/m114-seat-view.js": {
+      "size": 990,
+      "sha256": "c2fb8573e1460fcb3b3cd304b66bb8aab31a928390b822edffba15d9616fb189"
+    }
+  }
+}

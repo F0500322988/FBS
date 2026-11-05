@@ -1,0 +1,37 @@
+{
+  "coreVersion": "0.183.0-preview",
+  "privateProfilesPackaged": false,
+  "installers": [
+    {
+      "shortcutsVerified": true,
+      "installed": true,
+      "profilePickerGuiTested": false,
+      "embeddedHelperExecuted": true,
+      "unknownFilePreserved": true,
+      "actualStudentAppGuiTested": false,
+      "payloadFilesVerified": 307,
+      "uninstalled": true,
+      "setupBundle": "M184",
+      "profilePickerParsed": true,
+      "role": "Teacher",
+      "embeddedHelperChecks": 39
+    },
+    {
+      "shortcutsVerified": true,
+      "installed": true,
+      "profilePickerGuiTested": false,
+      "embeddedHelperExecuted": true,
+      "unknownFilePreserved": true,
+      "actualStudentAppGuiTested": false,
+      "payloadFilesVerified": 303,
+      "uninstalled": true,
+      "setupBundle": "M184",
+      "profilePickerParsed": true,
+      "role": "Student",
+      "embeddedHelperChecks": 39
+    }
+  ],
+  "stage": "M184",
+  "installerExecuted": true,
+  "isolatedRunner": true
+}

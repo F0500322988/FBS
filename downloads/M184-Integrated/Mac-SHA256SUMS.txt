@@ -1,0 +1,4 @@
+66cb3bc55c7568fb7d652b3813531f9e329ab450e1923c232d303e04824861c7  ./FBS-Classroom-Student-M184-macOS-Universal-PREVIEW.pkg
+24a30610f41df4007e37f1eaa4a2f0ad8bfa2a84d7206763670f5991c79b18e3  ./FBS-Classroom-Teacher-M184-macOS-Universal-PREVIEW.pkg
+52f5afef307d73f3d4fd286901bfd7b96c3807706b6a6b13747dfdf1be838195  ./FBS-Classroom-Student-M184-macOS-Universal-PREVIEW.dmg
+d23fcbadbe1b3f02d974fa040f92dcb8c29d225f68fa4b60f3b7562968d4fe06  ./FBS-Classroom-Teacher-M184-macOS-Universal-PREVIEW.dmg

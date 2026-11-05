@@ -3,17 +3,13 @@
 Local-network classroom management software for separate Windows and macOS labs, targeting up to 40 student endpoints per lab.
 
 ## Status
-M184 adds a separate [lab setup kit](docs/M184-DOWNLOADS-AR.md) for existing M183 installers: export a private profile locally on the teacher, import under each student account, then approve the device from the teacher. The public kit has no real lab secrets. Windows DPAPI checks (39) and Mac Intel and Apple Silicon Keychain checks (41 on each), including an independent consumer without authentication UI, passed. The Mac helper is Universal; independent execution passed on both architectures. [Results and limits](docs/M184-RESULTS-AR.md).
+The updated M184 teacher and student installers now bundle the verified M184 lab setup tools. Windows adds Start menu setup/import shortcuts; Mac adds a setup-tools button and a profile file picker script. Export a private student kit locally on the teacher, import under the student account, then approve the device from the teacher. Public installers contain no real lab profile or lab secret. The compatible core application version remains 0.183.0.
 
-M183 reorganizes the teacher console and native Windows/macOS student dashboard around the supplied blue/navy Arabic reference. It includes the left sidebar, lab header, five-column device grid, seven-action screen dock, large broadcast preview, lab/group cards and compact student connection card. The operational teacher console is shared browser UI; native setup remains separate. OS window chrome, fonts and DPI can differ. [UI review images](docs/M183-UI-AR.md) use labeled fixture data, not real students.
+[Download updated Windows EXE and Mac Universal PKG/DMG installers](docs/M184-INTEGRATED-DOWNLOADS-AR.md) · [Arabic installation guide](deployment/integrated/INTEGRATED-START-HERE-AR.md) · [Validation results and limits](docs/M184-INTEGRATED-RESULTS-AR.md).
 
-All 1513 JavaScript tests and Chromium functional/visual acceptance passed. [Final Windows CI](https://github.com/F0500322988/FBS/actions/runs/42029666946) passed ten .NET projects (231 checks), both installer executions, 588 installed payload hashes, bundled Node, uninstall and unknown-file preservation. These are isolated CI checks, not full physical lab acceptance.
+Final Windows validation passed 231 native checks, both installer executions, 610 installed file hashes, 39 embedded-helper checks per role, Node execution, shortcuts, uninstall and unknown-file preservation. Mac Intel passed 1513 JavaScript tests, Universal build, 41 embedded-helper checks, PKG/DMG verification and isolated install/remove/runtime checks. Independent execution of the new integrated packages on ARM could not start because GitHub did not allocate hosted runners in three attempts; both architectures were compiled and verified in the Universal bundle.
 
-M182 automatic full-screen teacher broadcast and managed power/wake remain available. Student capture and desktop input retain their separate consent requirements. Wake packets do not prove power-on; Mac startup from complete shutdown is hardware-dependent and not guaranteed. See [M183 guide](M183-START-HERE.md), [Arabic results](docs/M183-RESULTS-AR.md) and [device test instructions](diagnostics/M183-DEVICE-TESTS-AR.md).
-
-[Download both roles for Windows and Mac](docs/M183-DOWNLOADS-AR.md). Mac Universal packages passed Intel and Apple Silicon builds, isolated install/remove, PKG/DMG and runtime checks; downloaded packages were checked again by SHA256.
-
-Windows previews are unsigned; Mac requires macOS13+ and uses ad-hoc signing without Developer ID or notarization. Updated physical lab GUI, permissions, actual power/wake and target-scale performance acceptance remain pending. This is a development preview.
+M183 classroom features remain available, including automatic full-screen teacher broadcast, managed power and wake. Student capture/input consent and local macOS permissions remain required. Wake packets do not prove power-on. Physical classroom acceptance, updated full application GUI and permission flows remain pending. Windows is unsigned; Mac requires macOS13+ and uses ad-hoc signing without Developer ID/notarization. This is a development preview.
 
 ## Components
 - `src/shared`: protocol contracts and security requirements

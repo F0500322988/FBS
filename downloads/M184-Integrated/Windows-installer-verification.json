@@ -1,0 +1,34 @@
+{
+  "stage": "M184",
+  "applicationVersion": "0.183.0-preview",
+  "buildTool": "NSIS native Linux compiler / signed Debian packages",
+  "setupBundle": "M184",
+  "buildPassed": true,
+  "allPayloadSha256Verified": true,
+  "unexpectedPayloadRejected": true,
+  "windowsInstallExecuted": false,
+  "windowsGuiExecuted": false,
+  "twoPcLanTested": false,
+  "installers": [
+    {
+      "role": "Teacher",
+      "file": "FBS-Classroom-Teacher-M184-Setup-PREVIEW.exe",
+      "size": 116265404,
+      "sha256": "d18251992fd6b259396bae74433c32dd2b9ee146254cf3ccd629c06453321813",
+      "payloadFilesVerified": 307,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    },
+    {
+      "role": "Student",
+      "file": "FBS-Classroom-Student-M184-Setup-PREVIEW.exe",
+      "size": 116238698,
+      "sha256": "0b377940f39dbdedf4a99e78c7e8c706d8eff41ba320ec9403f43998f2c31dc8",
+      "payloadFilesVerified": 303,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    }
+  ]
+}

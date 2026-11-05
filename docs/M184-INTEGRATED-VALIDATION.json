@@ -1,0 +1,145 @@
+{
+  "stage": "M184 integrated installers",
+  "coreApplicationVersion": "0.183.0",
+  "publicKitSha256": "fbae6767a8d5e52443f45b611a5b42e22cb5662a09047bac275174eedf3cd20f",
+  "privateProfilesIncluded": false,
+  "mainChanged": false,
+  "windows": {
+    "buildRun": "https://github.com/F0500322988/FBS/actions/runs/42062857298",
+    "validationRun": "https://github.com/F0500322988/FBS/actions/runs/42071024333",
+    "buildHost": "Linux NSIS",
+    "installHost": "Windows2022",
+    "coreNativeChecks": 231,
+    "embeddedHelperChecksPerInstalledRole": 39,
+    "installerSmoke": {
+      "coreVersion": "0.183.0-preview",
+      "privateProfilesPackaged": false,
+      "installers": [
+        {
+          "shortcutsVerified": true,
+          "installed": true,
+          "profilePickerGuiTested": false,
+          "embeddedHelperExecuted": true,
+          "unknownFilePreserved": true,
+          "actualStudentAppGuiTested": false,
+          "payloadFilesVerified": 307,
+          "uninstalled": true,
+          "setupBundle": "M184",
+          "profilePickerParsed": true,
+          "role": "Teacher",
+          "embeddedHelperChecks": 39
+        },
+        {
+          "shortcutsVerified": true,
+          "installed": true,
+          "profilePickerGuiTested": false,
+          "embeddedHelperExecuted": true,
+          "unknownFilePreserved": true,
+          "actualStudentAppGuiTested": false,
+          "payloadFilesVerified": 303,
+          "uninstalled": true,
+          "setupBundle": "M184",
+          "profilePickerParsed": true,
+          "role": "Student",
+          "embeddedHelperChecks": 39
+        }
+      ],
+      "stage": "M184",
+      "installerExecuted": true,
+      "isolatedRunner": true
+    },
+    "buildReport": {
+      "stage": "M184",
+      "applicationVersion": "0.183.0-preview",
+      "buildTool": "NSIS native Linux compiler / signed Debian packages",
+      "setupBundle": "M184",
+      "buildPassed": true,
+      "allPayloadSha256Verified": true,
+      "unexpectedPayloadRejected": true,
+      "windowsInstallExecuted": false,
+      "windowsGuiExecuted": false,
+      "twoPcLanTested": false,
+      "installers": [
+        {
+          "role": "Teacher",
+          "file": "FBS-Classroom-Teacher-M184-Setup-PREVIEW.exe",
+          "size": 116265404,
+          "sha256": "d18251992fd6b259396bae74433c32dd2b9ee146254cf3ccd629c06453321813",
+          "payloadFilesVerified": 307,
+          "installerArchitecture": "x86 Unicode NSIS bootstrap",
+          "applicationArchitecture": "Windows x64",
+          "signed": false
+        },
+        {
+          "role": "Student",
+          "file": "FBS-Classroom-Student-M184-Setup-PREVIEW.exe",
+          "size": 116238698,
+          "sha256": "0b377940f39dbdedf4a99e78c7e8c706d8eff41ba320ec9403f43998f2c31dc8",
+          "payloadFilesVerified": 303,
+          "installerArchitecture": "x86 Unicode NSIS bootstrap",
+          "applicationArchitecture": "Windows x64",
+          "signed": false
+        }
+      ]
+    },
+    "publicDownloadShaVerified": true,
+    "profilePickerActualGuiTested": false,
+    "actualStudentAppGuiTested": false,
+    "authenticodeSigned": false
+  },
+  "macos": {
+    "intelRun": "https://github.com/F0500322988/FBS/actions/runs/42056932212",
+    "intelRelease": "https://github.com/F0500322988/FBS/releases/tag/m184-macos-preview-47-1",
+    "armRun": "https://github.com/F0500322988/FBS/actions/runs/42063562011",
+    "armRunnerAllocationFailed": true,
+    "armActualValidation": null,
+    "armExecutionPassed": false,
+    "intelValidation": {
+      "stage": "M184",
+      "platform": "macOS",
+      "coreApplicationVersion": "0.183.0",
+      "integratedSetupKit": "M184",
+      "embeddedKitTested": true,
+      "minimumOS": "13.0",
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "nativeBuildPassed": true,
+      "selfCheckHostArchitecture": "x86_64",
+      "otherArchitectureExecuted": false,
+      "pkgPayloadVerified": true,
+      "dmgVerified": true,
+      "bundleAdHocSigned": true,
+      "developerIDSigned": false,
+      "notarized": false,
+      "guiTested": false,
+      "keychainTested": false,
+      "screenRecordingTested": false,
+      "twoMacLanTested": false,
+      "installedOnMacTested": true,
+      "uninstallOnIsolatedRunnerTested": true,
+      "files": [
+        "FBS-Classroom-Student-M184-macOS-Universal-PREVIEW.dmg",
+        "FBS-Classroom-Student-M184-macOS-Universal-PREVIEW.pkg",
+        "FBS-Classroom-Teacher-M184-macOS-Universal-PREVIEW.dmg",
+        "FBS-Classroom-Teacher-M184-macOS-Universal-PREVIEW.pkg"
+      ]
+    },
+    "embeddedHelperChecks": 41,
+    "pkgDmgPublicDownloadsShaAndMagicVerified": true,
+    "installedFilesVerifiedPerRole": 58,
+    "sharedRuntimeSourceHashesVerifiedPerRole": 41,
+    "profilePickerGuiAndMainAppNewButtonActuallyClicked": false,
+    "developerIDSigned": false,
+    "notarized": false
+  },
+  "javascript": {
+    "fullTestsOnIntelMac": 1513,
+    "passed": 1513,
+    "failed": 0,
+    "skipped": 0
+  },
+  "physicalClassroomTested": false,
+  "userPrivateProfileCreatedInCloud": false
+}
