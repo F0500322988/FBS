@@ -142,6 +142,7 @@ struct StudentKeychain {
             throw ConfigurationError.invalid("Use export [teacher-LAN-IP] [new-folder] or import lab-profile.json")
         } catch {
             // No decoded JSON, lab key, teacher password or private key in terminal/log errors.
+            if let safe = error as? ConfigurationError { fputs((safe.errorDescription ?? "Setup validation failed")+"\n",stderr) }
             fputs("تعذر إكمال الإعداد. أغلق تطبيق الطالب وتحقق من تثبيت M183 وحساب المستخدم وإعداد المعلم وملف الحزمة. الإعدادات الموجودة لا تُستبدل تلقائيًا. راجع README-AR.md.\n",stderr);exit(1)
         }
     }

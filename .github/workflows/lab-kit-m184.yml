@@ -48,7 +48,21 @@ jobs:
       - uses: actions/checkout@v5
       - name: Build both architectures and test isolated real Keychain fixtures
         shell: bash
-        run: bash deployment/m184/build-mac.sh "$RUNNER_TEMP/lab-kit-mac"
+        run: |
+          set +e
+          bash deployment/m184/build-mac.sh "$RUNNER_TEMP/lab-kit-mac" > "$RUNNER_TEMP/m184-mac-build.log" 2>&1
+          fbs_status=$?
+          set -e
+          tail -n 35 "$RUNNER_TEMP/m184-mac-build.log"
+          if [ "$fbs_status" -ne 0 ]; then
+            python3 - "$RUNNER_TEMP/m184-mac-build.log" <<'PYTHON'
+          import sys
+          from pathlib import Path
+          for line in Path(sys.argv[1]).read_text().splitlines()[-45:]:
+              print('::error::'+line.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PYTHON
+            exit "$fbs_status"
+          fi
       - name: Assemble cross-platform public kit without lab secrets
         shell: bash
         env:
