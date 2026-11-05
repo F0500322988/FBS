@@ -565,6 +565,7 @@ async function changeProfiles(profiles,success,selected){
  finally{profileBusy=false;updateProfileButtons();}
 }
 el('profile-name').addEventListener('input',updateProfileButtons);
+el('profile-name').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.isComposing){event.preventDefault();if(!el('profile-create').disabled)el('profile-create').click();}});
 el('profile-select').addEventListener('change',()=>{profileSelected=el('profile-select').value;updateProfileButtons();});
 el('profile-refresh').addEventListener('click',refreshLabProfiles);
 el('profile-create').addEventListener('click',()=>{
