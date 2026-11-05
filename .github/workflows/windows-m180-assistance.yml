@@ -1,0 +1,48 @@
+name: Windows M180 owned input validation
+on:
+  push:
+    branches: ['build/windows-m176-checks-m180-assistance-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  input:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.23.4'
+      - name: Assistance transport policy
+        run: node --test tests/m180-assistance.test.js
+      - name: Existing safety gates and real input only in an owned fixture window
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path checks-output -Force | Out-Null
+          $PSNativeCommandUseErrorActionPreference = $false
+          $results = @{}
+          foreach ($project in @('FBS.NativeGate.Tests','FBS.Setup.Tests','FBS.WindowsSetup.Tests','FBS.FileDelivery.Tests','FBS.ScreenPause.WindowsTests','FBS.Assistance.Tests','FBS.Assistance.WindowsTests')) {
+            $log = Join-Path checks-output "$project.log"
+            $ErrorActionPreference = 'Continue'
+            & dotnet run --project "windows/$project/$project.csproj" -c Release 2>&1 | Tee-Object -FilePath $log
+            $code = $LASTEXITCODE
+            $ErrorActionPreference = 'Stop'
+            $results[$project] = ($code -eq 0)
+            if ($code -ne 0) {
+              $details = @(Get-Content $log | Where-Object { $_ -match 'error|FAIL|Exception|Unhandled' } | Select-Object -Last 8)
+              if ($details.Count -eq 0) { $details = @(Get-Content $log -Tail 8) }
+              foreach ($line in $details) { Write-Output ('::error::'+$project+' '+$line.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')) }
+            }
+          }
+          $results | ConvertTo-Json | Set-Content checks-output/M180-projects.json
+          if ($results.Values -contains $false) { throw 'One or more native checks failed.' }
+          @{stage='M180'; ownedWindowOSInputPassed=$true; foregroundFixtureOnly=$true; fullNetworkToNativeInputTested=$false; userDesktopTested=$false; installerExecuted=$false} | ConvertTo-Json | Set-Content checks-output/M180-input-validation.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: FBS-M180-owned-input-checks
+          path: checks-output/*

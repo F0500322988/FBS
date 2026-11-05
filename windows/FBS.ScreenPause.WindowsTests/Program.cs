@@ -47,7 +47,7 @@ internal static class Program
                 else if (phase == 5 && windows.Length > 0)
                 {
                     controller.Dispose(); Check(Overlays().Length == 0, "controller disposal closes all owned overlays");
-                    timer.Stop(); Console.WriteLine(JsonSerializer.Serialize(new { stage = "M179", winFormsCiChecksPassed = passed, actualStudentAppTested = false, physicalKeyboardTested = false, installerExecuted = false })); runner.Close();
+                    timer.Stop(); Console.WriteLine(JsonSerializer.Serialize(new { stage = "M180", winFormsCiChecksPassed = passed, actualStudentAppTested = false, physicalKeyboardTested = false, installerExecuted = false })); runner.Close();
                 }
             }
             catch (Exception ex) { timer.Stop(); controller.Dispose(); Console.Error.WriteLine("FAIL: " + ex.GetType().Name + " " + ex.Message + " " + ex.InnerException?.GetType().Name + " " + ex.InnerException?.Message); Environment.ExitCode = 1; runner.Close(); }

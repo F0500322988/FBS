@@ -25,6 +25,7 @@ public sealed class StudentStatusForm : Form
     private readonly Button broadcastButton = new();
     private TeacherBroadcastForm? broadcastWindow;
     private ScreenPauseController? screenPause;
+    private AssistanceController? assistance;
     private readonly NotifyIcon tray = new();
     private readonly HttpClient localClient = new() { Timeout = TimeSpan.FromSeconds(2) };
     private readonly System.Windows.Forms.Timer consentTimer = new() { Interval = 2000 };
@@ -120,7 +121,7 @@ public sealed class StudentStatusForm : Form
         // M128: refuse to start if the disabled native-input adapter fails its safety probe.
         if (!NativeInputSafetyProbe.VerifyDisabled(nativeInput))
             throw new InvalidOperationException("Native input safety preflight failed; student app will not start.");
-        status.Text = "برنامج الطالب يعمل — التحكم عن بُعد غير مفعّل";
+        status.Text = "برنامج الطالب يعمل — التحكم الكامل غير مفعّل؛ المساعدة المحدودة تحتاج موافقتك";
         status.Location = new Point(35, 40);
         status.Size = new Size(470, 65);
         status.TextAlign = ContentAlignment.MiddleCenter;
@@ -205,7 +206,7 @@ public sealed class StudentStatusForm : Form
         };
         consentTimer.Start();
         tray.Icon = SystemIcons.Information;
-        tray.Text = "FBS Classroom — التحكم غير مفعّل";
+        tray.Text = "FBS Classroom — المساعدة المحدودة تحتاج موافقتك";
         tray.Visible = true;
         var connectionMenu = new ContextMenuStrip();
         var editConnection = new ToolStripMenuItem("إعداد عنوان المعلم وبصمة الشهادة");
@@ -228,11 +229,11 @@ public sealed class StudentStatusForm : Form
         tray.DoubleClick += (_, _) => { Show(); WindowState = FormWindowState.Normal; Activate(); };
         Shown += async (_, _) =>
         {
-            status.Text = "جارٍ تشغيل وكيل الطالب — التحكم عن بُعد غير مفعّل";
+            status.Text = "جارٍ تشغيل وكيل الطالب — التحكم الكامل غير مفعّل؛ المساعدة المحدودة تحتاج موافقتك";
             await agent.StartAsync();
-            if (!IsDisposed) { status.Text = agent.Status + " — التحكم عن بُعد غير مفعّل"; screenPause ??= new ScreenPauseController(agent.LocalControlToken); }
+            if (!IsDisposed) { status.Text = agent.Status + " — التحكم الكامل غير مفعّل؛ المساعدة المحدودة تحتاج موافقتك"; screenPause ??= new ScreenPauseController(agent.LocalControlToken); assistance ??= new AssistanceController(agent.LocalControlToken); }
         };
-        FormClosed += (_, _) => { nativeInput.Disable(); inputGate.Deactivate(); screenPause?.Dispose(); localConsent.ResetActive(); consentTimer.Stop(); consentTimer.Dispose(); localClient.Dispose(); agent.Dispose(); tray.Dispose(); sessionBanner.Dispose(); };
+        FormClosed += (_, _) => { nativeInput.Disable(); inputGate.Deactivate(); screenPause?.Dispose(); assistance?.Dispose(); localConsent.ResetActive(); consentTimer.Stop(); consentTimer.Dispose(); localClient.Dispose(); agent.Dispose(); tray.Dispose(); sessionBanner.Dispose(); };
     }
 
     private bool polling;

@@ -13,6 +13,7 @@ const publicRoot=path.resolve(__dirname,'../../public');
   await page.route('http://localhost:41999/**',async route=>{
    const url=new URL(route.request().url());let body,type='application/json',status=200;
    if(url.pathname==='/api/auth')body={required:false};
+   else if(url.pathname==='/api/assist')body={status:'idle'};
    else if(url.pathname==='/api/lab-profiles')body={version:1,revision:0,profiles:[]};
    else if(url.pathname==='/api/lab-settings')body={version:1,revision:0,name:'معمل الاختبار',platform:'windows',groups:[]};
    else if(url.pathname==='/api/status'){status=statusFail?503:200;body={mode:'live',lab:{name:'معمل الاختبار'},students:devices};}

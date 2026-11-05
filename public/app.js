@@ -14,20 +14,23 @@ async function fbsTeacherAuth(){
 fbsTeacherAuth().catch(console.error);
 'use strict';
 let previousMonitorSnapshot=null,monitorHistory=[],monitorInterrupted=false;let roster=[];let frames=new Map();let pageNow="home";let selectedScreen=null;let lastStatusAt=0,lastStatusMode='unconfigured';
-const labels={home:'الرئيسية',screens:'عرض الشاشات',broadcast:'مشاركة الشاشة',control:'التحكم عن بُعد',lock:'حجب العرض',files:'توزيع الملفات',messages:'الرسائل',labs:'إدارة المعمل',monitor:'مراقبة الأجهزة',enrollment:'اعتماد الأجهزة'};
+const labels={home:'الرئيسية',screens:'عرض الشاشات',broadcast:'مشاركة الشاشة',control:'المساعدة عن بُعد',lock:'حجب العرض',files:'توزيع الملفات',messages:'الرسائل',labs:'إدارة المعمل',monitor:'مراقبة الأجهزة',enrollment:'اعتماد الأجهزة'};
 const el=id=>document.getElementById(id);
 let deviceView='grid',refreshBusy=false,previewUnavailable=false;
-const plannedPages=new Set(['control']);
+const plannedPages=new Set([]);
 function updatePageNotice(){
  const notice=el('notice');
  notice.hidden=true;
  if(pageNow==='enrollment'){notice.hidden=false;notice.textContent='راجع الجهاز قبل اعتماده؛ لم يتم بعد إثبات امتلاك مفتاح Windows CNG. اعتماد المعمل لا يفعّل التحكم عن بُعد.';}
+ else if(pageNow==='control'){notice.hidden=false;notice.textContent='النقر واختصارات النظام غير متاحة؛ المساعدة المحدودة لا تبدأ إلا بموافقة الطالب ومشاركة شاشة حديثة.';}
  else if(pageNow==='screens'){notice.hidden=false;notice.textContent=previewUnavailable?'تعذر تحديث صور الشاشات؛ أُزيلت الصور السابقة. ستُعاد المحاولة تلقائيًا.':'تظهر لقطات الشاشة عند مشاركة الطالب وموافقته فقط. نقل المعمل عبر TLS؛ التحقق الكامل من هوية كل جهاز لم يكتمل.';}
  else if(plannedPages.has(pageNow)){notice.hidden=false;notice.textContent='هذه الوظيفة قيد التطوير وغير متاحة في هذه النسخة.';}
 }
 function render(){
  const custom=pageNow==='monitor'||pageNow==='enrollment';
  el('view-toolbar').hidden=custom||plannedPages.has(pageNow)||pageNow==='messages';
+ el('assist-panel').hidden=pageNow!=='control';
+ if(pageNow==='control'){el('view-toolbar').hidden=true;el('files-panel').hidden=true;el('labs-panel').hidden=true;el('messages-panel').hidden=true;el('broadcast-panel').hidden=true;el('pause-panel').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;renderAssistanceDevices();return;}
  el('pause-panel').hidden=pageNow!=='lock';
  if(pageNow==='lock'){el('view-toolbar').hidden=true;el('files-panel').hidden=true;el('labs-panel').hidden=true;el('messages-panel').hidden=true;el('broadcast-panel').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;renderPauseRecipients();return;}
  el('labs-panel').hidden=pageNow!=='labs';
@@ -85,7 +88,7 @@ async function refresh(){
   el('total').textContent=roster.length;el('online').textContent=roster.filter(x=>x.online).length;el('offline').textContent=roster.filter(x=>!x.online).length;
   el('lab-name').textContent=data.lab?.name||'المعمل';
   el('mode').textContent=data.mode==='demo'?'وضع العرض التجريبي':data.mode==='live'?'أجهزة حقيقية على الشبكة':'الاتصال غير مهيأ';
-  el('mode').dataset.mode=data.mode;updatePageNotice();render();updateLargeScreen();if(pageNow==='messages')loadMessageHistory();if(pageNow==='broadcast')loadBroadcastState();if(pageNow==='files')loadFileHistory();if(pageNow==='lock')loadPauseState();
+  el('mode').dataset.mode=data.mode;updatePageNotice();render();updateLargeScreen();if(pageNow==='messages')loadMessageHistory();if(pageNow==='broadcast')loadBroadcastState();if(pageNow==='files')loadFileHistory();if(pageNow==='lock')loadPauseState();if(pageNow==='control')loadAssistanceState();
  }catch(e){
   monitorInterrupted=true;previousMonitorSnapshot=null;lastStatusAt=0;roster=[];frames.clear();
   el('total').textContent='—';el('online').textContent='—';el('offline').textContent='—';
@@ -95,7 +98,7 @@ async function refresh(){
 }
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
  document.querySelectorAll('nav button').forEach(x=>{x.classList.remove('active');x.removeAttribute('aria-current');});
- b.classList.add('active');b.setAttribute('aria-current','page');if(pageNow==='broadcast'&&b.dataset.page!=='broadcast')stopBroadcast();if(pageNow==='lock'&&b.dataset.page!=='lock')stopPause();pageNow=b.dataset.page;
+ b.classList.add('active');b.setAttribute('aria-current','page');if(pageNow==='broadcast'&&b.dataset.page!=='broadcast')stopBroadcast();if(pageNow==='lock'&&b.dataset.page!=='lock')stopPause();if(pageNow==='control'&&b.dataset.page!=='control')stopAssistance();pageNow=b.dataset.page;
  el('page-title').textContent=labels[pageNow];el('section-title').textContent=pageNow==='home'?'أجهزة الطلاب':labels[pageNow];
  frames.clear();if(el('screen-dialog').open)el('screen-dialog').close();
  updatePageNotice();el('monitor-panel').hidden=pageNow!=='monitor';render();
@@ -334,7 +337,7 @@ async function loadMessageHistory(){
 // M174: explicit browser display selection and key-bound, short-lived JPEG broadcast.
 const broadcastSelection=new Set();let broadcastRecipientsKey='',broadcastStream=null,broadcastSession=null,broadcastTimer=null,broadcastBusy=false,broadcastSending=false,broadcastGeneration=0,broadcastSequence=0,broadcastStateBusy=false;
 function updateBroadcastButtons(){
- el('lab-group-filter').disabled=broadcastBusy||!!broadcastSession||pauseBusy||pauseOwned;
+ el('lab-group-filter').disabled=broadcastBusy||!!broadcastSession||pauseBusy||pauseOwned||assistBusy||!!assistToken;
  el('broadcast-start').disabled=broadcastBusy||!!broadcastSession||!broadcastSelection.size;
  el('broadcast-stop').disabled=!broadcastBusy&&!broadcastSession;
  for(const input of el('broadcast-recipients').querySelectorAll('input'))input.disabled=broadcastBusy||!!broadcastSession;
@@ -477,8 +480,8 @@ el('lab-platform').addEventListener('change',()=>{if(labDraft){labDraft.platform
 el('lab-add-group').addEventListener('click',()=>{if(!labDraft||labSaving||labDraft.groups.length>=20)return;labDraft.groups.push({id:crypto.randomUUID(),name:'',deviceIds:[]});markLabDirty();drawLabDraft();});
 el('lab-reload').addEventListener('click',()=>{if(labDirty&&!confirm('تجاهل التعديلات غير المحفوظة وإعادة تحميل المحفوظ؟'))return;refreshLabSettings(true);});
 el('lab-group-filter').addEventListener('change',()=>{
- if(broadcastBusy||broadcastSession||pauseBusy||pauseOwned){el('lab-group-filter').value=labGroupId;return;}
- labGroupId=el('lab-group-filter').value;messageSelection.clear();fileSelection.clear();pauseSelection.clear();pauseRecipientsKey='';
+ if(broadcastBusy||broadcastSession||pauseBusy||pauseOwned||assistBusy||assistToken){el('lab-group-filter').value=labGroupId;return;}
+ labGroupId=el('lab-group-filter').value;assistDevice='';el('assist-device').value='';messageSelection.clear();fileSelection.clear();pauseSelection.clear();pauseRecipientsKey='';
  if(!broadcastBusy&&!broadcastSession)broadcastSelection.clear();
  messageRecipientsKey='';fileRecipientsKey='';broadcastRecipientsKey='';render();
 });
@@ -499,7 +502,7 @@ function updatePauseButtons(){
  el('pause-stop').disabled=pauseBusy||!pauseSession;
  el('pause-duration').disabled=pauseBusy||!!pauseSession;el('pause-all').disabled=pauseBusy||!!pauseSession;
  for(const input of el('pause-recipients').querySelectorAll('input'))input.disabled=pauseBusy||!!pauseSession;
- el('lab-group-filter').disabled=broadcastBusy||!!broadcastSession||pauseBusy||pauseOwned;
+ el('lab-group-filter').disabled=broadcastBusy||!!broadcastSession||pauseBusy||pauseOwned||assistBusy||!!assistToken;
 }
 function renderPauseRecipients(){
  const available=groupRoster().filter(s=>s.online===true&&s.approved===true),ids=new Set(available.map(s=>s.id));for(const id of pauseSelection)if(!ids.has(id))pauseSelection.delete(id);
@@ -552,7 +555,7 @@ async function refreshLabProfiles(){
  finally{profileBusy=false;updateProfileButtons();}
 }
 function clearProfileRecipients(){
- labGroupId='';messageSelection.clear();fileSelection.clear();pauseSelection.clear();
+ labGroupId='';assistDevice='';el('assist-device').value='';messageSelection.clear();fileSelection.clear();pauseSelection.clear();
  if(!broadcastBusy&&!broadcastSession)broadcastSelection.clear();
  messageRecipientsKey='';fileRecipientsKey='';pauseRecipientsKey='';broadcastRecipientsKey='';
 }
@@ -587,3 +590,45 @@ el('profile-delete').addEventListener('click',()=>{
  const p=selectedProfile();if(profileBusy||labSaving||!p||!confirm('حذف ملف التنظيم «'+p.name+'»؟ تبقى إعدادات المعمل الحالية واعتماد الأجهزة.'))return;
  changeProfiles(profileSnapshot.profiles.filter(x=>x.id!==p.id),'حُذف الملف المحفوظ؛ لم تتغير إعدادات المعمل الحالي','');
 });
+
+// M180: limited, consented assistance. Tokens stay only in this browser's memory.
+let assistDevice='',assistSession=null,assistToken=null,assistStatus='idle',assistBusy=false,assistLoading=false,assistTouching=false,assistCommandBusy=false,assistGeneration=0,assistFrameAt=0,assistFrameReady=false,assistFrameKey='',assistImageGeneration=0;
+function assistFresh(){const age=Date.now()-assistFrameAt;return assistFrameReady&&age>=0&&age<3000;}
+function updateAssistanceButtons(){
+ const active=!!assistToken&&assistStatus==='active'&&assistFresh()&&!assistBusy&&!assistCommandBusy;
+ el('assist-start').disabled=assistBusy||!!assistSession||!assistDevice;el('assist-stop').disabled=!assistBusy&&!assistSession;el('assist-device').disabled=assistBusy||!!assistSession;
+ for(const button of el('assist-actions').querySelectorAll('button'))button.disabled=!active;el('assist-send').disabled=!active||!el('assist-text').value.length;
+ el('lab-group-filter').disabled=broadcastBusy||!!broadcastSession||pauseBusy||pauseOwned||assistBusy||!!assistToken;
+}
+function renderAssistanceDevices(){const available=groupRoster().filter(s=>s.online&&s.approved&&s.assistanceSupported===true);const options=[new Option('اختر جهازًا مؤهلًا','')];for(const d of available)options.push(new Option(d.id,d.id));if(assistDevice&&!available.some(d=>d.id===assistDevice)){if(!assistSession)assistDevice='';else options.push(new Option(assistDevice+' — غير متصل حاليًا',assistDevice));}el('assist-device').replaceChildren(...options);el('assist-device').value=assistDevice;updateAssistanceButtons();}
+async function assistApi(path,body){const r=await fetch('/api/assist'+path,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:'no-store',signal:AbortSignal.timeout(2500)});if(!r.ok)throw Error('Assistance unavailable');return r.json();}
+function clearAssistFrame(){assistFrameReady=false;assistFrameAt=0;assistFrameKey='';assistImageGeneration++;el('assist-preview').removeAttribute('src');el('assist-preview').hidden=true;updateAssistanceButtons();}
+async function loadAssistanceState(){
+ if(assistLoading||assistBusy||pageNow!=='control')return;assistLoading=true;const generation=assistGeneration;
+ try{const state=await assistApi('');if(generation!==assistGeneration)return;
+  const labels={requested:'بانتظار موافقة الطالب ومشاركته للشاشة',active:'وافق الطالب؛ الأوامر متاحة مع شاشة حديثة',declined:'رفض الطالب الطلب',stopped:'أوقف المعلم المساعدة','student-stopped':'أوقف الطالب المساعدة',expired:'انتهت المهلة أوالاتصال',revoked:'أُلغي اعتماد الجهاز','clock-changed':'توقف الطلب بسبب تغير ساعة الخادم',idle:'لا توجد جلسة مساعدة نشطة'};
+  assistStatus=state.status;el('assist-result').textContent=labels[state.status]||'الحالة غير متاحة';
+  if(['requested','active'].includes(state.status)){assistSession=state.sessionId;assistDevice=state.deviceId;if(!assistToken)el('assist-result').textContent+=' — التحكم متاح فقط من النافذة التي بدأت الطلب';}
+  else{assistSession=null;assistToken=null;}
+  if(state.lastReceipt)el('assist-receipt').textContent='الأمر '+state.lastReceipt.sequence+' — '+(state.lastReceipt.status==='submitted'?'أرسل تطبيق الطالب أحداث الإدخال إلى النظام؛ تحقق من الشاشة':'لم يتأكد إرسال الإدخال كاملًا؛ قد يكون جزئيًا. راجع الشاشة قبل المحاولة');
+  if(assistDevice){const r=await fetch('/api/frames',{cache:'no-store',signal:AbortSignal.timeout(2000)});if(!r.ok)throw Error();const data=await r.json();if(generation!==assistGeneration)return;const f=data.frames.find(f=>f.id===assistDevice&&f.assistanceMonitor===true&&Number.isFinite(f.at)&&Date.now()-f.at>=0&&Date.now()-f.at<3000&&roster.some(d=>d.id===f.id&&d.online&&d.approved));
+   if(f){const key=f.id+':'+f.at;if(key!==assistFrameKey){assistFrameKey=key;assistFrameReady=false;const imageGeneration=++assistImageGeneration,img=el('assist-preview');img.onload=()=>{if(imageGeneration===assistImageGeneration&&generation===assistGeneration){assistFrameReady=img.naturalWidth>0;assistFrameAt=f.at;img.hidden=!assistFrameReady;updateAssistanceButtons();}};img.onerror=()=>{if(imageGeneration===assistImageGeneration)clearAssistFrame();};img.src=f.jpeg;}el('assist-screen-state').textContent='لقطات متتابعة؛ الطالب يختار البرنامج الذي يستقبل النص. لا نقر على الصورة.';}else{clearAssistFrame();el('assist-screen-state').textContent='لا توجد مشاركة شاشة حديثة؛ الأوامر معطلة';}}
+  else clearAssistFrame();renderAssistanceDevices();
+ }catch{if(generation===assistGeneration){clearAssistFrame();el('assist-screen-state').textContent='تعذر تحديث الحالة أوالصورة؛ الأوامر معطلة';}}
+ finally{assistLoading=false;}
+}
+el('assist-device').addEventListener('change',()=>{assistDevice=el('assist-device').value;clearAssistFrame();loadAssistanceState();});el('assist-text').addEventListener('input',updateAssistanceButtons);
+el('assist-start').addEventListener('click',async()=>{
+ if(assistBusy||assistSession||!assistDevice)return;assistBusy=true;const generation=++assistGeneration;updateAssistanceButtons();
+ try{const state=await assistApi('/start',{deviceId:assistDevice});if(generation!==assistGeneration){await assistApi('/stop',{sessionId:state.sessionId});return;}assistSession=state.sessionId;assistToken=state.controlToken;assistStatus=state.status;el('assist-result').textContent='أُرسل طلب الموافقة إلى الطالب؛ لا إدخال قبل موافقته';}
+ catch{if(generation===assistGeneration)el('assist-result').textContent='لم يتأكد بدء المساعدة؛ راجع الحالة. الطلب غير المجدد ينتهي تلقائيًا';}
+ finally{assistBusy=false;updateAssistanceButtons();}
+});
+async function stopAssistance(){const id=assistSession;assistGeneration++;assistSession=null;assistToken=null;assistStatus='stopped';clearAssistFrame();if(!id)return;try{await assistApi('/stop',{sessionId:id});el('assist-result').textContent='أوقفت المساعدة';}catch{el('assist-result').textContent='توقف التجديد محليًا؛ ينتهي الإدخال تلقائيًا عند انتهاء المهلة القصيرة';}}
+el('assist-stop').addEventListener('click',stopAssistance);
+async function sendAssistance(action){if(!assistToken||assistStatus!=='active'||!assistFresh()||assistCommandBusy)return;assistCommandBusy=true;updateAssistanceButtons();try{const sent=await assistApi('/command',{sessionId:assistSession,controlToken:assistToken,action});el('assist-receipt').textContent='الأمر '+sent.sequence+' بانتظار تقرير تطبيق الطالب؛ لا تعاود الإرسال تلقائيًا';}catch{el('assist-receipt').textContent='لم يتأكد الإرسال؛ تحقق من الشاشة والحالة قبل المحاولة';}finally{assistCommandBusy=false;updateAssistanceButtons();}}
+for(const b of el('assist-actions').querySelectorAll('button'))b.addEventListener('click',()=>sendAssistance({type:'move',dx:Number(b.dataset.dx),dy:Number(b.dataset.dy)}));
+el('assist-text-form').addEventListener('submit',e=>{e.preventDefault();const text=el('assist-text').value;if(!text.length||text.length>80||/[\x00-\x1f\x7f-\x9f\u200b-\u200f\u2028-\u202e\u2066-\u2069]/.test(text)){el('assist-receipt').textContent='أدخل نصًا عاديًا دون أسطر أواختصارات';return;}sendAssistance({type:'text',text});});
+setInterval(async()=>{if(!assistToken||!assistSession||assistTouching||pageNow!=='control')return;assistTouching=true;const generation=assistGeneration;try{await assistApi('/keepalive',{sessionId:assistSession,controlToken:assistToken});}catch{if(generation===assistGeneration){assistToken=null;clearAssistFrame();el('assist-result').textContent='انتهى الطلب أوفقد الاتصال؛ توقف التجديد';}}finally{assistTouching=false;}},1500);
+setInterval(()=>{if(pageNow==='control')loadAssistanceState();},1000);setInterval(()=>{if(pageNow==='control'){if(!assistFresh()&&assistFrameReady)clearAssistFrame();updateAssistanceButtons();}},250);
+window.addEventListener('pagehide',()=>{const id=assistSession;assistGeneration++;assistToken=null;if(id)navigator.sendBeacon('/api/assist/stop',JSON.stringify({sessionId:id}));});

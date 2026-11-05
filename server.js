@@ -29,6 +29,7 @@ const broadcastStore=require('./classroom-broadcast').createBroadcastStore();
 if(lan)lan.setBroadcastStore(broadcastStore);
 const fileStore=require('./classroom-files').createFileStore();if(lan)lan.setFileStore(fileStore);
 const pauseStore=require('./classroom-pause').createPauseStore();if(lan)lan.setPauseStore(pauseStore);
+const assistanceStore=require('./classroom-assistance').createAssistanceStore();if(lan)lan.setAssistanceStore(assistanceStore);
 const controlSessions=leases.sessions;
 if(lan){lan.setApprovedKeys(enrollment.keys);lan.setControlLeases(leases);lan.setControlCommands(commands);}
 const controlAudit=leases.audit;
@@ -70,7 +71,7 @@ const server=http.createServer((req,res)=>{
      const publicKey=lan.devices.get(id).publicKey;
      if(!publicKey)return send(res,409,{error:'Device has no verified public key'});
      enrollment.approve(id,publicKey);
-    }else{enrollment.revoke(id);messageStore.revoke(id);broadcastStore.revoke(id);fileStore.revoke(id);pauseStore.revoke(id);leases.cancel(id);commands.clear(id);lan?.frames.delete(id);}
+    }else{enrollment.revoke(id);messageStore.revoke(id);broadcastStore.revoke(id);fileStore.revoke(id);pauseStore.revoke(id);assistanceStore.revoke(id);leases.cancel(id);commands.clear(id);lan?.frames.delete(id);}
     return send(res,200,{ok:true,deviceId:id,approved:enrollment.approved.has(id)});
    }).catch(()=>{if(!res.headersSent)send(res,400,{error:'Invalid request'});});
   }
@@ -148,6 +149,19 @@ const server=http.createServer((req,res)=>{
    }catch(e){return send(res,409,{error:e.message});}
   }).catch(()=>send(res,400,{error:'Invalid broadcast request'}));
  }
+ if(['/api/assist','/api/assist/start','/api/assist/keepalive','/api/assist/stop','/api/assist/command'].includes(url.pathname)){
+  if(!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
+  if(req.method==='GET'&&url.pathname==='/api/assist')return send(res,200,assistanceStore.state());
+  if(req.method!=='POST')return send(res,405,{error:'Method not allowed'});
+  if(!teacherOriginAllowed(req))return send(res,403,{error:'Origin rejected'});
+  return readJson(req).then(body=>{try{
+   if(url.pathname.endsWith('/start')){const d=lan?.devices.get(body.deviceId);if(!d||Date.now()-d.lastSeen>20000||!enrollment.approved.has(d.id)||enrollment.keys.get(d.id)!==d.publicKey)return send(res,409,{error:'Approved online device required'});return send(res,201,assistanceStore.start(d));}
+   if(url.pathname.endsWith('/keepalive'))return send(res,200,assistanceStore.touch(body.sessionId,body.controlToken));
+   if(url.pathname.endsWith('/stop'))return send(res,200,assistanceStore.stop(body.sessionId));
+   if(url.pathname.endsWith('/command')){const d=assistanceStore.state().deviceId,device=lan?.devices.get(d),frame=lan?.frames.get(d);const fresh=!!frame&&frame.assistanceMonitor===true&&Date.now()-frame.at>=0&&Date.now()-frame.at<3500&&device&&Date.now()-device.lastSeen<20000&&enrollment.keys.get(d)===device.publicKey;return send(res,202,assistanceStore.submit(body.sessionId,body.controlToken,body.action,fresh));}
+   return send(res,404,{error:'Unknown operation'});
+  }catch{return send(res,409,{error:'Assistance unavailable, stale screen or consent missing'});}}).catch(()=>{if(!res.headersSent)send(res,400,{error:'Invalid assistance request'});});
+ }
  if(['/api/pause','/api/pause/start','/api/pause/keepalive','/api/pause/stop'].includes(url.pathname)){
   if(!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
   if(req.method==='GET'&&url.pathname==='/api/pause')return send(res,200,pauseStore.state());
@@ -210,8 +224,8 @@ const server=http.createServer((req,res)=>{
  }
  if(url.pathname==='/api/auth')return send(res,200,{required:!!teacherPassword,authenticated:isAuthenticated(req),startupId});
  if((url.pathname==='/api/status'||url.pathname==='/api/frames')&&!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
- if(req.method==='GET' && url.pathname==='/api/status') return send(res,200,{lab:labStatus(),mode:demo?'demo':lan?'live':'unconfigured',students:[...(demo?students:lan?lan.devices:new Map()).values()].map(s=>({...s,online:s.demo?s.online:Date.now()-s.lastSeen<20000,approved:enrollment.approved.has(s.id)&&enrollment.keys.get(s.id)===s.publicKey})),features:{screenView:true,remoteControl:false,screenBroadcast:true,fileTransfer:true,messages:true,labManagement:true,screenPause:true}});
- if(req.method==='GET' && url.pathname==='/api/frames') return send(res,200,{frames:lan?[...lan.frames.entries()].filter(([id,v])=>Date.now()-v.at<5000&&lan.devices.has(id)&&enrollment.approved.has(id)&&enrollment.keys.get(id)===lan.devices.get(id).publicKey).map(([id,v])=>({id,jpeg:v.jpeg,at:v.at})):[]});
+ if(req.method==='GET' && url.pathname==='/api/status') return send(res,200,{lab:labStatus(),mode:demo?'demo':lan?'live':'unconfigured',students:[...(demo?students:lan?lan.devices:new Map()).values()].map(s=>({...s,online:s.demo?s.online:Date.now()-s.lastSeen<20000,approved:enrollment.approved.has(s.id)&&enrollment.keys.get(s.id)===s.publicKey})),features:{screenView:true,remoteControl:false,screenBroadcast:true,fileTransfer:true,messages:true,labManagement:true,screenPause:true,limitedAssistance:true}});
+ if(req.method==='GET' && url.pathname==='/api/frames') return send(res,200,{frames:lan?[...lan.frames.entries()].filter(([id,v])=>Date.now()-v.at<5000&&lan.devices.has(id)&&enrollment.approved.has(id)&&enrollment.keys.get(id)===lan.devices.get(id).publicKey).map(([id,v])=>({id,jpeg:v.jpeg,at:v.at,assistanceMonitor:v.assistanceMonitor===true})):[]});
  if(req.method==='GET' && (url.pathname==='/' || url.pathname==='/app.js' || url.pathname==='/style.css' || /^\/m1(?:0[5-9]|1[0-4])-[a-z-]+\.js$/.test(url.pathname))) {
   const file=url.pathname==='/'?'index.html':url.pathname.slice(1);
   return fs.readFile(path.join(publicDir,file),(err,data)=>err?send(res,404,{error:'Not found'}):send(res,200,data,file.endsWith('.js')?'text/javascript; charset=utf-8':{'index.html':'text/html; charset=utf-8','style.css':'text/css; charset=utf-8'}[file]));
