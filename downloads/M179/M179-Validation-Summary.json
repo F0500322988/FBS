@@ -1,0 +1,56 @@
+{
+  "stage": "M179",
+  "applicationVersion": "0.179.0-preview",
+  "featureSourceCommit": "f13b7294971836b96cefe83bd0fa6f7f044ee409",
+  "javascript": {
+    "passed": 1489,
+    "failed": 0,
+    "skippedOnLinuxAndMac": 0
+  },
+  "browser": {
+    "passed": true,
+    "apiMocked": true,
+    "independentRealApiRestartTestPassed": true,
+    "enterPreservesActiveLab": true
+  },
+  "windows": {
+    "run": "https://github.com/F0500322988/FBS/actions/runs/41975128335",
+    "dotnetChecksPassed": 155,
+    "isolatedWinFormsChecks": 7,
+    "profileApiTestsPassed": true,
+    "posixSymlinkCheckExplicitlySkipped": true,
+    "installerExecuted": true,
+    "uninstallExecuted": true,
+    "installedPayloadFilesSha256Verified": 97,
+    "bundledNodeExecuted": true,
+    "unknownFilePreservedOnUninstall": true,
+    "fullStudentAppGuiTested": false,
+    "physicalKeyboardTested": false,
+    "signed": false
+  },
+  "mac": {
+    "intelRun": "https://github.com/F0500322988/FBS/actions/runs/41974556464",
+    "armRun": "https://github.com/F0500322988/FBS/actions/runs/41975217557",
+    "release": "m179-macos-preview-18-1",
+    "armRelease": "m179-macos-arm-preview-6-1",
+    "architectures": [
+      "x86_64",
+      "arm64"
+    ],
+    "nativeExecutionOnBothArchitecturesPassed": true,
+    "pkgAndDmgPayloadVerified": true,
+    "installedAndRemovedOnBothHosts": true,
+    "swiftConfigChecksPerHost": 23,
+    "fileSaveChecksPerHost": 8,
+    "finalIntelAssetsDownloadedAndSha256Verified": true,
+    "earlierArmAttemptFailedCauseUnconfirmed": true,
+    "retryPassedWithoutApplicationCodeChange": true,
+    "guiTested": false,
+    "keychainTested": false,
+    "screenRecordingPermissionTested": false,
+    "developerIDSigned": false,
+    "notarized": false
+  },
+  "physicalMixedLanTested": false,
+  "fortyDeviceLoadTested": false
+}

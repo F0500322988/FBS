@@ -17,3 +17,12 @@
 - M179 featureda19bb5، وإصلاحEnterf13b729؛ الحزم النهائيةيجبأنترتبطبالمصدرf13b729 لاالبناءالأول. MacIntelالنهائيrun41974556464/job127070289085 وARMrun41974577926/job127070355860.
 - WindowsM179 التغليفالأولقديملإصلاحEnter؛ تجاهلهللتسليم. النهائي/workspace/setup/m179-installers-r2 و/tmp/fbs-m179-installers-final.log. مرحلةالحمولة/workspace/setup/m179-installer-stage حُدثتapp.js بعداكتمالالتغليفالأول.
 - بعداكتمالNSIS النهائي:أنشئTest-M179-Installed.ps1 منTest-M178 معالبصماتالجديدة، وانسخpayload-Teacher/Student.json إلىwindows/nsis/m179-ci، ثمارفعالحزمتينإلىفرعdownloads/m179-preview قبلتشغيلWindowsCI الذيينزلهما.
+
+## نتيجة التسليم النهائية M179
+
+- WindowsM179 run41975128335/job127072073053 اجتاز155.NET والتثبيتوالإزالةوحمايةملفغيرمعروف، مع97ملفًا مثبتًا. ملفاتEXEالنهائية من/workspace/setup/m179-installers-r2؛ SHAمثبتفي/workspace/outputs/FBS-Classroom-M179-Windows-Installer-Verification.json. أُعيدتنزيلالاثنينمنGitHubوتحققتالبصمات.
+- Intelالمصححrun41974556464/job127070289085 نجحونشرm179-macos-preview-18-1؛ tagيطابقf13b7294971836b96cefe83bd0fa6f7f044ee409. حزمPKG/DMGالأربعوتقاريرهافُحصتSHAوصيغxar/koly وتوجد/workspace/outputs/M179-Mac-final.
+- ARMإعادةالتشغيلrun41975217557/job127072358668 نجحتونشرتm179-macos-arm-preview-6-1؛ مصدر42af480 يختلففقطبتشخيصالـworkflow عنمصدرالتطبيقf13b729. تقريرARMيثبتselfCheckHostArchitecture=arm64 والتثبيتوالإزالة. توجدARM-*.json معتقاريرIntel.
+- ARMالمحاولةrun41974577926 فشلتبعدتوقيعالطالبقبلنشرالحزم؛ سببهاغيرمؤكدلأنGitHubأسقطنهايةالتشخيص. حسّنتالـworkflow ليعرضآخر8أسطروأعدتالتشغيلدونتغييرالتطبيقفنجح. لا تدعأنالسببتمتشخيصهأوأنكلGUIاُختبرت.
+- لا تستخدمm179-macos-preview-16-1 أوarm-preview-4-1 للتسليمالنهائي؛ هماقبلإصلاحEnter. استعملpreview-18-1 أوarm-preview-6-1.
+- الخطوةالقادمةبعدهذهالمرحلة:لا تكررM179أوتستخدماختباراتM178 كدليلبديل؛ القفلنظاميًاوالتحكمومطابقةالواجهةوالقبولالفعليمازالتبحاجةتطوير/تحقق. لا توجدجلسةتحكمبجهازالمستخدم؛ لديهWindowsواحدولميبلغعنإجراءاختبارفعلي.
