@@ -1,0 +1,72 @@
+{
+  "stage": "M183",
+  "finalProduct": false,
+  "source": {
+    "macApplication": "65cc25d",
+    "windowsApplication": "300c209",
+    "windowsFinalValidation": "1445e2c",
+    "mainChanged": false
+  },
+  "javascript": {
+    "tests": 1513,
+    "passed": 1513,
+    "failed": 0,
+    "skipped": 0,
+    "newPinnedTLSStudentConnectionTest": true
+  },
+  "browser": {
+    "functionalRegressionPassed": true,
+    "referenceLayoutAcceptancePassed": true,
+    "desktopAndMobilePassed": true,
+    "twentyOneRecipientBroadcastStartVisible": true,
+    "videoInMainPreview": true,
+    "screenshotsUseFixtureData": true
+  },
+  "windows": {
+    "run": "https://github.com/F0500322988/FBS/actions/runs/42029666946",
+    "dotnetChecks": 231,
+    "appearanceChecks": 9,
+    "installedFilesHashed": 588,
+    "bothInstallersExecuted": true,
+    "nodeExecuted": true,
+    "uninstallAndUnknownFilePreservationPassed": true,
+    "publicDownloadsShaVerified": true,
+    "nativeDashboardRenderedInOwnedFixture": true,
+    "actualFullStudentAppGuiTested": false,
+    "signed": false
+  },
+  "macos": {
+    "intelRun": "https://github.com/F0500322988/FBS/actions/runs/42029026374",
+    "armRun": "https://github.com/F0500322988/FBS/actions/runs/42029031804",
+    "architectures": [
+      "x86_64",
+      "arm64"
+    ],
+    "minimumOS": "13.0",
+    "nativeDashboardOffscreenFixtureRendered": true,
+    "actualUserStudentGuiTested": false,
+    "developerIDSigned": false,
+    "notarized": false,
+    "armRelease": "https://github.com/F0500322988/FBS/releases/tag/m183-macos-arm-preview-18-1",
+    "appleSiliconBuildAndIsolatedInstallationPassed": true,
+    "downloadedFourPkgDmgShaAndMagicVerified": true,
+    "sharedSourceHashComparisons": 82,
+    "intelFinalRunStatus": "in-progress-at-report",
+    "earlierIntelNativeM183BuildAndPackageChecksPassed": true,
+    "earlierIntelArtifactUploadFailed": "GitHub ArtifactService request timeout after 5 attempts; release skipped"
+  },
+  "physicalLabM183": {
+    "resultsReceived": false,
+    "userDevicesRemotelyAccessible": false,
+    "actualPowerAndWakeTested": false,
+    "updatedBroadcastVerifiedOnUserMac": false
+  },
+  "limits": [
+    "OS window chrome, fonts and DPI differ; exact pixel equality not established",
+    "Windows unsigned; Mac ad-hoc signed without Developer ID/notarization",
+    "Native setup and actual OS permissions remain necessary",
+    "Power requests and Wake-on-LAN packets do not prove resulting power state",
+    "No real student screenshots are published",
+    "M182 capture/input consent requirements preserved"
+  ]
+}
