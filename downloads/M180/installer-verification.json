@@ -1,0 +1,33 @@
+{
+  "stage": "M180",
+  "applicationVersion": "0.180.0-preview",
+  "buildTool": "NSIS native Linux compiler / signed Debian packages",
+  "buildPassed": true,
+  "allPayloadSha256Verified": true,
+  "unexpectedPayloadRejected": true,
+  "windowsInstallExecuted": false,
+  "windowsGuiExecuted": false,
+  "twoPcLanTested": false,
+  "installers": [
+    {
+      "role": "Teacher",
+      "file": "FBS-Classroom-Teacher-M180-Setup-PREVIEW.exe",
+      "size": 69336231,
+      "sha256": "0c96e4eabcd1853cc51939295f17deb39ba0c17df59c963aa8f691ceff9d9239",
+      "payloadFilesVerified": 294,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    },
+    {
+      "role": "Student",
+      "file": "FBS-Classroom-Student-M180-Setup-PREVIEW.exe",
+      "size": 69312672,
+      "sha256": "a1e5628accff1ca8d91793c529de3b66696bccb695372c4842462acd44a777c1",
+      "payloadFilesVerified": 290,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    }
+  ]
+}
