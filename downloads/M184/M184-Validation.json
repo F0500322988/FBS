@@ -42,7 +42,7 @@
   "windowsJob": "127301824034",
   "macIntelJob": "127302730096",
   "macArmJob": "127302729837",
-  "macArmExecutionStatus": "queued-not-run",
+  "macArmExecutionStatus": "success",
   "windowsM183RegressionRun": "https://github.com/F0500322988/FBS/actions/runs/42043969237",
   "windowsM183DotnetChecks": 231,
   "physicalUserDevicesTested": false,
@@ -53,5 +53,14 @@
   "macDeveloperIDSigned": false,
   "macNotarized": false,
   "jsApplicationChanged": false,
-  "fullJsSuiteRerunForM184": false
+  "fullJsSuiteRerunForM184": false,
+  "macArmChecks": {
+    "stage": "M184",
+    "macProvisioningChecks": 41,
+    "keychainRoundTripPassed": true,
+    "nativeStudentCompatibilityPassed": true,
+    "actualUserLabTested": false,
+    "secretsPrinted": false
+  },
+  "macArmRelease": "https://github.com/F0500322988/FBS/releases/tag/m184-lab-kit-macos-15-6-1"
 }
