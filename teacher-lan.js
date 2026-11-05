@@ -108,7 +108,7 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
      if(known && packet.publicKey!==known)throw Error('key mismatch');
      const prior=devices.get(body.id);
      if(prior && prior.publicKey!==packet.publicKey && (!known||known!==packet.publicKey))throw Error('pending key change');
-     devices.set(body.id,{id:body.id,platform:body.platform,ip,lastSeen:Date.now(),publicKey:packet.publicKey,assistanceSupported:body.assistanceSupported===true});
+     devices.set(body.id,{id:body.id,platform:body.platform,ip,lastSeen:Date.now(),publicKey:packet.publicKey,assistanceVersion:body.assistanceVersion===2?2:1,assistanceSupported:body.assistanceSupported===true});
     }
     res.writeHead(204);res.end();
    }catch{res.writeHead(400);res.end();}

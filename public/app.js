@@ -14,7 +14,7 @@ async function fbsTeacherAuth(){
 fbsTeacherAuth().catch(console.error);
 'use strict';
 let previousMonitorSnapshot=null,monitorHistory=[],monitorInterrupted=false;let roster=[];let frames=new Map();let pageNow="home";let selectedScreen=null;let lastStatusAt=0,lastStatusMode='unconfigured';
-const labels={home:'الرئيسية',screens:'عرض الشاشات',broadcast:'مشاركة الشاشة',control:'المساعدة عن بُعد',lock:'حجب العرض',files:'توزيع الملفات',messages:'الرسائل',labs:'إدارة المعمل',monitor:'مراقبة الأجهزة',enrollment:'اعتماد الأجهزة'};
+const labels={home:'الرئيسية',screens:'عرض الشاشات',broadcast:'مشاركة الشاشة',control:'التحكم عن بُعد',lock:'حجب العرض',files:'توزيع الملفات',messages:'الرسائل',labs:'إدارة المعمل',monitor:'مراقبة الأجهزة',enrollment:'اعتماد الأجهزة'};
 const el=id=>document.getElementById(id);
 let deviceView='grid',refreshBusy=false,previewUnavailable=false;
 const plannedPages=new Set([]);
@@ -22,11 +22,12 @@ function updatePageNotice(){
  const notice=el('notice');
  notice.hidden=true;
  if(pageNow==='enrollment'){notice.hidden=false;notice.textContent='راجع الجهاز قبل اعتماده؛ لم يتم بعد إثبات امتلاك مفتاح Windows CNG. اعتماد المعمل لا يفعّل التحكم عن بُعد.';}
- else if(pageNow==='control'){notice.hidden=false;notice.textContent='النقر واختصارات النظام غير متاحة؛ المساعدة المحدودة لا تبدأ إلا بموافقة الطالب ومشاركة شاشة حديثة.';}
+ else if(pageNow==='control'){notice.hidden=false;notice.textContent='شاشات الدخول المحمية غير متاحة للتحكم؛ يلزم إذن الطالب وشاشة كاملة حديثة. قفل حساب النظام يحتاج تأكيدًا محليًا مستقلًا.';}
  else if(pageNow==='screens'){notice.hidden=false;notice.textContent=previewUnavailable?'تعذر تحديث صور الشاشات؛ أُزيلت الصور السابقة. ستُعاد المحاولة تلقائيًا.':'تظهر لقطات الشاشة عند مشاركة الطالب وموافقته فقط. نقل المعمل عبر TLS؛ التحقق الكامل من هوية كل جهاز لم يكتمل.';}
  else if(plannedPages.has(pageNow)){notice.hidden=false;notice.textContent='هذه الوظيفة قيد التطوير وغير متاحة في هذه النسخة.';}
 }
 function render(){
+ document.body.dataset.page=pageNow;
  const custom=pageNow==='monitor'||pageNow==='enrollment';
  el('view-toolbar').hidden=custom||plannedPages.has(pageNow)||pageNow==='messages';
  el('assist-panel').hidden=pageNow!=='control';
@@ -592,13 +593,14 @@ el('profile-delete').addEventListener('click',()=>{
 });
 
 // M180: limited, consented assistance. Tokens stay only in this browser's memory.
-let assistDevice='',assistSession=null,assistToken=null,assistStatus='idle',assistBusy=false,assistLoading=false,assistTouching=false,assistCommandBusy=false,assistGeneration=0,assistFrameAt=0,assistFrameReady=false,assistFrameKey='',assistImageGeneration=0;
+let assistDevice='',assistSession=null,assistToken=null,assistStatus='idle',assistBusy=false,assistLoading=false,assistTouching=false,assistCommandBusy=false,assistGeneration=0,assistFrameAt=0,assistFrameReady=false,assistDesktop=false,assistFrameKey='',assistImageGeneration=0;
 function assistFresh(){const age=Date.now()-assistFrameAt;return assistFrameReady&&age>=0&&age<3000;}
 function updateAssistanceButtons(){
  const active=!!assistToken&&assistStatus==='active'&&assistFresh()&&!assistBusy&&!assistCommandBusy;
  el('assist-start').disabled=assistBusy||!!assistSession||!assistDevice;el('assist-stop').disabled=!assistBusy&&!assistSession;el('assist-device').disabled=assistBusy||!!assistSession;
  for(const button of el('assist-actions').querySelectorAll('button'))button.disabled=!active;el('assist-send').disabled=!active||!el('assist-text').value.length;
  el('lab-group-filter').disabled=broadcastBusy||!!broadcastSession||pauseBusy||pauseOwned||assistBusy||!!assistToken;
+ const desktop=active&&assistDesktop;for(const b of el('desktop-actions').querySelectorAll('button'))b.disabled=!desktop;
 }
 function renderAssistanceDevices(){const available=groupRoster().filter(s=>s.online&&s.approved&&s.assistanceSupported===true);const options=[new Option('اختر جهازًا مؤهلًا','')];for(const d of available)options.push(new Option(d.id,d.id));if(assistDevice&&!available.some(d=>d.id===assistDevice)){if(!assistSession)assistDevice='';else options.push(new Option(assistDevice+' — غير متصل حاليًا',assistDevice));}el('assist-device').replaceChildren(...options);el('assist-device').value=assistDevice;updateAssistanceButtons();}
 async function assistApi(path,body){const r=await fetch('/api/assist'+path,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:'no-store',signal:AbortSignal.timeout(2500)});if(!r.ok)throw Error('Assistance unavailable');return r.json();}
@@ -607,7 +609,7 @@ async function loadAssistanceState(){
  if(assistLoading||assistBusy||pageNow!=='control')return;assistLoading=true;const generation=assistGeneration;
  try{const state=await assistApi('');if(generation!==assistGeneration)return;
   const labels={requested:'بانتظار موافقة الطالب ومشاركته للشاشة',active:'وافق الطالب؛ الأوامر متاحة مع شاشة حديثة',declined:'رفض الطالب الطلب',stopped:'أوقف المعلم المساعدة','student-stopped':'أوقف الطالب المساعدة',expired:'انتهت المهلة أوالاتصال',revoked:'أُلغي اعتماد الجهاز','clock-changed':'توقف الطلب بسبب تغير ساعة الخادم',idle:'لا توجد جلسة مساعدة نشطة'};
-  assistStatus=state.status;el('assist-result').textContent=labels[state.status]||'الحالة غير متاحة';
+  assistDesktop=state.desktopControl===true;assistStatus=state.status;el('assist-result').textContent=labels[state.status]||'الحالة غير متاحة';
   if(['requested','active'].includes(state.status)){assistSession=state.sessionId;assistDevice=state.deviceId;if(!assistToken)el('assist-result').textContent+=' — التحكم متاح فقط من النافذة التي بدأت الطلب';}
   else{assistSession=null;assistToken=null;}
   if(state.lastReceipt)el('assist-receipt').textContent='الأمر '+state.lastReceipt.sequence+' — '+(state.lastReceipt.status==='submitted'?'أرسل تطبيق الطالب أحداث الإدخال إلى النظام؛ تحقق من الشاشة':'لم يتأكد إرسال الإدخال كاملًا؛ قد يكون جزئيًا. راجع الشاشة قبل المحاولة');
@@ -620,7 +622,7 @@ async function loadAssistanceState(){
 el('assist-device').addEventListener('change',()=>{assistDevice=el('assist-device').value;clearAssistFrame();loadAssistanceState();});el('assist-text').addEventListener('input',updateAssistanceButtons);
 el('assist-start').addEventListener('click',async()=>{
  if(assistBusy||assistSession||!assistDevice)return;assistBusy=true;const generation=++assistGeneration;updateAssistanceButtons();
- try{const state=await assistApi('/start',{deviceId:assistDevice});if(generation!==assistGeneration){await assistApi('/stop',{sessionId:state.sessionId});return;}assistSession=state.sessionId;assistToken=state.controlToken;assistStatus=state.status;el('assist-result').textContent='أُرسل طلب الموافقة إلى الطالب؛ لا إدخال قبل موافقته';}
+ try{const state=await assistApi('/start',{deviceId:assistDevice});if(generation!==assistGeneration){await assistApi('/stop',{sessionId:state.sessionId});return;}assistSession=state.sessionId;assistToken=state.controlToken;assistDesktop=state.desktopControl===true;assistStatus=state.status;el('assist-result').textContent='أُرسل طلب الموافقة إلى الطالب؛ لا إدخال قبل موافقته';}
  catch{if(generation===assistGeneration)el('assist-result').textContent='لم يتأكد بدء المساعدة؛ راجع الحالة. الطلب غير المجدد ينتهي تلقائيًا';}
  finally{assistBusy=false;updateAssistanceButtons();}
 });
@@ -632,3 +634,12 @@ el('assist-text-form').addEventListener('submit',e=>{e.preventDefault();const te
 setInterval(async()=>{if(!assistToken||!assistSession||assistTouching||pageNow!=='control')return;assistTouching=true;const generation=assistGeneration;try{await assistApi('/keepalive',{sessionId:assistSession,controlToken:assistToken});}catch{if(generation===assistGeneration){assistToken=null;clearAssistFrame();el('assist-result').textContent='انتهى الطلب أوفقد الاتصال؛ توقف التجديد';}}finally{assistTouching=false;}},1500);
 setInterval(()=>{if(pageNow==='control')loadAssistanceState();},1000);setInterval(()=>{if(pageNow==='control'){if(!assistFresh()&&assistFrameReady)clearAssistFrame();updateAssistanceButtons();}},250);
 window.addEventListener('pagehide',()=>{const id=assistSession;assistGeneration++;assistToken=null;if(id)navigator.sendBeacon('/api/assist/stop',JSON.stringify({sessionId:id}));});
+
+// M181 desktop commands are available only with negotiated v2 capability and explicit consent.
+for(const b of document.querySelectorAll('[data-go]'))b.addEventListener('click',()=>document.querySelector('nav [data-page="'+b.dataset.go+'"]').click());
+for(const b of document.querySelectorAll('#desktop-actions [data-button]'))b.addEventListener('click',()=>{if(assistDesktop)sendAssistance({type:'click',button:b.dataset.button});});
+for(const b of document.querySelectorAll('#desktop-actions [data-scroll]'))b.addEventListener('click',()=>{if(assistDesktop)sendAssistance({type:'scroll',steps:Number(b.dataset.scroll)});});
+el('desktop-send-key').addEventListener('click',()=>{if(!assistDesktop)return;const modifiers=['primary','shift','alt'].filter(m=>el('desktop-'+m).checked);if(modifiers.length>2){el('assist-receipt').textContent='اختر مفتاحي تعديل كحد أقصى';return;}sendAssistance({type:'key',key:el('desktop-key').value,modifiers});});
+el('desktop-lock').addEventListener('click',()=>{if(assistDesktop&&confirm('سيظهر تأكيد قفل الحساب على جهاز الطالب. فتح القفل يحتاج كلمة مرور الطالب. إرسال الطلب؟'))sendAssistance({type:'lock'});});
+
+el('desktop-drag').addEventListener('click',()=>{const dx=Number(el('desktop-drag-x').value),dy=Number(el('desktop-drag-y').value);if(assistDesktop&&Number.isInteger(dx)&&Number.isInteger(dy)&&Math.abs(dx)<=500&&Math.abs(dy)<=500&&(dx||dy))sendAssistance({type:'drag',dx,dy});});

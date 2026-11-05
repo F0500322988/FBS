@@ -5,7 +5,7 @@ import AppKit
     private var config: ConnectionConfig!, host = RuntimeHost(), messages: MessagesWindow?, broadcast: BroadcastWindow?, filesWindow: FilesWindow?
     private let key = NSSecureTextField(), password = NSSecureTextField(), address = NSTextField(), port = NSTextField(), pin = NSTextField(), device = NSTextField()
     private let discovery = NSButton(checkboxWithTitle: "اكتشاف المعلم تلقائيًا داخل الشبكة", target: nil, action: nil)
-    private let state = NSTextField(wrappingLabelWithString: "التحكم الكامل غير مفعّل؛ المساعدة المحدودة تحتاج موافقتك")
+    private let state = NSTextField(wrappingLabelWithString: "التحكم يحتاج موافقتك؛ يمكنك إيقافه في أي وقت")
     private let connection = NSTextField(wrappingLabelWithString: "")
     private let startButton = NSButton(title: "حفظ الإعداد وتشغيل البرنامج", target: nil, action: nil)
     private let filesButton = NSButton(title: "ملفات المعلم — حفظ بموافقتك", target: nil, action: nil)
@@ -18,6 +18,7 @@ import AppKit
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: role == .teacher ? 580 : 820), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = "FBS Classroom — " + (role == .teacher ? "المعلم" : "الطالب") + " — macOS Preview"
         window.isReleasedWhenClosed = false
+        window.backgroundColor = NSColor(calibratedRed: 0.94, green: 0.96, blue: 1, alpha: 1)
         let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .trailing; stack.spacing = 8
         let title = NSTextField(labelWithString: "🎓 FBS Classroom — macOS / iMac"); title.font = .boldSystemFont(ofSize: 22); stack.addArrangedSubview(title)
         func field(_ label: String, _ input: NSTextField) { let text = NSTextField(labelWithString: label); text.alignment = .right; stack.addArrangedSubview(text); stack.addArrangedSubview(input); input.widthAnchor.constraint(equalToConstant: 670).isActive = true; input.font = .systemFont(ofSize: 15) }

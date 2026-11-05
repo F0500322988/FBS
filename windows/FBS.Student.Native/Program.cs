@@ -113,7 +113,7 @@ public sealed class StudentStatusForm : Form
         RightToLeft = RightToLeft.Yes;
         RightToLeftLayout = true;
         ClientSize = new Size(540, 495);
-        BackColor = Color.FromArgb(20, 38, 69);
+        BackColor = Color.FromArgb(13, 46, 104);
         ForeColor = Color.White;
         Font = new Font("Segoe UI", 12);
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -121,18 +121,20 @@ public sealed class StudentStatusForm : Form
         // M128: refuse to start if the disabled native-input adapter fails its safety probe.
         if (!NativeInputSafetyProbe.VerifyDisabled(nativeInput))
             throw new InvalidOperationException("Native input safety preflight failed; student app will not start.");
-        status.Text = "برنامج الطالب يعمل — التحكم الكامل غير مفعّل؛ المساعدة المحدودة تحتاج موافقتك";
+        status.Text = "برنامج الطالب يعمل — التحكم يحتاج موافقتك؛ يمكنك إيقافه في أي وقت";
         status.Location = new Point(35, 40);
         status.Size = new Size(470, 65);
         status.TextAlign = ContentAlignment.MiddleCenter;
-        status.ForeColor = Color.White;
+        status.ForeColor = Color.FromArgb(16, 58, 105);
+        status.BackColor = Color.FromArgb(225, 246, 234);
+        status.Padding = new Padding(10);
         stop.Text = "إيقاف جلسة التحكم";
         stop.Size = new Size(250, 50);
         stop.Location = new Point(145, 170);
         stop.BackColor = Color.FromArgb(190, 42, 55);
         stop.ForeColor = Color.White;
         stop.FlatStyle = FlatStyle.Flat;
-        stop.Enabled = false;
+        stop.Enabled = assistance is not null;
         stop.Click += (_, _) => StopControl();
         sessionBanner.EmergencyStopRequested += (_, _) => StopControl();
         var identityLabel = new Label
@@ -206,7 +208,7 @@ public sealed class StudentStatusForm : Form
         };
         consentTimer.Start();
         tray.Icon = SystemIcons.Information;
-        tray.Text = "FBS Classroom — المساعدة المحدودة تحتاج موافقتك";
+        tray.Text = "FBS Classroom — التحكم يحتاج موافقتك";
         tray.Visible = true;
         var connectionMenu = new ContextMenuStrip();
         var editConnection = new ToolStripMenuItem("إعداد عنوان المعلم وبصمة الشهادة");
@@ -229,9 +231,9 @@ public sealed class StudentStatusForm : Form
         tray.DoubleClick += (_, _) => { Show(); WindowState = FormWindowState.Normal; Activate(); };
         Shown += async (_, _) =>
         {
-            status.Text = "جارٍ تشغيل وكيل الطالب — التحكم الكامل غير مفعّل؛ المساعدة المحدودة تحتاج موافقتك";
+            status.Text = "جارٍ تشغيل وكيل الطالب — التحكم يحتاج موافقتك؛ يمكنك إيقافه في أي وقت";
             await agent.StartAsync();
-            if (!IsDisposed) { status.Text = agent.Status + " — التحكم الكامل غير مفعّل؛ المساعدة المحدودة تحتاج موافقتك"; screenPause ??= new ScreenPauseController(agent.LocalControlToken); assistance ??= new AssistanceController(agent.LocalControlToken); }
+            if (!IsDisposed) { status.Text = agent.Status + " — التحكم يحتاج موافقتك؛ يمكنك إيقافه في أي وقت"; screenPause ??= new ScreenPauseController(agent.LocalControlToken); assistance ??= new AssistanceController(agent.LocalControlToken); stop.Enabled = true; }
         };
         FormClosed += (_, _) => { nativeInput.Disable(); inputGate.Deactivate(); screenPause?.Dispose(); assistance?.Dispose(); localConsent.ResetActive(); consentTimer.Stop(); consentTimer.Dispose(); localClient.Dispose(); agent.Dispose(); tray.Dispose(); sessionBanner.Dispose(); };
     }
@@ -472,7 +474,7 @@ public sealed class StudentStatusForm : Form
                 status.Text = "تم الرفض محليًا؛ تعذر الاتصال بالخادم";
         }
     }
-    private void ClearPending() { verifiedPipeline.Stop(); nativeInput.Disable(); inputGate.Deactivate(); sessionBanner.EndSession(); commandChannel.Revoke(); nativePreflight.Stop(); sessionLiveness.Stop(); sessionExpiresAt = DateTimeOffset.MinValue; currentSession = null; lastPreviewSequence = 0; previewAudit.Reset(); commandPreview.Text = "معاينة الأوامر: لا توجد جلسة نشطة"; approve.Visible = decline.Visible = false; stop.Enabled = false; }
+    private void ClearPending() { verifiedPipeline.Stop(); nativeInput.Disable(); inputGate.Deactivate(); sessionBanner.EndSession(); commandChannel.Revoke(); nativePreflight.Stop(); sessionLiveness.Stop(); sessionExpiresAt = DateTimeOffset.MinValue; currentSession = null; lastPreviewSequence = 0; previewAudit.Reset(); commandPreview.Text = "معاينة الأوامر: لا توجد جلسة نشطة"; approve.Visible = decline.Visible = false; stop.Enabled = assistance is not null; }
 
     // A future authenticated controller may call this only after validating device enrollment,
     // teacher identity, session authorization, and command channel security.
@@ -486,6 +488,7 @@ public sealed class StudentStatusForm : Form
 
     private async void StopControl()
     {
+        assistance?.StopNow();
         var id = currentSession;
         if (id is null) return;
         // Fail closed immediately, regardless of server availability or HTTP outcome.

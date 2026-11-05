@@ -43,7 +43,18 @@ internal sealed class AssistanceController : IDisposable
             foreach (var c in s.GetProperty("commands").EnumerateArray())
             {
                 long seq = c.GetProperty("sequence").GetInt64(); bool accepted = gate.Accept(id, seq, true, sharing, AssistanceInput.DesktopAvailable() && AssistanceInput.OtherApplicationFocused(), Now), submitted = false;
-                if (accepted) { var type = c.GetProperty("type").GetString(); if (type == "move") submitted = AssistanceInput.Move(c.GetProperty("dx").GetInt32(), c.GetProperty("dy").GetInt32()); else if (type == "text") submitted = AssistanceInput.Text(c.GetProperty("text").GetString()!); }
+                if (accepted) { var type = c.GetProperty("type").GetString(); if (type == "move") submitted = AssistanceInput.Move(c.GetProperty("dx").GetInt32(), c.GetProperty("dy").GetInt32()); else if (type == "text") submitted = AssistanceInput.Text(c.GetProperty("text").GetString()!); else if (s.TryGetProperty("desktopControl", out var mode) && mode.GetBoolean()) {
+                    if (type == "click") submitted = AssistanceInput.Click(c.GetProperty("button").GetString()!);
+                    else if (type == "drag") submitted = AssistanceInput.Drag(c.GetProperty("dx").GetInt32(), c.GetProperty("dy").GetInt32());
+                    else if (type == "scroll") submitted = AssistanceInput.Scroll(c.GetProperty("steps").GetInt32());
+                    else if (type == "key") submitted = AssistanceInput.PressKey(c.GetProperty("key").GetString()!, c.GetProperty("modifiers").EnumerateArray().Select(m => m.GetString()!).ToArray());
+                    else if (type == "lock") {
+                        Stop();
+                        bool confirmed = MessageBox.Show("يطلب المعلم قفل حساب Windows. سيتوقف التحكم، وفتح القفل يحتاج كلمة مرور حسابك. هل تريد قفل الحساب الآن؟", "FBS Classroom — تأكيد محلي لقفل النظام", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+                        if (confirmed && !AssistanceInput.RequestSystemLock()) MessageBox.Show("لم يتأكد إرسال طلب قفل الحساب إلى Windows.", "FBS Classroom");
+                        return;
+                    }
+                } }
                 _ = Post(new { action = "receipt", sessionId = id, sequence = seq, state = submitted ? "submitted" : "rejected" });
                 if (!submitted) { Stop(); break; }
             }
@@ -51,10 +62,11 @@ internal sealed class AssistanceController : IDisposable
         catch { if (!disposed) Stop(); }
         finally { busy = false; }
     }
+    internal void StopNow() => Stop();
     public void Dispose() { if (disposed) return; disposed = true; timer.Stop(); timer.Dispose(); Stop(); client.Dispose(); }
     private sealed class ConsentForm : Form
     {
-        private readonly Button approve = new() { Text = "أوافق على المساعدة المحدودة", Dock = DockStyle.Bottom, Height = 45 };
+        private readonly Button approve = new() { Text = "أوافق على التحكم", Dock = DockStyle.Bottom, Height = 45 };
         private readonly Label label = new() { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter };
         private bool ending, active; private readonly Action stop;
         private readonly Button end = new() { Text = "رفض / إيقاف المساعدة", Dock = DockStyle.Bottom, Height = 45 };
@@ -63,13 +75,13 @@ internal sealed class AssistanceController : IDisposable
         protected override bool ShowWithoutActivation => active;
         public ConsentForm(string teacher, Action consent, Action stop)
         {
-            this.stop = stop; Text = "FBS Classroom — طلب مساعدة محدود"; Size = new Size(520, 330); StartPosition = FormStartPosition.CenterScreen; TopMost = true; MinimizeBox = false; MaximizeBox = false; RightToLeft = RightToLeft.Yes; Font = new Font("Segoe UI", 11);
-            label.Text = "المعلم يطلب تحريك المؤشر نسبيًا وكتابة نص عادي، دون نقر أو اختصارات.\nشارك الشاشة كاملة أولًا من تطبيق الطالب، ثم وافق واختر البرنامج الذي سيستقبل النص.\nيمكنك الإيقاف بأي وقت.\n" + teacher;
+            this.stop = stop; Text = "FBS Classroom — طلب تحكم بموافقتك"; Size = new Size(520, 330); StartPosition = FormStartPosition.CenterScreen; TopMost = true; MinimizeBox = false; MaximizeBox = false; RightToLeft = RightToLeft.Yes; Font = new Font("Segoe UI", 11);
+            label.Text = "المعلم يطلب تحريك المؤشر والنقر والتمرير وكتابة النص والمفاتيح والاختصارات.\nشارك الشاشة كاملة أولًا من تطبيق الطالب، ثم وافق واختر البرنامج الذي سيستقبل النص.\nيمكنك الإيقاف بأي وقت.\n" + teacher;
             end.Click += (_, _) => stop(); approve.Click += (_, _) => consent(); Controls.Add(label); Controls.Add(approve); Controls.Add(end);
             FormClosing += (_, e) => { if (!ending) { e.Cancel = true; BeginInvoke(stop); } };
         }
         public void AllowApproval(bool allowed) { approve.Enabled = allowed && !active; }
-        public void ActiveMode() { if (active) return; active = true; approve.Visible = false; label.Text = "مساعدة محدودة نشطة — المؤشر والنص العادي فقط\nاختر البرنامج الذي سيستقبل النص؛ شارك الشاشة باستمرار.\nيمكنك إيقافها بالزر أدناه. تنتهي بعد دقيقتين أو عند انقطاع الاتصال."; Size = new Size(440, 200); Location = new Point(Screen.PrimaryScreen!.WorkingArea.Right - Width - 12, Screen.PrimaryScreen.WorkingArea.Bottom - Height - 12); }
+        public void ActiveMode() { if (active) return; active = true; approve.Visible = false; label.Text = "تحكم نشط بموافقتك — المؤشر والنقر ولوحة المفاتيح\nاختر البرنامج الذي سيستقبل النص؛ شارك الشاشة باستمرار.\nيمكنك إيقافها بالزر أدناه. تنتهي بعد دقيقتين أو عند انقطاع الاتصال."; Size = new Size(440, 200); Location = new Point(Screen.PrimaryScreen!.WorkingArea.Right - Width - 12, Screen.PrimaryScreen.WorkingArea.Bottom - Height - 12); }
         public void End() { ending = true; Close(); Dispose(); }
     }
 }

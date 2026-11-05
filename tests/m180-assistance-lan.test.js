@@ -121,6 +121,11 @@ test('real TLS assistance: explicit consent, fresh screen, private ownership, re
   const queued=await api('/api/assist/command',{sessionId:assist.body.sessionId,controlToken:owner,action:{type:'text',text:'مرحبا 42'}});assert.equal(queued.status,202);
   const command=await until(async()=>{const view=await assistView();return view.session?.commands.length?view.session.commands[0]:null;});assert.equal(command.type,'text');assert.equal(command.text,'مرحبا 42');
   assert.equal((await assistLocal({action:'receipt',sessionId:assist.body.sessionId,sequence:command.sequence,state:'submitted'})).status,200);assert.equal((await api('/api/assist')).body.lastReceipt.status,'submitted');
+  assert.equal((await api('/api/assist')).body.desktopControl,true);
+  for(const action of [{type:'click',button:'right'},{type:'scroll',steps:-2},{type:'drag',dx:50,dy:10},{type:'key',key:'Enter',modifiers:[]},{type:'lock'}]){
+   assert.equal((await api('/api/assist/command',{sessionId:assist.body.sessionId,controlToken:owner,action})).status,202);
+   const received=await until(async()=>{const s=(await assistView()).session;assert.equal(s?.desktopControl,true);return s?.commands.length?s.commands[0]:null;});const {sequence,...clean}=received;assert.deepEqual(clean,action);
+  }
   assert.equal((await assistLocal({action:'stop',sessionId:assist.body.sessionId})).status,200);assert.equal((await assistView()).session,null);assert.equal((await api('/api/assist')).body.status,'student-stopped');
   assist=await api('/api/assist/start',{deviceId:'MSG-PC'});await until(async()=>(await assistView()).session?.sessionId===assist.body.sessionId);
   assert.equal((await fetch(local+'/share/stopped',{method:'POST',headers:{'X-FBS-Share-Token':(await assistView()).shareNonce}})).status,204);assert.equal((await assistView()).sharingFresh,false);assert.equal((await assistView()).session,null);await until(async()=>(await api('/api/assist')).body.status==='student-stopped');

@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   windows:
-    if: ${{ !contains(github.ref, 'm180-assistance-') }}
+    if: ${{ !contains(github.ref, '-assistance-') }}
     runs-on: windows-2022
     timeout-minutes: 25
     steps:
