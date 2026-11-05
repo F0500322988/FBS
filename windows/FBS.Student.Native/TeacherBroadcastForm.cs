@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace FBS.Student.Native;
@@ -14,7 +15,8 @@ internal sealed class TeacherBroadcastForm : Form
     private bool busy, automatic;
     private string? sessionId;
     private long sequence;
-    private DateTimeOffset lastFrameAt = DateTimeOffset.MinValue;
+    private double lastFrameAt = double.NegativeInfinity;
+    private static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
     public TeacherBroadcastForm(string token)
     {
         Text = "FBS Classroom — عرض شاشة المعلم";
@@ -22,7 +24,7 @@ internal sealed class TeacherBroadcastForm : Form
         FormBorderStyle = FormBorderStyle.None; StartPosition = FormStartPosition.Manual; Bounds = Screen.PrimaryScreen!.Bounds; TopMost = true; ShowInTaskbar = false;
         Font = new Font("Segoe UI", 11);
         Controls.Add(picture);
-        FormClosing += (_, e) => { if (!automatic && !Disposing && DateTimeOffset.UtcNow - lastFrameAt < TimeSpan.FromSeconds(4)) e.Cancel = true; };
+        FormClosing += (_, e) => { if (!automatic && !Disposing && Now - lastFrameAt < 4) e.Cancel = true; };
         client.DefaultRequestHeaders.Add("X-FBS-Local-Token", token);
         fullscreen.Click += (_, _) => WindowState = WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized;
         timer.Tick += async (_, _) => await RefreshFrame();
@@ -36,7 +38,7 @@ internal sealed class TeacherBroadcastForm : Form
     private async Task RefreshFrame()
     {
         if (IsDisposed) return;
-        if (DateTimeOffset.UtcNow - lastFrameAt > TimeSpan.FromSeconds(4))
+        if (Now - lastFrameAt > 4)
         { ClearImage(); if (sessionId is not null) { automatic = true; Close(); return; } }
         if (busy) return; busy = true;
         try
@@ -58,7 +60,7 @@ internal sealed class TeacherBroadcastForm : Form
             if (decoded.Width > 1280 || decoded.Height > 720) throw new InvalidDataException("Frame is too large");
             var image = new Bitmap(decoded);
             ClearImage(); picture.Image = image;
-            sessionId = incomingSession; sequence = incomingSequence; lastFrameAt = DateTimeOffset.UtcNow;
+            sessionId = incomingSession; sequence = incomingSequence; lastFrameAt = Now;
             state.Text = "شاشة المعلم — عرض تلقائي بملء الشاشة";
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or ObjectDisposedException or FormatException or InvalidDataException or ArgumentException or OutOfMemoryException)
