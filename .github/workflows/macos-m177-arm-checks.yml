@@ -17,7 +17,22 @@ jobs:
         with:
           node-version: '22.23.4'
       - name: Shared JavaScript and real TLS checks on Apple Silicon
-        run: node --test tests/*.test.js
+        run: |
+          set +e
+          node --test tests/*.test.js > "$RUNNER_TEMP/fbs-m181-js.log" 2>&1
+          fbs_js_status=$?
+          set -e
+          tail -n 18 "$RUNNER_TEMP/fbs-m181-js.log"
+          if [ "$fbs_js_status" -ne 0 ]; then
+            python3 - "$RUNNER_TEMP/fbs-m181-js.log" <<'PYTHON'
+          import pathlib,sys,re
+          lines=pathlib.Path(sys.argv[1]).read_text(errors='replace').splitlines()
+          selected=[line for line in lines if re.search(r'not ok|✖|error:|Error:|expected:|actual:|location:',line)]
+          for line in (selected or lines[-8:])[-8:]:
+              print('::error::'+line.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PYTHON
+          fi
+          exit "$fbs_js_status"
       - name: Universal apps, native runtime, file save, installed PKG and DMG checks
         run: |
           set +e

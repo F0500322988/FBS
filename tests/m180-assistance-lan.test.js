@@ -123,6 +123,7 @@ test('real TLS assistance: explicit consent, fresh screen, private ownership, re
   assert.equal((await assistLocal({action:'receipt',sessionId:assist.body.sessionId,sequence:command.sequence,state:'submitted'})).status,200);assert.equal((await api('/api/assist')).body.lastReceipt.status,'submitted');
   assert.equal((await api('/api/assist')).body.desktopControl,true);
   for(const action of [{type:'click',button:'right'},{type:'scroll',steps:-2},{type:'drag',dx:50,dy:10},{type:'key',key:'Enter',modifiers:[]},{type:'lock'}]){
+   assert.equal((await api('/api/assist/keepalive',{sessionId:assist.body.sessionId,controlToken:owner})).status,200);
    assert.equal((await api('/api/assist/command',{sessionId:assist.body.sessionId,controlToken:owner,action})).status,202);
    const received=await until(async()=>{const s=(await assistView()).session;assert.equal(s?.desktopControl,true);return s?.commands.length?s.commands[0]:null;});const {sequence,...clean}=received;assert.deepEqual(clean,action);
   }
