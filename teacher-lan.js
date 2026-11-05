@@ -15,6 +15,7 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
  let broadcastStore=null;
  let pauseStore=null;function setPauseStore(store){pauseStore=store;}
  let assistanceStore=null;function setAssistanceStore(store){assistanceStore=store;}
+ let labNameProvider=()=>'';function setLabNameProvider(provider){labNameProvider=provider;}
  let powerStore=null;function setPowerStore(store){powerStore=store;}
  let fileStore=null;
  function setFileStore(store){fileStore=store;}
@@ -117,6 +118,7 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
      devices.set(body.id,{id:body.id,platform:body.platform,ip,lastSeen:Date.now(),publicKey:packet.publicKey,assistanceVersion:body.assistanceVersion===2?2:1,assistanceSupported:body.assistanceSupported===true,powerSupported:body.powerSupported===true});
      if(powerStore&&known)try{powerStore.observe(devices.get(body.id),body.wakeInterfaces);}catch{}
     }
+    if(req.url==='/heartbeat'){res.setHeader('X-FBS-Approved',known===packet.publicKey?'1':'0');try{res.setHeader('X-FBS-Lab',encodeURIComponent(labNameProvider()));}catch{}}
     res.writeHead(204);res.end();
    }catch{res.writeHead(400);res.end();}
   });
@@ -130,7 +132,7 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
   announce();timer=setInterval(announce,intervalMs);console.log('Teacher LAN active:',localIPv4().join(', '));
  }
  async function stop(){clearInterval(timer);await Promise.all([new Promise(resolve=>server.close(resolve)),udpStarted?new Promise(resolve=>udp.close(resolve)):Promise.resolve()]);}
- return {devices,frames,server,start,stop,setApprovedKeys,setControlLeases,setControlCommands,setMessageStore,setBroadcastStore,setFileStore,setPauseStore,setAssistanceStore,setPowerStore};
+ return {devices,frames,server,start,stop,setApprovedKeys,setControlLeases,setControlCommands,setMessageStore,setBroadcastStore,setFileStore,setPauseStore,setAssistanceStore,setPowerStore,setLabNameProvider};
 }
 if(require.main===module){const lan=createTeacherLan({secret:process.env.FBS_PAIRING_KEY});lan.start().catch(e=>{console.error(e);process.exitCode=1;});}
 module.exports={createTeacherLan};

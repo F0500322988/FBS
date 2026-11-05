@@ -29,7 +29,7 @@ function verify(stage,output,releaseStage="M170"){
   if(machine(file)!==0x14c)throw Error('Unexpected NSIS bootstrap architecture');
   installers.push({role,file:name,size:fs.statSync(file).size,sha256:hash(file),payloadFilesVerified:expected.size,installerArchitecture:'x86 Unicode NSIS bootstrap',applicationArchitecture:'Windows x64',signed:false});
  }
- return {stage:releaseStage==='M170'?'M171':releaseStage,applicationVersion:'0.182.0-preview',buildTool:'NSIS native Linux compiler / signed Debian packages',buildPassed:true,allPayloadSha256Verified:true,unexpectedPayloadRejected:true,windowsInstallExecuted:false,windowsGuiExecuted:false,twoPcLanTested:false,installers};
+ return {stage:releaseStage==='M170'?'M171':releaseStage,applicationVersion:'0.183.0-preview',buildTool:'NSIS native Linux compiler / signed Debian packages',buildPassed:true,allPayloadSha256Verified:true,unexpectedPayloadRejected:true,windowsInstallExecuted:false,windowsGuiExecuted:false,twoPcLanTested:false,installers};
 }
 if(require.main===module){if(![4,5].includes(process.argv.length))throw Error('Usage: node verify-payload.js <stage-root> <output-root> [M-stage]');const result=verify(path.resolve(process.argv[2]),path.resolve(process.argv[3]),process.argv[4]);fs.writeFileSync(path.join(process.argv[3],'installer-verification.json'),JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result,null,2));}
 module.exports={verify};

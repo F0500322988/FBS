@@ -15,6 +15,7 @@ const labProfiles=require('./lab-profiles').createLabProfiles(process.env.FBS_LA
 function labStatus(){try{const s=labSettings.snapshot();return {name:s.name,platform:s.platform,capacity:40,settingsAvailable:true};}catch{return {name:'المعمل — تعذر قراءة الإعدادات',capacity:40,settingsAvailable:false};}}
 const demo = process.env.FBS_DEMO === '1';
 const lan = !demo && process.env.FBS_PAIRING_KEY ? createTeacherLan({secret:process.env.FBS_PAIRING_KEY,port:Number(process.env.FBS_AGENT_PORT||4180),discoveryPort:Number(process.env.FBS_DISCOVERY_PORT||4181),discoveryEnabled:process.env.FBS_DISCOVERY_ENABLED!=='0'}) : null;
+if(lan)lan.setLabNameProvider(()=>labStatus().name);
 if (demo) for(let i=1;i<=21;i++) students.set(`PC-${String(i).padStart(2,'0')}`, {id:`PC-${String(i).padStart(2,'0')}`,online:i!==17,os:'Windows 11',lastSeen:Date.now()- (i===17?120000:Math.round(Math.random()*9000)), demo:true});
 const publicDir = path.join(__dirname,'public');
 const teacherPassword=process.env.FBS_TEACHER_PASSWORD||'';
@@ -236,9 +237,9 @@ const server=http.createServer((req,res)=>{
  if((url.pathname==='/api/status'||url.pathname==='/api/frames')&&!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
  if(req.method==='GET' && url.pathname==='/api/status') return send(res,200,{lab:labStatus(),mode:demo?'demo':lan?'live':'unconfigured',students:[...(demo?students:lan?lan.devices:new Map()).values()].map(s=>({...s,online:s.demo?s.online:Date.now()-s.lastSeen<20000,approved:enrollment.approved.has(s.id)&&enrollment.keys.get(s.id)===s.publicKey})),features:{screenView:true,remoteControl:false,screenBroadcast:true,fileTransfer:true,messages:true,labManagement:true,screenPause:true,limitedAssistance:true,consentedDesktopControl:true,localConfirmedSystemLock:true,powerManagement:true,managedBroadcast:true}});
  if(req.method==='GET' && url.pathname==='/api/frames') return send(res,200,{frames:lan?[...lan.frames.entries()].filter(([id,v])=>Date.now()-v.at<5000&&lan.devices.has(id)&&enrollment.approved.has(id)&&enrollment.keys.get(id)===lan.devices.get(id).publicKey).map(([id,v])=>({id,jpeg:v.jpeg,at:v.at,assistanceMonitor:v.assistanceMonitor===true})):[]});
- if(req.method==='GET' && (url.pathname==='/' || url.pathname==='/app.js' || url.pathname==='/style.css' || /^\/m1(?:0[5-9]|1[0-4])-[a-z-]+\.js$/.test(url.pathname))) {
+ if(req.method==='GET' && (url.pathname==='/' || url.pathname==='/app.js' || url.pathname==='/style.css' || url.pathname==='/reference-theme.css' || /^\/m1(?:0[5-9]|1[0-4])-[a-z-]+\.js$/.test(url.pathname))) {
   const file=url.pathname==='/'?'index.html':url.pathname.slice(1);
-  return fs.readFile(path.join(publicDir,file),(err,data)=>err?send(res,404,{error:'Not found'}):send(res,200,data,file.endsWith('.js')?'text/javascript; charset=utf-8':{'index.html':'text/html; charset=utf-8','style.css':'text/css; charset=utf-8'}[file]));
+  return fs.readFile(path.join(publicDir,file),(err,data)=>err?send(res,404,{error:'Not found'}):send(res,200,data,file.endsWith('.js')?'text/javascript; charset=utf-8':{'index.html':'text/html; charset=utf-8','style.css':'text/css; charset=utf-8','reference-theme.css':'text/css; charset=utf-8'}[file]));
  }
  send(res,404,{error:'Not found'});
 });

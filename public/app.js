@@ -14,7 +14,7 @@ async function fbsTeacherAuth(){
 fbsTeacherAuth().catch(console.error);
 'use strict';
 let previousMonitorSnapshot=null,monitorHistory=[],monitorInterrupted=false;let roster=[];let frames=new Map();let pageNow="home";let selectedScreen=null;let lastStatusAt=0,lastStatusMode='unconfigured';
-const labels={home:'الرئيسية',screens:'عرض الشاشات',broadcast:'مشاركة الشاشة',control:'التحكم عن بُعد',lock:'حجب العرض',power:'طاقة الأجهزة',files:'توزيع الملفات',messages:'الرسائل',labs:'إدارة المعمل',monitor:'مراقبة الأجهزة',enrollment:'اعتماد الأجهزة'};
+const labels={home:'الرئيسية',screens:'عرض الشاشات',broadcast:'مشاركة الشاشة',control:'التحكم عن بُعد',lock:'حجب العرض',settings:'الإعدادات',power:'طاقة الأجهزة',files:'توزيع الملفات',messages:'الرسائل',labs:'إدارة المعمل',monitor:'مراقبة الأجهزة',enrollment:'اعتماد الأجهزة'};
 const el=id=>document.getElementById(id);
 let deviceView='grid',refreshBusy=false,previewUnavailable=false;
 const plannedPages=new Set([]);
@@ -28,6 +28,9 @@ function updatePageNotice(){
 }
 function render(){
  document.body.dataset.page=pageNow;
+ updateReferenceHeader();
+ el('settings-frame').hidden=!['labs','settings'].includes(pageNow);
+ if(pageNow==='settings'){for(const id of ['assist-panel','power-panel','pause-panel','files-panel','messages-panel','broadcast-panel','monitor-panel','view-toolbar','empty-state'])el(id).hidden=true;el('devices').replaceChildren();renderSettings();return;}
  const custom=pageNow==='monitor'||pageNow==='enrollment';
  el('view-toolbar').hidden=custom||plannedPages.has(pageNow)||pageNow==='messages';
  el('power-panel').hidden=pageNow!=='power';
@@ -37,7 +40,7 @@ function render(){
  el('pause-panel').hidden=pageNow!=='lock';
  if(pageNow==='lock'){el('view-toolbar').hidden=true;el('files-panel').hidden=true;el('labs-panel').hidden=true;el('messages-panel').hidden=true;el('broadcast-panel').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;renderPauseRecipients();return;}
  el('labs-panel').hidden=pageNow!=='labs';
- if(pageNow==='labs'){el('view-toolbar').hidden=true;el('files-panel').hidden=true;el('messages-panel').hidden=true;el('broadcast-panel').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;return;}
+ if(pageNow==='labs'){settingsTab='labs';renderSettings();el('view-toolbar').hidden=true;el('files-panel').hidden=true;el('messages-panel').hidden=true;el('broadcast-panel').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;return;}
  el('files-panel').hidden=pageNow!=='files';
  if(pageNow==='files'){el('view-toolbar').hidden=true;el('messages-panel').hidden=true;el('broadcast-panel').hidden=true;el('devices').replaceChildren();el('empty-state').hidden=true;renderFileRecipients();return;}
  el('broadcast-panel').hidden=pageNow!=='broadcast';
@@ -55,14 +58,14 @@ function render(){
  el('empty-state').hidden=filtered.length>0;
  el('empty-state').textContent=lastStatusAt===0?'بيانات الأجهزة غير متاحة حاليًا':roster.length===0?'لا توجد أجهزة مسجلة بعد. شغّل تطبيق الطالب واتصل بالمعلم، ثم راجع صفحة اعتماد الأجهزة.':'لا توجد أجهزة تطابق البحث';
  el('devices').replaceChildren(...filtered.map(s=>{
-  const c=document.createElement('article');c.className='device'+(s.online?'':' offline');
+  const c=document.createElement('article');c.className='device'+(s.online?'':' offline')+(s.approved?'':' unapproved');c.title=[s.id,s.ip,s.platform||s.os].filter(Boolean).join(' · ');
   const screen=document.createElement('div');screen.className='screen';
   const name=document.createElement('b');name.textContent=s.id;
   const detail=document.createElement('small');detail.textContent=[s.ip,s.platform||s.os].filter(Boolean).join(' · ');
   const status=document.createElement('small');status.className='device-status';
   const dot=document.createElement('span');dot.className='dot';
   status.append(dot,document.createTextNode(s.online?' متصل':' غير متصل'));
-  if(pageNow==='screens'&&s.online&&frames.has(s.id)){
+  if(['screens','home'].includes(pageNow)&&s.online&&frames.has(s.id)){
    const img=document.createElement('img');img.src=frames.get(s.id);img.alt='مشاركة شاشة '+s.id;
    screen.append(img);screen.classList.add('has-preview');screen.tabIndex=0;screen.setAttribute('role','button');screen.setAttribute('aria-label','تكبير شاشة '+s.id);
    screen.addEventListener('click',()=>openScreen(s.id));screen.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openScreen(s.id);}});
@@ -80,18 +83,18 @@ async function refresh(){
   lastStatusMode=data.mode;lastStatusAt=Date.now();recordMonitorSnapshot(roster,data.mode);
   await refreshLabSettings();
   frames.clear();previewUnavailable=false;
-  if(pageNow==='screens'){
+  if(['screens','home'].includes(pageNow)){
    try{
     const fr=await fetch('/api/frames',{cache:'no-store',signal:AbortSignal.timeout(5000)});
     if(!fr.ok)throw new Error('HTTP '+fr.status);
     const d=await fr.json();if(!Array.isArray(d.frames))throw new Error('Invalid frames');
-    if(pageNow==='screens')frames=new Map(d.frames.filter(x=>roster.some(s=>s.id===x.id&&s.online===true&&s.approved===true)&&typeof x.jpeg==='string'&&x.jpeg.startsWith('data:image/jpeg;base64,')&&Number.isFinite(x.at)&&Date.now()-x.at>=0&&Date.now()-x.at<5000).map(x=>[x.id,x.jpeg]));
+    if(['screens','home'].includes(pageNow))frames=new Map(d.frames.filter(x=>roster.some(s=>s.id===x.id&&s.online===true&&s.approved===true)&&typeof x.jpeg==='string'&&x.jpeg.startsWith('data:image/jpeg;base64,')&&Number.isFinite(x.at)&&Date.now()-x.at>=0&&Date.now()-x.at<5000).map(x=>[x.id,x.jpeg]));
    }catch{frames.clear();previewUnavailable=true;}
   }
   el('total').textContent=roster.length;el('online').textContent=roster.filter(x=>x.online).length;el('offline').textContent=roster.filter(x=>!x.online).length;
   el('lab-name').textContent=data.lab?.name||'المعمل';
   el('mode').textContent=data.mode==='demo'?'وضع العرض التجريبي':data.mode==='live'?'أجهزة حقيقية على الشبكة':'الاتصال غير مهيأ';
-  el('mode').dataset.mode=data.mode;updatePageNotice();render();updateLargeScreen();if(pageNow==='messages')loadMessageHistory();if(pageNow==='broadcast')loadBroadcastState();if(pageNow==='files')loadFileHistory();if(pageNow==='lock')loadPauseState();if(pageNow==='control')loadAssistanceState();
+  el('mode').dataset.mode=data.mode;updateReferenceHeader();updatePageNotice();render();updateLargeScreen();if(pageNow==='messages')loadMessageHistory();if(pageNow==='broadcast')loadBroadcastState();if(pageNow==='files')loadFileHistory();if(pageNow==='lock')loadPauseState();if(pageNow==='control')loadAssistanceState();
  }catch(e){
   monitorInterrupted=true;previousMonitorSnapshot=null;lastStatusAt=0;roster=[];frames.clear();
   el('total').textContent='—';el('online').textContent='—';el('offline').textContent='—';
@@ -102,6 +105,7 @@ async function refresh(){
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
  document.querySelectorAll('nav button').forEach(x=>{x.classList.remove('active');x.removeAttribute('aria-current');});
  b.classList.add('active');b.setAttribute('aria-current','page');if(pageNow==='broadcast'&&b.dataset.page!=='broadcast')stopBroadcast();if(pageNow==='lock'&&b.dataset.page!=='lock')stopPause();if(pageNow==='control'&&b.dataset.page!=='control')stopAssistance();pageNow=b.dataset.page;
+ if(['labs','settings'].includes(pageNow))el('lab-editor-details').open=pageNow==='labs';
  el('page-title').textContent=labels[pageNow];el('section-title').textContent=pageNow==='home'?'أجهزة الطلاب':labels[pageNow];
  frames.clear();if(el('screen-dialog').open)el('screen-dialog').close();
  updatePageNotice();el('monitor-panel').hidden=pageNow!=='monitor';render();
@@ -110,7 +114,7 @@ document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()
 for(const view of ['grid','list'])el('view-'+view).addEventListener('click',()=>{
  deviceView=view;for(const option of ['grid','list'])el('view-'+option).setAttribute('aria-pressed',String(option===view));render();
 });
-el('card-size').addEventListener('input',()=>el('devices').style.setProperty('--card-size',el('card-size').value+'px'));
+el('card-size').addEventListener('input',()=>{el('devices').style.setProperty('--card-size',el('card-size').value+'px');el('devices').style.setProperty('--columns',String(Math.max(2,Math.min(8,Math.round(900/Number(el('card-size').value))))));});
 el('search').addEventListener('input',render);el('refresh').addEventListener('click',refresh);refresh();setInterval(refresh,2000);
 
 function openScreen(id){if(!frames.has(id))return;selectedScreen=id;el('screen-dialog-title').textContent='شاشة الطالب — '+id;updateLargeScreen();el('screen-dialog').showModal();}
@@ -454,7 +458,7 @@ function updateLabFilter(){
  const select=el('lab-group-filter');const options=[new Option('جميع الأجهزة','')];
  for(const g of labSnapshot?.groups||[])options.push(new Option(g.name,g.id));
  if(labGroupId&&!options.some(o=>o.value===labGroupId))options.push(new Option('المجموعة غير متاحة — أعد الاختيار',labGroupId));
- select.replaceChildren(...options);select.value=labGroupId;
+ select.replaceChildren(...options);select.value=labGroupId;document.querySelector('.group-filter').hidden=['home','screens','settings'].includes(pageNow)&&!(labSnapshot?.groups.length||labGroupId);
 }
 function markLabDirty(){labDirty=true;el('lab-save').disabled=labSaving||!labDraft;el('lab-result').textContent='توجد تعديلات غير محفوظة';}
 function drawLabDraft(){
@@ -549,7 +553,7 @@ function updateProfileButtons(){
 function renderProfileOptions(){
  const options=[new Option('اختر ملف معمل محفوظًا','')];for(const p of profileSnapshot?.profiles||[])options.push(new Option(p.name,p.id));
  if(profileSelected&&!options.some(o=>o.value===profileSelected))options.push(new Option('الملف غير متاح — أعد الاختيار',profileSelected));
- el('profile-select').replaceChildren(...options);el('profile-select').value=profileSelected;updateProfileButtons();
+ el('profile-select').replaceChildren(...options);el('profile-select').value=profileSelected;updateProfileButtons();renderReferenceLabCards();
 }
 async function refreshLabProfiles(){
  if(profileBusy||labSaving)return;profileBusy=true;const generation=++profileGeneration;updateProfileButtons();
@@ -656,3 +660,44 @@ async function loadPower(){if(powerLoading||powerBusy||pageNow!=='power'||perfor
 for(const kind of ['online','wake'])el('power-select-'+kind).addEventListener('click',()=>{powerSelection=new Set(powerDevices().filter(d=>kind==='online'?d.online&&d.approved&&d.powerSupported:d.wakeConfigured).map(d=>d.id));renderPowerDevices();});el('power-clear').addEventListener('click',()=>{powerSelection.clear();renderPowerDevices();});
 for(const action of ['wake','sleep','restart','shutdown'])el('power-'+action).addEventListener('click',async()=>{if(el('power-'+action).disabled||powerBusy)return;const ids=powerDevices().filter(d=>powerSelection.has(d.id)).map(d=>d.id);const names={wake:'تشغيل / إيقاظ',sleep:'سكون',restart:'إعادة تشغيل',shutdown:'إيقاف'};if(!confirm('تأكيد '+names[action]+' للأجهزة التالية:\n'+ids.join('، ')+'\nاحفظ العمل غير المحفوظ قبل الإيقاف أو إعادة التشغيل. متابعة؟'))return;powerBusy=true;updatePowerButtons();try{const result=await powerApi(action==='wake'?'/wake':'/start',{action,deviceIds:ids,confirmed:true});el('power-result').textContent=action==='wake'?result.results.map(x=>x.id+': '+(x.state==='wake-packet-sent'?'أُرسلت حزمة الإيقاظ؛ التشغيل غير مؤكد':'تعذر إرسال الإيقاظ')).join('، '):'أُرسل طلب '+names[action]+'؛ راقب تقارير الطالب وحالة اتصال الجهاز';}catch{el('power-result').textContent='لم يتأكد إرسال الطلب؛ راجع حالة الأجهزة قبل تكراره';}finally{powerBusy=false;powerAt=-Infinity;loadPower();}});
 setInterval(()=>{if(pageNow==='power'){updatePowerButtons();loadPower();}},1000);
+
+// M183 visual system shared by Windows and macOS teacher consoles.
+let settingsTab='labs';
+function createPlatformMark(platform){
+ const mark=document.createElementNS('http://www.w3.org/2000/svg','svg'),path=document.createElementNS('http://www.w3.org/2000/svg','path');mark.setAttribute('viewBox','0 0 64 64');mark.setAttribute('fill','currentColor');path.setAttribute('d',platform==='macos'?'M40 5c-1 9-6 13-12 13 0-7 5-12 12-13ZM49 35c0-7 5-11 7-12-4-6-10-7-13-7-5 0-9 3-12 3s-7-3-11-3C10 16 5 25 6 35c1 12 7 25 14 25 4 0 6-3 11-3s7 3 11 3c7 0 13-12 15-18-5-2-8-5-8-7Z':'m3 10 25-4v24H3Zm29-5 29-4v29H32ZM3 34h25v24L3 54Zm29 0h29v29l-29-4Z');mark.append(path);return mark;
+}
+function updateReferenceHeader(){
+ const online=roster.filter(x=>x.online).length,total=roster.length;
+ el('lab-connected').textContent=lastStatusAt===0?'بانتظار الاتصال':`متصل (${online} / ${total})`;
+ el('lab-dot').style.background=online?'#18c452':'#8794aa';
+ const platform=labSnapshot?.platform||'windows';
+ el('lab-platform-mark').replaceChildren(createPlatformMark(platform));
+ el('view-return').hidden=pageNow==='home';
+ el('lab-platform-mark').title=platform==='macos'?'Mac / iMac':platform==='mixed'?'Windows وMac':'Windows';
+ const caption=document.querySelector('.application-bar>span>span');if(caption)caption.textContent='— '+(pageNow==='home'?'لوحة المعلم':labels[pageNow]||'لوحة المعلم');
+ if(['home','screens'].includes(pageNow))el('section-title').textContent=(pageNow==='home'?'أجهزة الطلاب':'عرض الشاشات')+' ('+groupRoster().length+')';
+ el('settings-current-lab').textContent=labSnapshot?.name||'بانتظار إعدادات المعلم';el('settings-approved-count').textContent='الأجهزة المعتمدة المتصلة: '+roster.filter(x=>x.approved&&x.online).length;
+ renderReferenceLabCards();
+}
+function renderSettings(){
+ el('labs-panel').hidden=settingsTab!=='labs';
+ for(const p of document.querySelectorAll('[data-settings-panel]'))p.hidden=p.dataset.settingsPanel!==settingsTab;
+ for(const b of document.querySelectorAll('.settings-menu button'))b.classList.toggle('active',b.dataset.settings===settingsTab);
+ if(settingsTab==='labs')renderReferenceLabCards();
+}
+for(const button of document.querySelectorAll('[data-settings]'))button.addEventListener('click',()=>{settingsTab=button.dataset.settings;if(!['labs','settings'].includes(pageNow))document.querySelector('nav [data-page="settings"]').click();else{if(pageNow==='labs'&&settingsTab!=='labs'){pageNow='settings';document.body.dataset.page=pageNow;}renderSettings();updateReferenceHeader();}});
+function renderReferenceLabCards(){
+ const target=el('settings-lab-cards');if(!target)return;const nodes=[];
+ const heading=document.createElement('h2');heading.textContent='إدارة المعامل';nodes.push(heading);
+ const add=(name,platform,count,onEdit,onRemove)=>{const row=document.createElement('article');row.className='lab-reference-row';const mark=document.createElement('span');mark.className='lab-reference-platform';mark.append(createPlatformMark(platform));row.dataset.platform=platform;mark.setAttribute('aria-label',platform==='macos'?'Mac':'Windows');const text=document.createElement('div'),title=document.createElement('b'),detail=document.createElement('small');title.textContent=name;detail.textContent=count;text.append(title,detail);const edit=document.createElement('button');edit.type='button';edit.className='lab-row-edit';edit.append(referenceRowIcon('edit'));edit.setAttribute('aria-label','تعديل '+name);edit.addEventListener('click',onEdit);row.append(mark,text,edit);if(onRemove){const remove=document.createElement('button');remove.type='button';remove.className='lab-row-delete';remove.append(referenceRowIcon('delete'));remove.setAttribute('aria-label','حذف '+name);remove.addEventListener('click',onRemove);row.append(remove);}return row;};
+ if(labSnapshot)nodes.push(add(labSnapshot.name,labSnapshot.platform,roster.length+' جهاز مسجل — المعمل الحالي',()=>{el('lab-editor-details').open=true;el('lab-title').focus();}));
+ for(const p of profileSnapshot?.profiles||[])nodes.push(add(p.name,p.platform,p.groups.length+' مجموعة محفوظة',()=>{el('lab-editor-details').open=true;el('profile-select').value=p.id;el('profile-select').dispatchEvent(new Event('change'));el('profile-load').click();},()=>{el('profile-select').value=p.id;el('profile-select').dispatchEvent(new Event('change'));el('profile-delete').click();}));
+ const addButton=document.createElement('button');addButton.type='button';addButton.className='new-lab-reference';addButton.textContent='＋ إضافة معمل جديد';addButton.addEventListener('click',()=>{el('lab-editor-details').open=true;el('profile-name').focus();});nodes.push(addButton);
+ if(labSnapshot?.groups.length){const h=document.createElement('h3');h.textContent='مجموعات داخل المعمل';nodes.push(h);for(const g of labSnapshot.groups)nodes.push(add(g.name,labSnapshot.platform,g.deviceIds.length+' أجهزة',()=>{el('lab-editor-details').open=true;el('lab-groups').scrollIntoView({block:'nearest'});}));}
+ target.replaceChildren(...nodes);
+}
+async function toggleConsoleFullscreen(target){try{if(document.fullscreenElement)await document.exitFullscreen();else await target.requestFullscreen();}catch{el('notice').hidden=false;el('notice').textContent='تعذر فتح ملء الشاشة؛ استخدم زر ملء الشاشة في المتصفح.';}}
+el('console-fullscreen').addEventListener('click',()=>toggleConsoleFullscreen(document.documentElement));el('grid-fullscreen').addEventListener('click',()=>toggleConsoleFullscreen(el('workspace-panel')));
+
+function referenceRowIcon(kind){const s=document.createElementNS('http://www.w3.org/2000/svg','svg'),p=document.createElementNS('http://www.w3.org/2000/svg','path');s.setAttribute('viewBox','0 0 24 24');s.setAttribute('fill','none');s.setAttribute('stroke','currentColor');s.setAttribute('stroke-width','1.8');p.setAttribute('d',kind==='edit'?'m4 16 12-12 4 4L8 20H4Zm10-10 4 4':'M3 6h18M8 6V3h8v3M5 6l1 15h12l1-15M10 10v7m4-7v7');s.append(p);return s;}
+el('view-return').addEventListener('click',()=>document.querySelector('nav [data-page="home"]').click());

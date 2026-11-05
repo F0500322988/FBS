@@ -16,6 +16,8 @@ const id=(process.env.FBS_DEVICE_ID||os.hostname()).replace(/[^\w.-]/g,'_').slic
 const port=Number(process.env.FBS_DISCOVERY_PORT||4181);
 const udp=dgram.createSocket('udp4');let teacher=fixedTeacher;
 let sharing=false;
+let lastTeacherAck=-Infinity,acknowledgedTeacher=null,teacherApproved=false,teacherLabName=null;
+function connectionSnapshot(){const connected=!!teacher&&acknowledgedTeacher===teacher.host+':'+teacher.port+':'+teacher.fingerprint&&performance.now()-lastTeacherAck<12000;return {deviceId:id,connected,approved:connected&&teacherApproved,teacherHost:connected?teacher.host:null,labName:connected?teacherLabName:null};}
 const inbox=require('./classroom-messages').createStudentInbox();
 let messagesBusy=false;
 const broadcastReceiver=require('./classroom-broadcast').createBroadcastReceiver();
@@ -212,6 +214,7 @@ function localMessages(req,res){
 }
 const localServer=http.createServer((req,res)=>{
  if(req.method==='POST'&&req.url==='/share/stopped'){const origin='http://127.0.0.1:'+localServer.address().port;if(req.headers['x-fbs-share-token']!==shareNonce||req.headers.origin&&req.headers.origin!==origin){res.writeHead(403);return res.end();}shareGeneration++;lastSharedFrameAt=-Infinity;const session=assistanceReceiver.snapshot();if(session){assistanceReceiver.close(session.sessionId);fileRequest('/assist/stop',{sessionId:session.sessionId}).catch(()=>{});}res.writeHead(204);return res.end();}
+ if(req.url==='/status/local'){if(!authorizedLocalRequest(req,localControlToken)){res.writeHead(403);return res.end();}if(req.method!=='GET'){res.writeHead(405);return res.end();}res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});return res.end(JSON.stringify(connectionSnapshot()));}
  if(req.url==='/power/local')return localPower(req,res);
  if(req.url==='/assist/local')return localAssistance(req,res);
  if(req.url==='/pause/local')return localPause(req,res);
@@ -227,7 +230,8 @@ if(req.method==='GET'&&req.url==='/'){res.writeHead(200,{'Content-Type':'text/ht
 const localPort=Number(process.env.FBS_LOCAL_PORT||4190);
 if(!Number.isInteger(localPort)||localPort<0||localPort>65535)throw Error('Invalid FBS_LOCAL_PORT');
 localServer.listen(localPort,'127.0.0.1',()=>console.log('Optional screen share: http://127.0.0.1:'+localServer.address().port));
-function heartbeat(){if(!teacher)return;const data=JSON.stringify(signMessage(identity,{id,platform:process.platform,addresses:localIPv4(),powerSupported,wakeInterfaces:powerSupported?wakeInterfaces():[],assistanceVersion:assistanceSupported?2:0,assistanceSupported}));const req=pinnedRequest({fingerprint:teacher.fingerprint,host:teacher.host,port:teacher.port,path:'/heartbeat',method:'POST',timeout:3000,headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data),'X-FBS-Key':secret}},res=>res.resume());req.on('error',()=>{});req.on('timeout',()=>req.destroy());req.end(data);}
+function heartbeat(){if(!teacher)return;const endpoint=teacher;const data=JSON.stringify(signMessage(identity,{id,platform:process.platform,addresses:localIPv4(),powerSupported,wakeInterfaces:powerSupported?wakeInterfaces():[],assistanceVersion:assistanceSupported?2:0,assistanceSupported}));const req=pinnedRequest({fingerprint:endpoint.fingerprint,host:endpoint.host,port:endpoint.port,path:'/heartbeat',method:'POST',timeout:3000,headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data),'X-FBS-Key':secret}},res=>{if(teacher&&endpoint.host===teacher.host&&endpoint.port===teacher.port&&endpoint.fingerprint===teacher.fingerprint){if(res.statusCode===204){lastTeacherAck=performance.now();acknowledgedTeacher=endpoint.host+':'+endpoint.port+':'+endpoint.fingerprint;teacherApproved=res.headers['x-fbs-approved']==='1';try{const lab=decodeURIComponent(res.headers['x-fbs-lab']||'');teacherLabName=lab.length<=60?lab:null;}catch{teacherLabName=null;}}else{lastTeacherAck=-Infinity;teacherApproved=false;}}res.resume();});req.on('error',()=>{});req.on('timeout',()=>req.destroy());req.end(data);}
+
 udp.on('message',(buf,remote)=>{try{const msg=JSON.parse(buf.toString());if(!safeEqual(signature(secret,msg.payload),msg.mac))return;const p=JSON.parse(msg.payload);if(p.type!=='fbs-teacher-v1'||Math.abs(Date.now()-p.timestamp)>10000||!Number.isInteger(p.port)||p.port<1||p.port>65535)return;if(!/^[a-f0-9]{64}$/.test(p.fingerprint))return;teacher={host:remote.address,port:p.port,fingerprint:p.fingerprint};heartbeat();}catch{}});
 if(fixedTeacher){console.log('Student using configured teacher endpoint; UDP discovery disabled.');heartbeat();}
 else udp.bind(port,'0.0.0.0',()=>console.log('Student agent',id,'IP:',localIPv4().join(', '),'waiting for teacher discovery on UDP',port));

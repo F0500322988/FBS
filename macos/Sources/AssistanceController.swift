@@ -23,6 +23,7 @@ import Carbon
     }
     private func post(_ body: [String: Any], completion: @escaping (Bool) -> Void = { _ in }) { host.get("/assist/local", body: body) { result in if case .success = result { completion(true) } else { completion(false) } } }
     @objc private func localStop() { let old = id; if let id = old { closed.append(id); if closed.count > 100 { closed.removeFirst() } }; id = nil; approved = false; activeMode = false; sequence = 0; deadline = 0; window?.close(); window = nil; if let old = old { post(["action":"stop", "sessionId":old]) } }
+    func stopCurrent() { localStop() }
     func stop() { stopped = true; timer?.invalidate(); timer = nil; localStop() }
     @objc private func approve() {
         guard !busy, let current = id, now < deadline else { return }

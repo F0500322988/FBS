@@ -27,7 +27,7 @@ public sealed class StudentStatusForm : Form
     private ScreenPauseController? screenPause;
     private AssistanceController? assistance;
     private readonly NotifyIcon tray = new();
-    private readonly HttpClient localClient = new() { Timeout = TimeSpan.FromSeconds(2) };
+    private readonly HttpClient localClient = new(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromSeconds(2) };
     private readonly System.Windows.Forms.Timer consentTimer = new() { Interval = 2000 };
     private string? currentSession;
     private readonly Button approve = new();
@@ -106,6 +106,21 @@ public sealed class StudentStatusForm : Form
         persistentStops.Stop(id);
     }
 
+    private StudentDashboard? dashboard;
+    private Form? advancedWindow;
+    private bool dashboardBusy;
+    private async Task RefreshDashboard()
+    {
+        if(dashboardBusy||dashboard is null||IsDisposed)return;dashboardBusy=true;
+        try{using var data=JsonDocument.Parse(await localClient.GetStringAsync("http://127.0.0.1:4190/status/local"));if(!IsDisposed)dashboard.ApplyConnection(data.RootElement);}
+        catch{if(!IsDisposed)dashboard.SetDisconnected();}finally{dashboardBusy=false;}
+    }
+    private void BuildDashboard(Button filesButton)
+    {
+        var original=Controls.Cast<Control>().ToArray();var content=new Panel{Dock=DockStyle.Fill,AutoScroll=true,AutoScrollMinSize=new Size(540,495)};Controls.Clear();content.Controls.AddRange(original);
+        advancedWindow=new Form{Text="FBS Classroom — إعدادات الطالب",Size=new Size(570,560),StartPosition=FormStartPosition.CenterParent,BackColor=BackColor,ForeColor=ForeColor,RightToLeft=RightToLeft.Yes};advancedWindow.Controls.Add(content);advancedWindow.FormClosing+=(_,e)=>{if(!IsDisposed){e.Cancel=true;advancedWindow.Hide();}};
+        dashboard=new StudentDashboard(()=>{advancedWindow.Show(this);advancedWindow.Activate();},()=>StopControl(),()=>messagesButton.PerformClick(),()=>filesButton.PerformClick());Controls.Add(dashboard);ClientSize=new Size(340,422);MinimumSize=new Size(340,450);FormClosed+=(_,_)=>advancedWindow.Dispose();
+    }
     private PowerController? power;
     public StudentStatusForm()
     {
@@ -190,6 +205,7 @@ public sealed class StudentStatusForm : Form
         filesButton.Click += (_, _) => { using var files = new TeacherFilesForm(agent.LocalControlToken); files.ShowDialog(this); };
         Controls.Add(filesButton);
         foreach (var button in Controls.OfType<Button>()) { if (button == stop) continue; button.FlatStyle = FlatStyle.Flat; button.BackColor = Color.FromArgb(30, 84, 158); button.ForeColor = Color.White; button.FlatAppearance.BorderSize = 0; }
+        BuildDashboard(filesButton);
         localClient.DefaultRequestHeaders.Add("X-FBS-Local-Token", agent.LocalControlToken);
         consentTimer.Tick += async (_, _) =>
         {
@@ -207,6 +223,7 @@ public sealed class StudentStatusForm : Form
                 status.Text = "انتهت الجلسة أو انقطع الاتصال — تم تعطيل التحكم";
             }
             await CheckPending();
+            await RefreshDashboard();
         };
         consentTimer.Start();
         tray.Icon = SystemIcons.Information;

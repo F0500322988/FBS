@@ -1,6 +1,7 @@
 import AppKit
 
 @MainActor final class ClassroomApp: NSObject, NSApplicationDelegate {
+    private var settingsWindow: NSWindow?, dashboard: StudentDashboardView?
     private var window: NSWindow!, role = ClassroomRole.student
     private var config: ConnectionConfig!, host = RuntimeHost(), messages: MessagesWindow?, broadcast: BroadcastWindow?, filesWindow: FilesWindow?
     private let key = NSSecureTextField(), password = NSSecureTextField(), address = NSTextField(), port = NSTextField(), pin = NSTextField(), device = NSTextField()
@@ -50,6 +51,7 @@ import AppKit
         pollTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in
             guard let self = self, self.role == .student, self.host.process?.isRunning == true else { return }
+            self.host.get("/status/local") { [weak self] result in guard let self = self else { return };if case .success(let value) = result { self.dashboard?.update(value) } else { self.dashboard?.disconnect() } }
             self.host.get("/control/local") { [weak self] result in
                 guard let self = self else { return }
                 if case .success(let json) = result { self.messageButton.title = "رسائل المعلم (\(json["unreadMessages"] as? Int ?? 0) غير مقروءة)"; self.viewButton.title = json["broadcastAvailable"] as? Bool == true ? "● شاشة المعلم متاحة — فتح العرض" : "عرض شاشة المعلم" }
@@ -62,6 +64,11 @@ import AppKit
             editMenu.addItem(withTitle: title, action: action, keyEquivalent: key)
         }
         editItem.submenu = editMenu; menu.addItem(editItem); NSApp.mainMenu = menu
+        if role == .student {
+            let configurationView = window.contentView!; window.contentView = NSView(frame:window.contentView!.bounds); let preferences = NSWindow(contentRect:NSRect(x:0,y:0,width:720,height:820),styleMask:[.titled,.closable,.miniaturizable],backing:.buffered,defer:false);preferences.isReleasedWhenClosed = false;preferences.title = "FBS Classroom — إعدادات الطالب";preferences.contentView = configurationView; settingsWindow = preferences
+            window.setContentSize(NSSize(width:340,height:422)); let dashboard = StudentDashboardView(frame:NSRect(x:0,y:0,width:340,height:422));self.dashboard = dashboard;dashboard.settingsAction = { [weak self] in self?.settingsWindow?.center();self?.settingsWindow?.makeKeyAndOrderFront(nil) };dashboard.stopAction = { [weak self] in self?.assistance?.stopCurrent() };window.contentView = dashboard
+            if loaded { do { try config.validate();start() } catch { DispatchQueue.main.async { preferences.center();preferences.makeKeyAndOrderFront(nil) } } }
+        }
         window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
     }
     @objc private func start() {
@@ -74,7 +81,7 @@ import AppKit
             else { connection.stringValue = "اسم الجهاز: \(updated.deviceName) — مشاركة الشاشة والرسائل تتطلب اعتماد المعلم" }
         } catch { showError(error) }
     }
-    @objc private func stopHost() { power?.stop(); power = nil; screenPause?.stop(); screenPause = nil; assistance?.stop(); assistance = nil; host.stop(); messages?.window.close(); broadcast?.stop(); broadcast = nil; filesWindow?.window.close(); for button in [messageButton, viewButton, shareButton, filesButton] { button.isEnabled = false }; state.stringValue = "توقف التطبيق محليًا — التحكم غير مفعّل" }
+    @objc private func stopHost() { power?.stop(); power = nil; screenPause?.stop(); screenPause = nil; assistance?.stop(); assistance = nil; host.stop(); dashboard?.disconnect(); messages?.window.close(); broadcast?.stop(); broadcast = nil; filesWindow?.window.close(); for button in [messageButton, viewButton, shareButton, filesButton] { button.isEnabled = false }; state.stringValue = "توقف التطبيق محليًا — التحكم غير مفعّل" }
     @objc private func openTeacher() { if let url = host.baseURL, host.process?.isRunning == true { NSWorkspace.shared.open(url) } }
     @objc private func openFiles() { if filesWindow == nil || filesWindow!.isClosed { filesWindow = FilesWindow(host) }; filesWindow?.show() }
     @objc private func openMessages() { if messages == nil || messages!.isClosed { messages = MessagesWindow(host) }; messages?.show() }
