@@ -15,6 +15,9 @@ import Carbon
     }
     private func available() -> Bool {
         guard AXIsProcessTrusted(), !IsSecureEventInputEnabled(), let app = NSWorkspace.shared.frontmostApplication, app.bundleIdentifier != "com.apple.loginwindow" else { return false }
+        return true
+    }
+    private func neutralInput() -> Bool {
         let flags = CGEventSource.flagsState(.combinedSessionState)
         return flags.intersection([.maskShift, .maskControl, .maskAlternate, .maskCommand]).isEmpty && !CGEventSource.buttonState(.combinedSessionState, button: .left) && !CGEventSource.buttonState(.combinedSessionState, button: .right)
     }
@@ -37,7 +40,7 @@ import Carbon
         NSLayoutConstraint.activate([stack.centerXAnchor.constraint(equalTo: w.contentView!.centerXAnchor), stack.centerYAnchor.constraint(equalTo: w.contentView!.centerYAnchor)]); window = w; w.center(); w.makeKeyAndOrderFront(nil)
     }
     private func execute(_ c: [String: Any]) -> Bool {
-        guard available(), NSWorkspace.shared.frontmostApplication?.processIdentifier != getpid(), let type = c["type"] as? String else { return false }
+        guard available(), neutralInput(), NSWorkspace.shared.frontmostApplication?.processIdentifier != getpid(), let type = c["type"] as? String else { return false }
         if type == "move" {
             guard let dx = c["dx"] as? Int, let dy = c["dy"] as? Int, (-100...100).contains(dx), (-100...100).contains(dy), dx != 0 || dy != 0, let current = CGEvent(source: nil)?.location else { return false }
             var displays = [CGDirectDisplayID](repeating: 0, count: 16), count: UInt32 = 0
@@ -48,7 +51,7 @@ import Carbon
         }
         guard type == "text", let text = c["text"] as? String, !text.isEmpty, text.utf16.count <= 80, !text.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) || (0x200b...0x200f).contains($0.value) || (0x2028...0x202e).contains($0.value) || (0x2066...0x2069).contains($0.value) }) else { return false }
         for scalar in text.unicodeScalars {
-            guard available(), let down = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: false) else { return false }
+            guard available(), neutralInput(), let down = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: false) else { return false }
             let chars = Array(String(scalar).utf16); down.keyboardSetUnicodeString(stringLength: chars.count, unicodeString: chars); up.keyboardSetUnicodeString(stringLength: chars.count, unicodeString: chars); down.flags = []; up.flags = []; down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
         }; return true
     }

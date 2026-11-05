@@ -5,21 +5,22 @@ internal static class AssistanceInput
 {
     internal static bool DesktopAvailable()
     {
-        if (GetForegroundWindow() == IntPtr.Zero || new[] { 1, 2, 4, 16, 17, 18, 91, 92 }.Any(k => GetAsyncKeyState(k) < 0)) return false;
+        if (GetForegroundWindow() == IntPtr.Zero) return false;
         var desktop = OpenInputDesktop(0, false, 1); if (desktop == IntPtr.Zero) return false;
         try { var name = new StringBuilder(128); return GetUserObjectInformation(desktop, 2, name, 256, out _) && name.ToString() == "Default"; }
         finally { CloseDesktop(desktop); }
     }
+    internal static bool NeutralInputState() => !new[] { 1, 2, 4, 16, 17, 18, 91, 92 }.Any(k => GetAsyncKeyState(k) < 0);
     internal static bool OtherApplicationFocused() { GetWindowThreadProcessId(GetForegroundWindow(), out uint pid); return pid != 0 && pid != (uint)Environment.ProcessId; }
     internal static bool Move(int dx, int dy)
     {
-        if (Math.Abs((long)dx) > 100 || Math.Abs((long)dy) > 100 || (dx == 0 && dy == 0) || !DesktopAvailable()) return false;
+        if (Math.Abs((long)dx) > 100 || Math.Abs((long)dy) > 100 || (dx == 0 && dy == 0) || !DesktopAvailable() || !NeutralInputState()) return false;
         var input = new Input { type = 0, data = new Data { mouse = new Mouse { dx = dx, dy = dy, flags = 1 } } };
         return SendInput(1, new[] { input }, Marshal.SizeOf<Input>()) == 1;
     }
     internal static bool Text(string text)
     {
-        if (!AssistanceCommandGate.ValidText(text) || !DesktopAvailable()) return false;
+        if (!AssistanceCommandGate.ValidText(text) || !DesktopAvailable() || !NeutralInputState()) return false;
         var inputs = new List<Input>();
         foreach (char c in text) { inputs.Add(new Input { type = 1, data = new Data { key = new Key { scan = c, flags = 4 } } }); inputs.Add(new Input { type = 1, data = new Data { key = new Key { scan = c, flags = 6 } } }); }
         return SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<Input>()) == inputs.Count;
