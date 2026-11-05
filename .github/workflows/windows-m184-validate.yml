@@ -46,4 +46,4 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: ./deployment/integrated/publish-windows.ps1 -ReleaseTag m184-windows-integrated-5-1 -BuildRoot "$env:RUNNER_TEMP/M184-integrated"
+        run: ./deployment/integrated/publish-windows.ps1 -ReleaseTag "m184-windows-integrated-verified-$env:GITHUB_RUN_NUMBER-$env:GITHUB_RUN_ATTEMPT" -CreateVerifiedRelease -BuildRoot "$env:RUNNER_TEMP/M184-integrated"

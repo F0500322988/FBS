@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           fbs_tag="m184-windows-integrated-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
-          gh release create "$fbs_tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'M184 Windows installer build — awaiting installation checks' --notes 'Build candidate only. Do not treat build verification as installed Windows validation; the dependent Windows job must finish.' "$RUNNER_TEMP"/M184-integrated/installers/*.exe "$RUNNER_TEMP"/M184-integrated/installers/*.json
+          gh release create "$fbs_tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --draft --title 'M184 Windows installer build — awaiting installation checks' --notes 'Build candidate only. Do not treat build verification as installed Windows validation; the dependent Windows job must finish.' "$RUNNER_TEMP"/M184-integrated/installers/*.exe "$RUNNER_TEMP"/M184-integrated/installers/*.json
   windows:
     needs: build
     runs-on: windows-2022
