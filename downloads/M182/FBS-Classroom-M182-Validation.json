@@ -1,0 +1,98 @@
+{
+  "stage": "M182",
+  "finalProduct": false,
+  "releaseKind": "development preview",
+  "feedback": {
+    "userPhysicallyTestedEarlierM179": true,
+    "wiredEthernetConfirmed": true,
+    "requests": [
+      "teacher-controlled automatic broadcast without per-session student accept/reject",
+      "full-screen student display",
+      "teacher managed power and wake"
+    ]
+  },
+  "source": {
+    "macApplication": "fc4e44ed1fa7868430f31430bb68dd699e4e9cc1",
+    "windowsMonotonicDisplay": "b83a904",
+    "finalWindowsValidation": "1af06a9",
+    "sharedMacAndCurrentJSFilesHashMatched": 40,
+    "mainChanged": false,
+    "incompleteInitial50f157eBranchesExcluded": true
+  },
+  "javascript": {
+    "tests": 1512,
+    "passed": 1512,
+    "failed": 0,
+    "skipped": 0,
+    "realPinnedTLSPowerDispatchAndReceiptsTested": true,
+    "wakePacketFormatAndInventoryTested": true,
+    "actualSystemPowerCallsExecutedByTests": false
+  },
+  "browser": {
+    "chromiumAcceptancePassed": true,
+    "powerRecipientsAndConfirmationPassed": true,
+    "offlineWakeInventoryPassed": true,
+    "noFakePowerOnConfirmation": true,
+    "unavailableAPIAndMobilePassed": true,
+    "priorFeatureRegressionsPassed": true,
+    "screenshotUsesFixtureData": true
+  },
+  "windows": {
+    "run": "https://github.com/F0500322988/FBS/actions/runs/42016890437",
+    "dotnetChecks": 222,
+    "managedBroadcastFixtureChecks": 11,
+    "managedBroadcastFixturePassed": true,
+    "nativeViewerFullScreenWithoutStudentClickTested": true,
+    "teacherStopAndStaleExitTested": true,
+    "monotonicDisplayFreshness": true,
+    "powerGateChecks": 13,
+    "powerGatePassed": true,
+    "bothInstallersExecuted": true,
+    "installedFilesHashed": 586,
+    "bundledNodeExecuted": true,
+    "uninstallAndUnknownFilePreservationPassed": true,
+    "collectorPowerShellParsed": true,
+    "actualFullStudentAppGuiTested": false,
+    "actualShutdownRestartSleepTested": false,
+    "physicalWakeTested": false,
+    "signed": false
+  },
+  "macos": {
+    "intelRun": "https://github.com/F0500322988/FBS/actions/runs/41990809762",
+    "armRun": "https://github.com/F0500322988/FBS/actions/runs/41990812443",
+    "intelRelease": "https://github.com/F0500322988/FBS/releases/tag/m182-macos-preview-37-1",
+    "armRelease": "https://github.com/F0500322988/FBS/releases/tag/m182-macos-arm-preview-14-1",
+    "minimumOS": "13.0",
+    "architectures": [
+      "x86_64",
+      "arm64"
+    ],
+    "nativeBuildsAndPkgDmgVerificationPassed": true,
+    "isolatedInstallRemoveAndLoopbackPassed": true,
+    "downloadedPkgDmgShaAndMagicVerified": true,
+    "studentViewerGuiTestedOnUserMac": false,
+    "automationAndAccessibilityPermissionFlowsTested": false,
+    "actualShutdownRestartSleepTested": false,
+    "physicalWakeTested": false,
+    "developerIDSigned": false,
+    "notarized": false
+  },
+  "physicalM182LabAcceptance": {
+    "directDeviceAccessAvailable": false,
+    "resultsReceived": false,
+    "broadcastFullScreenConfirmed": null,
+    "powerOffConfirmed": null,
+    "wakeFromSleepConfirmed": null,
+    "powerOnFromCompleteShutdownConfirmed": null
+  },
+  "constraints": [
+    "Student M182 must be installed and running; old M179 viewer does not change by updating teacher alone",
+    "Power needs manually pinned teacher endpoint and approved identity",
+    "Mac Automation is a local OS prerequisite",
+    "Wake requires hardware and Ethernet configuration; Mac startup from complete shutdown is not guaranteed",
+    "No automatic permission bypass or remote unlock",
+    "No OS process-quit restrictions or secure kiosk guarantee",
+    "Sent requests, UDP packets or lost connectivity do not prove power state",
+    "Physical corrected lab and target-scale performance acceptance remain pending"
+  ]
+}
