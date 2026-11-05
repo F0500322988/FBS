@@ -29,10 +29,28 @@ jobs:
           }
       - name: Build integrated installers from pinned core and setup kit
         shell: pwsh
-        run: ./deployment/integrated/build-windows.ps1 -OutputRoot "$env:RUNNER_TEMP/M184-integrated"
+        run: |
+          $log=Join-Path $env:RUNNER_TEMP 'm184-integrated-build.log'
+          try {
+            & ./deployment/integrated/build-windows.ps1 -OutputRoot "$env:RUNNER_TEMP/M184-integrated" *> $log
+            Get-Content $log
+          } catch {
+            $details=@($_.Exception.Message,$_.ScriptStackTrace)+@(Get-Content $log -Tail 40 -ErrorAction SilentlyContinue)
+            foreach ($line in $details) { Write-Output ('::error::'+$line.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')) }
+            throw
+          }
       - name: Install both roles, execute embedded setup helper, verify payload and uninstall
         shell: pwsh
-        run: ./deployment/integrated/test-installed-windows.ps1 -BuildRoot "$env:RUNNER_TEMP/M184-integrated"
+        run: |
+          $log=Join-Path $env:RUNNER_TEMP 'm184-integrated-install.log'
+          try {
+            & ./deployment/integrated/test-installed-windows.ps1 -BuildRoot "$env:RUNNER_TEMP/M184-integrated" *> $log
+            Get-Content $log
+          } catch {
+            $details=@($_.Exception.Message,$_.ScriptStackTrace)+@(Get-Content $log -Tail 40 -ErrorAction SilentlyContinue)
+            foreach ($line in $details) { Write-Output ('::error::'+$line.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')) }
+            throw
+          }
       - name: Publish complete Windows installers directly on GitHub Releases
         shell: bash
         env:
