@@ -1,4 +1,4 @@
-param([string]$Profile)
+﻿param([string]$Profile)
 $ErrorActionPreference='Stop'
 try {
     if ([string]::IsNullOrWhiteSpace($Profile)) {

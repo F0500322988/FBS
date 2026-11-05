@@ -1,0 +1,43 @@
+name: M184 integrated Windows installers
+on:
+  push:
+    branches: ['build/windows-m184-integrated-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.23.4'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - name: Core Windows safety regressions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          foreach ($name in @('FBS.NativeGate.Tests','FBS.Setup.Tests','FBS.WindowsSetup.Tests','FBS.FileDelivery.Tests','FBS.ScreenPause.WindowsTests','FBS.Assistance.Tests','FBS.Assistance.WindowsTests','FBS.Power.Tests','FBS.Broadcast.WindowsTests','FBS.Appearance.WindowsTests')) {
+            dotnet run --project "windows/$name/$name.csproj" -c Release
+            if ($LASTEXITCODE -ne 0) { throw 'Native regression failed.' }
+          }
+      - name: Build integrated installers from pinned core and setup kit
+        shell: pwsh
+        run: ./deployment/integrated/build-windows.ps1 -OutputRoot "$env:RUNNER_TEMP/M184-integrated"
+      - name: Install both roles, execute embedded setup helper, verify payload and uninstall
+        shell: pwsh
+        run: ./deployment/integrated/test-installed-windows.ps1 -BuildRoot "$env:RUNNER_TEMP/M184-integrated"
+      - name: Publish complete Windows installers directly on GitHub Releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          fbs_tag="m184-windows-integrated-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$fbs_tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'FBS Classroom M184 — Windows installers with integrated lab setup' --notes-file M184-START-HERE.md "$RUNNER_TEMP"/M184-integrated/installers/*.exe "$RUNNER_TEMP"/M184-integrated/installers/*.json "$RUNNER_TEMP"/M184-integrated/installers/*.log "$RUNNER_TEMP"/M184-integrated/installers/SHA256SUMS.txt
