@@ -61,8 +61,23 @@ if (-not (Test-Path -LiteralPath $nsis)) {
 node (Join-Path $repo 'windows/nsis/prepare-manifests.js') $stage
 if ($LASTEXITCODE -ne 0) { throw 'Payload manifest generation failed.' }
 foreach ($role in @('Teacher','Student')) {
-    & $nsis '/INPUTCHARSET' 'UTF8' '/V3' "-DStageRoot=$stage" "-DOutputRoot=$out" "-DRole=$role" '-DReleaseStage=M184' "-DDeleteManifest=$(Join-Path $stage "delete-$role.nsh")" (Join-Path $repo 'windows/nsis/Installer.nsi')
-    if ($LASTEXITCODE -ne 0) { throw 'NSIS compilation failed.' }
+    $driver=Join-Path $root "compile-$role.nsi"
+    $include=Join-Path $repo 'windows/nsis/Installer.nsi'
+    $deletion=Join-Path $stage "delete-$role.nsh"
+    $definitions=@("!define StageRoot `"$stage`"","!define OutputRoot `"$out`"","!define Role `"$role`"",'!define ReleaseStage "M184"',"!define DeleteManifest `"$deletion`"","!include `"$include`"")
+    [IO.File]::WriteAllLines($driver,$definitions,[Text.UTF8Encoding]::new($true))
+    $compileStart=New-Object System.Diagnostics.ProcessStartInfo
+    $compileStart.FileName=$nsis;$compileStart.UseShellExecute=$false;$compileStart.CreateNoWindow=$true
+    $compileStart.RedirectStandardOutput=$true;$compileStart.RedirectStandardError=$true
+    foreach ($argument in @('/INPUTCHARSET','UTF8','/V3',$driver)) { $compileStart.ArgumentList.Add($argument) }
+    $compiler=New-Object System.Diagnostics.Process;$compiler.StartInfo=$compileStart
+    try {
+        if (-not $compiler.Start()) { throw 'Cannot start NSIS.' }
+        $stdout=$compiler.StandardOutput.ReadToEndAsync();$stderr=$compiler.StandardError.ReadToEndAsync()
+        $compiler.WaitForExit()
+        Write-Output $stdout.GetAwaiter().GetResult();Write-Output $stderr.GetAwaiter().GetResult()
+        if ($compiler.ExitCode -ne 0) { throw 'NSIS compilation failed; compiler diagnostics are above.' }
+    } finally { $compiler.Dispose() }
     & 'C:/Program Files/7-Zip/7z.exe' x (Join-Path $out "FBS-Classroom-$role-M184-Setup-PREVIEW.exe") "-o$(Join-Path $out "extracted-$role")" -y | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'New installer extraction failed.' }
 }
