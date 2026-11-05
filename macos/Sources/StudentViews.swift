@@ -56,30 +56,38 @@ import AppKit
 }
 @MainActor final class BroadcastWindow: NSObject, NSWindowDelegate {
     let window: NSWindow
-    private let host: RuntimeHost, image = NSImageView(), state = NSTextField(wrappingLabelWithString: "انتظار شاشة المعلم...")
-    private var timer: Timer?, busy = false, closed = false, lastAt = Date.distantPast, lastSession = "", lastSequence = 0
+    private let host: RuntimeHost
+    private var displays: [(NSWindow, NSImageView)] = []
+    private var timer: Timer?, busy = false, closed = false, lastAt: TimeInterval = 0, lastSession = "", lastSequence = 0
     init(_ host: RuntimeHost) {
-        self.host = host; window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1000, height: 650), styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
-        super.init(); window.title = "FBS Classroom — عرض شاشة المعلم"; window.delegate = self; window.isReleasedWhenClosed = false
-        image.imageScaling = .scaleProportionallyUpOrDown
-        let stack = NSStackView(views: [image, state]); stack.orientation = .vertical; stack.spacing = 10; MessagesWindow.install(stack, into: window)
-        image.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true; image.heightAnchor.constraint(greaterThanOrEqualToConstant: 250).isActive = true
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } }; refresh()
+        self.host = host; window = NSWindow(contentRect: .zero, styleMask: [.borderless], backing: .buffered, defer: false)
+        super.init()
+        for (index, screen) in NSScreen.screens.prefix(16).enumerated() {
+            let w = index == 0 ? window : NSWindow(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+            w.setFrame(screen.frame, display: false); w.isReleasedWhenClosed = false; w.delegate = self; w.title = "FBS Classroom — شاشة المعلم"; w.level = .screenSaver; w.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]; w.backgroundColor = .black
+            let image = NSImageView(); image.imageScaling = .scaleProportionallyUpOrDown; image.translatesAutoresizingMaskIntoConstraints = false; w.contentView!.addSubview(image)
+            NSLayoutConstraint.activate([image.leadingAnchor.constraint(equalTo: w.contentView!.leadingAnchor), image.trailingAnchor.constraint(equalTo: w.contentView!.trailingAnchor), image.topAnchor.constraint(equalTo: w.contentView!.topAnchor), image.bottomAnchor.constraint(equalTo: w.contentView!.bottomAnchor)])
+            displays.append((w,image))
+        }
+        timer = Timer.scheduledTimer(withTimeInterval: 0.7, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } }; refresh()
     }
     var isClosed: Bool { closed }
-    func show() { if window.isMiniaturized { window.deminiaturize(nil) }; window.center(); window.makeKeyAndOrderFront(nil) }
+    func show() { refresh() }
+    private func hide() { displays.forEach { $0.1.image = nil; $0.0.orderOut(nil) } }
+    func stop() { closed = true; timer?.invalidate(); timer = nil; hide(); displays.forEach { $0.0.close() }; displays.removeAll() }
+    func windowShouldClose(_ sender: NSWindow) -> Bool { closed }
     private func refresh() {
-        if closed { return }; if Date().timeIntervalSince(lastAt) >= 4 { image.image = nil; state.stringValue = "لا توجد صورة حديثة" }
+        if closed { return }
+        if ProcessInfo.processInfo.systemUptime - lastAt >= 4 { hide() }
         if busy { return }; busy = true
         host.get("/broadcast/local") { [weak self] result in
             guard let self = self, !self.closed else { return }; self.busy = false
             guard case .success(let json) = result, let frame = json["broadcast"] as? [String: Any], let id = frame["sessionId"] as? String, let sequence = frame["sequence"] as? Int,
-                  let jpeg = frame["jpeg"] as? String, jpeg.hasPrefix("data:image/jpeg;base64,"), jpeg.count <= 170000 else { self.image.image = nil; self.state.stringValue = "توقفت المشاركة أو لا توجد مشاركة موجهة لهذا الجهاز"; return }
+                let jpeg = frame["jpeg"] as? String, jpeg.hasPrefix("data:image/jpeg;base64,"), jpeg.count <= 170000 else { self.hide(); return }
             if id == self.lastSession && sequence <= self.lastSequence { return }
-            guard let data = Data(base64Encoded: String(jpeg.dropFirst(23))), let decoded = NSImage(data: data), decoded.size.width <= 1280, decoded.size.height <= 720 else { self.image.image = nil; self.state.stringValue = "صورة غير صالحة"; return }
-            self.image.image = decoded; self.lastAt = Date(); self.lastSession = id; self.lastSequence = sequence
-            self.state.stringValue = "شاشة المعلم — لقطات متتابعة بلا صوت؛ يمكنك إغلاق العرض في أي وقت"
+            guard let data = Data(base64Encoded: String(jpeg.dropFirst(23))), let decoded = NSImage(data: data), decoded.size.width <= 1280, decoded.size.height <= 720 else { self.hide(); return }
+            self.lastAt = ProcessInfo.processInfo.systemUptime; self.lastSession = id; self.lastSequence = sequence
+            for (w,image) in self.displays { image.image = decoded; if w.isMiniaturized { w.deminiaturize(nil) }; w.orderFrontRegardless() }
         }
     }
-    func windowWillClose(_ notification: Notification) { closed = true; timer?.invalidate(); image.image = nil }
 }

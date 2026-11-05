@@ -11,7 +11,7 @@ internal sealed class TeacherBroadcastForm : Form
     private readonly PictureBox picture = new() { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(15, 30, 53) };
     private readonly Label state = new() { Dock = DockStyle.Bottom, Height = 40, Text = "انتظار شاشة المعلم...", TextAlign = ContentAlignment.MiddleCenter };
     private readonly Button fullscreen = new() { Dock = DockStyle.Bottom, Height = 36, Text = "تكبير نافذة العرض" };
-    private bool busy;
+    private bool busy, automatic;
     private string? sessionId;
     private long sequence;
     private DateTimeOffset lastFrameAt = DateTimeOffset.MinValue;
@@ -19,9 +19,10 @@ internal sealed class TeacherBroadcastForm : Form
     {
         Text = "FBS Classroom — عرض شاشة المعلم";
         RightToLeft = RightToLeft.Yes; RightToLeftLayout = true;
-        Size = new Size(1000, 650); MinimumSize = new Size(420, 320);
-        StartPosition = FormStartPosition.CenterParent; Font = new Font("Segoe UI", 11);
-        Controls.Add(picture); Controls.Add(fullscreen); Controls.Add(state);
+        FormBorderStyle = FormBorderStyle.None; StartPosition = FormStartPosition.Manual; Bounds = Screen.PrimaryScreen!.Bounds; TopMost = true; ShowInTaskbar = false;
+        Font = new Font("Segoe UI", 11);
+        Controls.Add(picture);
+        FormClosing += (_, e) => { if (!automatic && !Disposing && DateTimeOffset.UtcNow - lastFrameAt < TimeSpan.FromSeconds(4)) e.Cancel = true; };
         client.DefaultRequestHeaders.Add("X-FBS-Local-Token", token);
         fullscreen.Click += (_, _) => WindowState = WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized;
         timer.Tick += async (_, _) => await RefreshFrame();
@@ -36,7 +37,7 @@ internal sealed class TeacherBroadcastForm : Form
     {
         if (IsDisposed) return;
         if (DateTimeOffset.UtcNow - lastFrameAt > TimeSpan.FromSeconds(4))
-        { ClearImage(); state.Text = "لا توجد صورة حديثة من المعلم"; }
+        { ClearImage(); if (sessionId is not null) { automatic = true; Close(); return; } }
         if (busy) return; busy = true;
         try
         {
@@ -45,7 +46,7 @@ internal sealed class TeacherBroadcastForm : Form
             using var doc = JsonDocument.Parse(raw);
             var frame = doc.RootElement.GetProperty("broadcast");
             if (frame.ValueKind == JsonValueKind.Null)
-            { ClearImage(); state.Text = "توقفت المشاركة أو لا توجد مشاركة موجهة لهذا الجهاز"; return; }
+            { ClearImage(); automatic = true; Close(); return; }
             var incomingSession = frame.GetProperty("sessionId").GetString();
             var incomingSequence = frame.GetProperty("sequence").GetInt64();
             if (incomingSession == sessionId && incomingSequence <= sequence) return;
@@ -58,7 +59,7 @@ internal sealed class TeacherBroadcastForm : Form
             var image = new Bitmap(decoded);
             ClearImage(); picture.Image = image;
             sessionId = incomingSession; sequence = incomingSequence; lastFrameAt = DateTimeOffset.UtcNow;
-            state.Text = "شاشة المعلم — لقطات متتابعة بلا صوت؛ يمكنك إغلاق العرض في أي وقت";
+            state.Text = "شاشة المعلم — عرض تلقائي بملء الشاشة";
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or ObjectDisposedException or FormatException or InvalidDataException or ArgumentException or OutOfMemoryException)
         { if (!IsDisposed) { ClearImage(); state.Text = "تعذر تحديث شاشة المعلم؛ أُخفيت الصورة السابقة"; } }

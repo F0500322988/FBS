@@ -142,6 +142,19 @@ function localPause(req,res){
 const assistanceReceiver=require('./classroom-assistance').createAssistanceReceiver();let assistanceBusy=false,lastSharedFrameAt=-Infinity,shareGeneration=0;
 const assistanceSupported=process.env.FBS_ASSISTANCE_UI==='1'&&!!fixedTeacher&&/^[a-f0-9]{64}$/i.test(localControlToken);
 async function pollAssistance(){if(!assistanceSupported||assistanceBusy)return;assistanceBusy=true;const revision=assistanceReceiver.revision,start=performance.now();try{const result=await fileRequest('/assist/poll');const elapsed=performance.now()-start;if(elapsed>1500)throw Error('Stale assistance poll');if(result.session)result.session.remainingMs=Math.max(0,result.session.remainingMs-Math.ceil(elapsed));assistanceReceiver.accept(result.session,revision);}catch{assistanceReceiver.clear();}finally{assistanceBusy=false;}}
+const powerSupported=process.env.FBS_POWER_UI==='1'&&!!fixedTeacher&&/^[a-f0-9]{64}$/i.test(localControlToken);
+const powerReceiver=require('./classroom-power').createPowerReceiver();let powerBusy=false;
+async function pollPower(){if(!powerSupported||powerBusy)return;powerBusy=true;const revision=powerReceiver.revision,start=performance.now();try{const data=await fileRequest('/power/poll');const elapsed=performance.now()-start;if(elapsed>2000)throw Error('Stale power poll');if(data.power)data.power.remainingMs=Math.max(0,data.power.remainingMs-Math.ceil(elapsed));powerReceiver.accept(data.power,revision);}catch{powerReceiver.clear();}finally{powerBusy=false;}}
+function localPower(req,res){
+ const reply=(code,b)=>{res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(b));};
+ if(!authorizedLocalRequest(req,localControlToken))return reply(403,{error:'Unauthorized local power controller'});
+ if(req.method==='GET')return reply(200,{supported:powerSupported,power:powerReceiver.snapshot()});if(req.method!=='POST'||!powerSupported)return reply(409,{error:'Managed pinned connection required'});
+ let raw='';req.on('data',c=>{raw+=c;if(raw.length>1024)req.destroy();});req.on('end',async()=>{try{const b=JSON.parse(raw),current=powerReceiver.snapshot();if(!['received','submitted','rejected'].includes(b.state))throw Error('Invalid receipt');
+  if(b.state==='received'&&(!current||current.id!==b.requestId||current.remainingMs<1000))return reply(409,{error:'Power request expired'});
+  await fileRequest('/power/ack',{requestId:b.requestId,state:b.state});if(b.state==='received'||b.state==='rejected')powerReceiver.clear(b.requestId);return reply(200,{acknowledged:true});
+ }catch{return reply(409,{error:'Power receipt not confirmed'});}});
+}
+function wakeInterfaces(){return Object.values(os.networkInterfaces()).flat().filter(x=>x&&!x.internal&&x.family==='IPv4'&&x.mac&&x.address).slice(0,8).map(x=>({mac:x.mac,address:x.address,netmask:x.netmask}));}
 function localAssistance(req,res){
  const reply=(code,body)=>{res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(body));};
  if(!authorizedLocalRequest(req,localControlToken))return reply(403,{error:'Unauthorized local controller'});
@@ -199,6 +212,7 @@ function localMessages(req,res){
 }
 const localServer=http.createServer((req,res)=>{
  if(req.method==='POST'&&req.url==='/share/stopped'){const origin='http://127.0.0.1:'+localServer.address().port;if(req.headers['x-fbs-share-token']!==shareNonce||req.headers.origin&&req.headers.origin!==origin){res.writeHead(403);return res.end();}shareGeneration++;lastSharedFrameAt=-Infinity;const session=assistanceReceiver.snapshot();if(session){assistanceReceiver.close(session.sessionId);fileRequest('/assist/stop',{sessionId:session.sessionId}).catch(()=>{});}res.writeHead(204);return res.end();}
+ if(req.url==='/power/local')return localPower(req,res);
  if(req.url==='/assist/local')return localAssistance(req,res);
  if(req.url==='/pause/local')return localPause(req,res);
  if(['/files/local','/files/local/download','/files/local/saved'].includes(req.url))return localFiles(req,res);
@@ -213,7 +227,7 @@ if(req.method==='GET'&&req.url==='/'){res.writeHead(200,{'Content-Type':'text/ht
 const localPort=Number(process.env.FBS_LOCAL_PORT||4190);
 if(!Number.isInteger(localPort)||localPort<0||localPort>65535)throw Error('Invalid FBS_LOCAL_PORT');
 localServer.listen(localPort,'127.0.0.1',()=>console.log('Optional screen share: http://127.0.0.1:'+localServer.address().port));
-function heartbeat(){if(!teacher)return;const data=JSON.stringify(signMessage(identity,{id,platform:process.platform,addresses:localIPv4(),assistanceVersion:assistanceSupported?2:0,assistanceSupported}));const req=pinnedRequest({fingerprint:teacher.fingerprint,host:teacher.host,port:teacher.port,path:'/heartbeat',method:'POST',timeout:3000,headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data),'X-FBS-Key':secret}},res=>res.resume());req.on('error',()=>{});req.on('timeout',()=>req.destroy());req.end(data);}
+function heartbeat(){if(!teacher)return;const data=JSON.stringify(signMessage(identity,{id,platform:process.platform,addresses:localIPv4(),powerSupported,wakeInterfaces:powerSupported?wakeInterfaces():[],assistanceVersion:assistanceSupported?2:0,assistanceSupported}));const req=pinnedRequest({fingerprint:teacher.fingerprint,host:teacher.host,port:teacher.port,path:'/heartbeat',method:'POST',timeout:3000,headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data),'X-FBS-Key':secret}},res=>res.resume());req.on('error',()=>{});req.on('timeout',()=>req.destroy());req.end(data);}
 udp.on('message',(buf,remote)=>{try{const msg=JSON.parse(buf.toString());if(!safeEqual(signature(secret,msg.payload),msg.mac))return;const p=JSON.parse(msg.payload);if(p.type!=='fbs-teacher-v1'||Math.abs(Date.now()-p.timestamp)>10000||!Number.isInteger(p.port)||p.port<1||p.port>65535)return;if(!/^[a-f0-9]{64}$/.test(p.fingerprint))return;teacher={host:remote.address,port:p.port,fingerprint:p.fingerprint};heartbeat();}catch{}});
 if(fixedTeacher){console.log('Student using configured teacher endpoint; UDP discovery disabled.');heartbeat();}
 else udp.bind(port,'0.0.0.0',()=>console.log('Student agent',id,'IP:',localIPv4().join(', '),'waiting for teacher discovery on UDP',port));
@@ -231,3 +245,5 @@ setInterval(pollFiles,2000);
 setInterval(pollPause,1000);
 
 setInterval(pollAssistance,500);
+
+setInterval(pollPower,1000);

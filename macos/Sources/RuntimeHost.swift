@@ -54,7 +54,7 @@ final class RuntimeHost {
             let (cert, key, pin) = try PlatformServices.certificate(state); fingerprint = pin
             env.merge(["FBS_PAIRING_KEY": config.pairingKey, "FBS_TEACHER_PASSWORD": config.teacherPassword, "FBS_TLS_CERT": cert.path, "FBS_TLS_KEY": key.path, "FBS_ENROLLMENT_FILE": state.appendingPathComponent("enrollment.json").path, "FBS_LAB_SETTINGS_FILE": state.appendingPathComponent("lab-settings.json").path, "FBS_STARTUP_ID": startupID, "FBS_DEMO": "0", "PORT": "4177", "FBS_AGENT_PORT": "4180"], uniquingKeysWith: { _, new in new })
             baseURL = URL(string: "http://127.0.0.1:4177")
-        } else { for name in ["FBS_TEACHER_HOST", "FBS_TEACHER_PORT", "FBS_TEACHER_FINGERPRINT"] { env.removeValue(forKey: name) }; env["FBS_ASSISTANCE_UI"] = "1"; env.merge(try config.studentEnvironment(state: state, token: token), uniquingKeysWith: { _, new in new }); baseURL = nil }
+        } else { for name in ["FBS_TEACHER_HOST", "FBS_TEACHER_PORT", "FBS_TEACHER_FINGERPRINT"] { env.removeValue(forKey: name) }; env["FBS_ASSISTANCE_UI"] = "1"; env["FBS_POWER_UI"] = "1"; env.merge(try config.studentEnvironment(state: state, token: token), uniquingKeysWith: { _, new in new }); baseURL = nil }
         let task = Process(), pipe = Pipe(); task.executableURL = Self.node; task.arguments = [Self.runtime.appendingPathComponent(teacher ? "server.js" : "student-agent.js").path]
         task.environment = env; task.currentDirectoryURL = Self.runtime; task.standardOutput = pipe; task.standardError = FileHandle.nullDevice
         generation += 1; let revision = generation; stdoutBuffer = ""

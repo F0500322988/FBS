@@ -106,6 +106,7 @@ public sealed class StudentStatusForm : Form
         persistentStops.Stop(id);
     }
 
+    private PowerController? power;
     public StudentStatusForm()
     {
         FormClosed += (_, _) => enrollmentStartup.Close();
@@ -234,9 +235,9 @@ public sealed class StudentStatusForm : Form
         {
             status.Text = "جارٍ تشغيل وكيل الطالب — التحكم يحتاج موافقتك؛ يمكنك إيقافه في أي وقت";
             await agent.StartAsync();
-            if (!IsDisposed) { status.Text = agent.Status + " — التحكم يحتاج موافقتك؛ يمكنك إيقافه في أي وقت"; screenPause ??= new ScreenPauseController(agent.LocalControlToken); assistance ??= new AssistanceController(agent.LocalControlToken); stop.Enabled = true; }
+            if (!IsDisposed) { status.Text = agent.Status + " — التحكم يحتاج موافقتك؛ يمكنك إيقافه في أي وقت"; screenPause ??= new ScreenPauseController(agent.LocalControlToken); assistance ??= new AssistanceController(agent.LocalControlToken); power ??= new PowerController(agent.LocalControlToken); stop.Enabled = true; }
         };
-        FormClosed += (_, _) => { nativeInput.Disable(); inputGate.Deactivate(); screenPause?.Dispose(); assistance?.Dispose(); localConsent.ResetActive(); consentTimer.Stop(); consentTimer.Dispose(); localClient.Dispose(); agent.Dispose(); tray.Dispose(); sessionBanner.Dispose(); };
+        FormClosed += (_, _) => { nativeInput.Disable(); inputGate.Deactivate(); screenPause?.Dispose(); assistance?.Dispose(); power?.Dispose(); localConsent.ResetActive(); consentTimer.Stop(); consentTimer.Dispose(); localClient.Dispose(); agent.Dispose(); tray.Dispose(); sessionBanner.Dispose(); };
     }
 
     private bool polling;
@@ -264,7 +265,10 @@ public sealed class StudentStatusForm : Form
                 status.Text = "أكد الخادم إيقاف جلسة التحكم";
             }
             if (doc.RootElement.TryGetProperty("broadcastAvailable", out var broadcastAvailable))
-                broadcastButton.Text = broadcastAvailable.GetBoolean() ? "● شاشة المعلم متاحة — فتح العرض" : "عرض شاشة المعلم";
+            {
+                broadcastButton.Text = "شاشة المعلم — العرض يبدأ تلقائيًا";
+                if (broadcastAvailable.GetBoolean() && (broadcastWindow is null || broadcastWindow.IsDisposed)) { broadcastWindow = new TeacherBroadcastForm(agent.LocalControlToken); broadcastWindow.Show(); }
+            }
             if (doc.RootElement.TryGetProperty("unreadMessages", out var unread))
                 messagesButton.Text = "رسائل المعلم (" + unread.GetInt32() + " غير مقروءة)";
             var session = doc.RootElement.GetProperty("session");

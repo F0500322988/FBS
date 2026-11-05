@@ -10,6 +10,7 @@ import AppKit
     private let startButton = NSButton(title: "حفظ الإعداد وتشغيل البرنامج", target: nil, action: nil)
     private let filesButton = NSButton(title: "ملفات المعلم — حفظ بموافقتك", target: nil, action: nil)
     private let messageButton = NSButton(title: "رسائل المعلم", target: nil, action: nil), viewButton = NSButton(title: "عرض شاشة المعلم", target: nil, action: nil), shareButton = NSButton(title: "مشاركة شاشة الطالب بموافقته", target: nil, action: nil)
+    private var power: PowerController?
     private var assistance: AssistanceController?
     private var screenPause: ScreenPauseController?
     private var loaded = false, pollTimer: Timer?
@@ -42,7 +43,7 @@ import AppKit
         host.status = { [weak self] message in self?.state.stringValue = message }
         host.ready = { [weak self] url in
             guard let self = self else { return }
-            if self.role == .teacher { NSWorkspace.shared.open(url) } else { self.screenPause?.stop(); self.screenPause = ScreenPauseController(self.host); self.assistance?.stop(); self.assistance = AssistanceController(self.host); self.messageButton.isEnabled = true; self.viewButton.isEnabled = true; self.shareButton.isEnabled = true; self.filesButton.isEnabled = true }
+            if self.role == .teacher { NSWorkspace.shared.open(url) } else { self.screenPause?.stop(); self.screenPause = ScreenPauseController(self.host); self.assistance?.stop(); self.assistance = AssistanceController(self.host); self.messageButton.isEnabled = true; self.viewButton.isEnabled = true; self.shareButton.isEnabled = true; self.filesButton.isEnabled = true; self.broadcast?.stop(); self.broadcast = BroadcastWindow(self.host); self.power?.stop(); self.power = PowerController(self.host) }
         }
         do { config = try PlatformServices.load(role) ?? ConnectionConfig(role: role, pairingKey: ""); loaded = true; key.stringValue = config.pairingKey; password.stringValue = config.teacherPassword; address.stringValue = config.teacherHost; port.stringValue = String(config.teacherPort); pin.stringValue = config.fingerprint; device.stringValue = config.deviceName; discovery.state = config.discovery ? .on : .off }
         catch { startButton.isEnabled = false; showError(error) }
@@ -73,7 +74,7 @@ import AppKit
             else { connection.stringValue = "اسم الجهاز: \(updated.deviceName) — مشاركة الشاشة والرسائل تتطلب اعتماد المعلم" }
         } catch { showError(error) }
     }
-    @objc private func stopHost() { screenPause?.stop(); screenPause = nil; assistance?.stop(); assistance = nil; host.stop(); messages?.window.close(); broadcast?.window.close(); filesWindow?.window.close(); for button in [messageButton, viewButton, shareButton, filesButton] { button.isEnabled = false }; state.stringValue = "توقف التطبيق محليًا — التحكم غير مفعّل" }
+    @objc private func stopHost() { power?.stop(); power = nil; screenPause?.stop(); screenPause = nil; assistance?.stop(); assistance = nil; host.stop(); messages?.window.close(); broadcast?.stop(); broadcast = nil; filesWindow?.window.close(); for button in [messageButton, viewButton, shareButton, filesButton] { button.isEnabled = false }; state.stringValue = "توقف التطبيق محليًا — التحكم غير مفعّل" }
     @objc private func openTeacher() { if let url = host.baseURL, host.process?.isRunning == true { NSWorkspace.shared.open(url) } }
     @objc private func openFiles() { if filesWindow == nil || filesWindow!.isClosed { filesWindow = FilesWindow(host) }; filesWindow?.show() }
     @objc private func openMessages() { if messages == nil || messages!.isClosed { messages = MessagesWindow(host) }; messages?.show() }
@@ -81,7 +82,7 @@ import AppKit
     @objc private func openShare() { if let url = host.baseURL { NSWorkspace.shared.open(url) } }
     private func showError(_ error: Error) { let alert = NSAlert(); alert.messageText = "FBS Classroom"; alert.informativeText = error.localizedDescription; alert.runModal() }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
-    func applicationWillTerminate(_ notification: Notification) { pollTimer?.invalidate(); screenPause?.stop(); assistance?.stop(); host.stop() }
+    func applicationWillTerminate(_ notification: Notification) { pollTimer?.invalidate(); power?.stop(); broadcast?.stop(); screenPause?.stop(); assistance?.stop(); host.stop() }
 }
 @main @MainActor struct Main {
     static func main() {

@@ -30,6 +30,7 @@ if(lan)lan.setBroadcastStore(broadcastStore);
 const fileStore=require('./classroom-files').createFileStore();if(lan)lan.setFileStore(fileStore);
 const pauseStore=require('./classroom-pause').createPauseStore();if(lan)lan.setPauseStore(pauseStore);
 const assistanceStore=require('./classroom-assistance').createAssistanceStore();if(lan)lan.setAssistanceStore(assistanceStore);
+const powerStore=require('./classroom-power').createPowerStore({registryFile:process.env.FBS_POWER_FILE||path.join(path.dirname(process.env.FBS_ENROLLMENT_FILE||path.join(__dirname,'data','enrollment.json')),'wake-devices.json'),getKey:id=>enrollment.keys.get(id)});if(lan)lan.setPowerStore(powerStore);
 const controlSessions=leases.sessions;
 if(lan){lan.setApprovedKeys(enrollment.keys);lan.setControlLeases(leases);lan.setControlCommands(commands);}
 const controlAudit=leases.audit;
@@ -71,7 +72,7 @@ const server=http.createServer((req,res)=>{
      const publicKey=lan.devices.get(id).publicKey;
      if(!publicKey)return send(res,409,{error:'Device has no verified public key'});
      enrollment.approve(id,publicKey);
-    }else{enrollment.revoke(id);messageStore.revoke(id);broadcastStore.revoke(id);fileStore.revoke(id);pauseStore.revoke(id);assistanceStore.revoke(id);leases.cancel(id);commands.clear(id);lan?.frames.delete(id);}
+    }else{enrollment.revoke(id);try{powerStore.revoke(id);}catch{}messageStore.revoke(id);broadcastStore.revoke(id);fileStore.revoke(id);pauseStore.revoke(id);assistanceStore.revoke(id);leases.cancel(id);commands.clear(id);lan?.frames.delete(id);}
     return send(res,200,{ok:true,deviceId:id,approved:enrollment.approved.has(id)});
    }).catch(()=>{if(!res.headersSent)send(res,400,{error:'Invalid request'});});
   }
@@ -149,6 +150,15 @@ const server=http.createServer((req,res)=>{
    }catch(e){return send(res,409,{error:e.message});}
   }).catch(()=>send(res,400,{error:'Invalid broadcast request'}));
  }
+ if(['/api/power','/api/power/start','/api/power/wake'].includes(url.pathname)){
+  if(!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
+  if(req.method==='GET'&&url.pathname==='/api/power'){try{return send(res,200,powerStore.state());}catch{return send(res,503,{error:'Power inventory unavailable'});}}
+  if(req.method!=='POST')return send(res,405,{error:'Method not allowed'});if(!teacherOriginAllowed(req))return send(res,403,{error:'Origin rejected'});
+  return readJson(req).then(async b=>{try{if(b.confirmed!==true||!Array.isArray(b.deviceIds)||!b.deviceIds.length||b.deviceIds.length>40||new Set(b.deviceIds).size!==b.deviceIds.length)throw Error('Explicit teacher confirmation and unique recipients required');
+   if(url.pathname.endsWith('/wake'))return send(res,200,await powerStore.wake(b.deviceIds));
+   const devices=b.deviceIds.map(id=>{const d=lan?.devices.get(id);if(!d||Date.now()-d.lastSeen>20000||enrollment.keys.get(id)!==d.publicKey)throw Error('Approved online recipient required');return d;});return send(res,202,powerStore.start(b.action,devices));
+  }catch(e){return send(res,e.status===503?503:409,{error:'Power request unavailable; verify capability, inventory and current status'});}}).catch(()=>{if(!res.headersSent)send(res,400,{error:'Invalid power request'});});
+ }
  if(['/api/assist','/api/assist/start','/api/assist/keepalive','/api/assist/stop','/api/assist/command'].includes(url.pathname)){
   if(!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
   if(req.method==='GET'&&url.pathname==='/api/assist')return send(res,200,assistanceStore.state());
@@ -224,7 +234,7 @@ const server=http.createServer((req,res)=>{
  }
  if(url.pathname==='/api/auth')return send(res,200,{required:!!teacherPassword,authenticated:isAuthenticated(req),startupId});
  if((url.pathname==='/api/status'||url.pathname==='/api/frames')&&!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
- if(req.method==='GET' && url.pathname==='/api/status') return send(res,200,{lab:labStatus(),mode:demo?'demo':lan?'live':'unconfigured',students:[...(demo?students:lan?lan.devices:new Map()).values()].map(s=>({...s,online:s.demo?s.online:Date.now()-s.lastSeen<20000,approved:enrollment.approved.has(s.id)&&enrollment.keys.get(s.id)===s.publicKey})),features:{screenView:true,remoteControl:false,screenBroadcast:true,fileTransfer:true,messages:true,labManagement:true,screenPause:true,limitedAssistance:true,consentedDesktopControl:true,localConfirmedSystemLock:true}});
+ if(req.method==='GET' && url.pathname==='/api/status') return send(res,200,{lab:labStatus(),mode:demo?'demo':lan?'live':'unconfigured',students:[...(demo?students:lan?lan.devices:new Map()).values()].map(s=>({...s,online:s.demo?s.online:Date.now()-s.lastSeen<20000,approved:enrollment.approved.has(s.id)&&enrollment.keys.get(s.id)===s.publicKey})),features:{screenView:true,remoteControl:false,screenBroadcast:true,fileTransfer:true,messages:true,labManagement:true,screenPause:true,limitedAssistance:true,consentedDesktopControl:true,localConfirmedSystemLock:true,powerManagement:true,managedBroadcast:true}});
  if(req.method==='GET' && url.pathname==='/api/frames') return send(res,200,{frames:lan?[...lan.frames.entries()].filter(([id,v])=>Date.now()-v.at<5000&&lan.devices.has(id)&&enrollment.approved.has(id)&&enrollment.keys.get(id)===lan.devices.get(id).publicKey).map(([id,v])=>({id,jpeg:v.jpeg,at:v.at,assistanceMonitor:v.assistanceMonitor===true})):[]});
  if(req.method==='GET' && (url.pathname==='/' || url.pathname==='/app.js' || url.pathname==='/style.css' || /^\/m1(?:0[5-9]|1[0-4])-[a-z-]+\.js$/.test(url.pathname))) {
   const file=url.pathname==='/'?'index.html':url.pathname.slice(1);

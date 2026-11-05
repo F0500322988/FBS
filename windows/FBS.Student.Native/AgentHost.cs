@@ -62,6 +62,7 @@ internal sealed class AgentHost : IDisposable
             startInfo.Environment["FBS_PAIRING_KEY"] = labKey;
             startInfo.Environment["FBS_LOCAL_CONTROL_TOKEN"] = LocalControlToken;
             startInfo.Environment["FBS_ASSISTANCE_UI"] = "1";
+            startInfo.Environment["FBS_POWER_UI"] = "1";
             startInfo.Environment["FBS_LOCAL_PORT"] = "4190";
             var owned = Process.Start(startInfo);
             process = owned;
