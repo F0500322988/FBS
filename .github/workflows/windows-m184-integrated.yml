@@ -6,9 +6,49 @@ on:
 permissions:
   contents: read
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.23.4'
+      - name: Stage exact pinned Windows core and public setup kit
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y p7zip-full
+          python3 deployment/integrated/stage-windows.py "$RUNNER_TEMP/M184-integrated"
+      - name: Compile and verify NSIS installers using the established Linux builder
+        run: |
+          set +e
+          FBS_RELEASE_STAGE=M184 bash windows/nsis/build-linux.sh "$RUNNER_TEMP/M184-integrated/stage" "$RUNNER_TEMP/M184-integrated/installers" > "$RUNNER_TEMP/m184-nsis.log" 2>&1
+          fbs_status=$?
+          set -e
+          tail -n 45 "$RUNNER_TEMP/m184-nsis.log"
+          if [ "$fbs_status" -ne 0 ]; then
+            python3 - "$RUNNER_TEMP/m184-nsis.log" <<'PYTHON'
+          from pathlib import Path
+          import sys
+          for line in Path(sys.argv[1]).read_text().splitlines()[-40:]:print('::error::'+line.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PYTHON
+            exit "$fbs_status"
+          fi
+          cp "$RUNNER_TEMP"/M184-integrated/stage/payload-*.json "$RUNNER_TEMP/M184-integrated/installers/"
+      - name: Publish build candidate for Windows validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          fbs_tag="m184-windows-integrated-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$fbs_tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'M184 Windows installer build — awaiting installation checks' --notes 'Build candidate only. Do not treat build verification as installed Windows validation; the dependent Windows job must finish.' "$RUNNER_TEMP"/M184-integrated/installers/*.exe "$RUNNER_TEMP"/M184-integrated/installers/*.json
   windows:
+    needs: build
     runs-on: windows-2022
-    timeout-minutes: 40
+    timeout-minutes: 25
     permissions:
       contents: write
     steps:
@@ -27,19 +67,15 @@ jobs:
             dotnet run --project "windows/$name/$name.csproj" -c Release
             if ($LASTEXITCODE -ne 0) { throw 'Native regression failed.' }
           }
-      - name: Build integrated installers from pinned core and setup kit
-        shell: pwsh
+      - name: Download exact build candidate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $log=Join-Path $env:RUNNER_TEMP 'm184-integrated-build.log'
-          try {
-            & ./deployment/integrated/build-windows.ps1 -OutputRoot "$env:RUNNER_TEMP/M184-integrated" *> $log
-            Get-Content $log
-          } catch {
-            $details=@($_.Exception.Message,$_.ScriptStackTrace)+@(Get-Content $log -Tail 40 -ErrorAction SilentlyContinue)
-            foreach ($line in $details) { Write-Output ('::error::'+$line.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')) }
-            throw
-          }
-      - name: Install both roles, execute embedded setup helper, verify payload and uninstall
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/M184-integrated/installers"
+          gh release download "m184-windows-integrated-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --pattern '*.exe' --pattern '*.json' --dir "$RUNNER_TEMP/M184-integrated/installers"
+      - name: Install both roles, run embedded setup checks, verify files and uninstall
         shell: pwsh
         run: |
           $log=Join-Path $env:RUNNER_TEMP 'm184-integrated-install.log'
@@ -51,11 +87,12 @@ jobs:
             foreach ($line in $details) { Write-Output ('::error::'+$line.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')) }
             throw
           }
-      - name: Publish complete Windows installers directly on GitHub Releases
+      - name: Publish installed validation and mark the release ready for preview testing
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           fbs_tag="m184-windows-integrated-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
-          gh release create "$fbs_tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'FBS Classroom M184 — Windows installers with integrated lab setup' --notes-file M184-START-HERE.md "$RUNNER_TEMP"/M184-integrated/installers/*.exe "$RUNNER_TEMP"/M184-integrated/installers/*.json "$RUNNER_TEMP"/M184-integrated/installers/*.log "$RUNNER_TEMP"/M184-integrated/installers/SHA256SUMS.txt
+          gh release upload "$fbs_tag" --repo "$GITHUB_REPOSITORY" "$RUNNER_TEMP"/M184-integrated/installers/Windows-integrated-installer-smoke.json "$RUNNER_TEMP"/M184-integrated/installers/*-installed-setup-checks.log "$RUNNER_TEMP"/M184-integrated/installers/SHA256SUMS.txt
+          gh release edit "$fbs_tag" --repo "$GITHUB_REPOSITORY" --title 'FBS Classroom M184 — Windows installers with integrated lab setup' --notes-file M184-START-HERE.md
