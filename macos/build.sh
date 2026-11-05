@@ -55,7 +55,10 @@ PY
   ditto "$fbs_mac_app" "$fbs_mac_work/$fbs_role-dmg/FBS Classroom $fbs_role.app"
   ln -s /Applications "$fbs_mac_work/$fbs_role-dmg/Applications"
   fbs_mac_dmg="$fbs_mac_output/FBS-Classroom-$fbs_role-M181-macOS-Universal-PREVIEW.dmg"
-  hdiutil create -srcfolder "$fbs_mac_work/$fbs_role-dmg" -volname "FBS Classroom $fbs_role M181" -format UDZO "$fbs_mac_dmg"
+  # Reserve filesystem overhead explicitly; automatic sizing can under-allocate the image.
+  fbs_mac_dmg_kib="$(du -sk "$fbs_mac_work/$fbs_role-dmg" | awk '{print $1}')"
+  fbs_mac_dmg_mib="$(( (fbs_mac_dmg_kib + 1023) / 1024 + 128 ))"
+  hdiutil create -size "${fbs_mac_dmg_mib}m" -fs HFS+ -srcfolder "$fbs_mac_work/$fbs_role-dmg" -volname "FBS Classroom $fbs_role M181" -format UDZO "$fbs_mac_dmg"
   hdiutil verify "$fbs_mac_dmg"
   pkgutil --expand-full "$fbs_mac_pkg" "$fbs_mac_work/$fbs_role-expanded"
   python3 "$fbs_mac_root/macos/verify-payload.py" "$fbs_mac_app" "$fbs_mac_work/$fbs_role-expanded" "$fbs_mac_output/$fbs_role-payload-verification.json"
