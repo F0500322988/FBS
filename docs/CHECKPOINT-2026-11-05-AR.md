@@ -45,3 +45,24 @@
 - نُزلت حزمIntelالأربع وتحققتSHAوصيغxar/koly. تقاريرIntel/ARM في/workspace/outputs/M180-Mac-final؛ كل منهمايثبت بنيةالمضيف والتثبيتوالإزالةوالـloopback، ولا يثبتCGEvent الفعلي أوأذوناتAccessibility.
 - إعادةJS النهائية بعدNSIS نجحت1499/1499 بلا تخطٍّ في/tmp/fbs-m180-complete-retry.log؛ السبب الدقيق لمهلةM173 السابقة غير مؤكد. Chromiumالنهائي نجح في/tmp/fbs-m180-browser-release.log.
 - التقرير العربيdocs/M180-RESULTS-AR.md والدليلdocs/M180-ASSISTANCE-AR.md. المرحلة ما زالتPreview؛ لا نقر أواختصارات أوتحكمكامل أوقفلحسابنظام، ولا اختبارمعملفعلي.
+
+## M181 — التحكم وقفل الحساب والتصميم
+
+- طلب المستخدم صراحةً إكمال التحكم والقفل والتصميم واختبار الأجهزة. أكد توفر Windows وMac، لكن لا يوجد وصول مباشر لهما ولا تقارير فعلية بعد.
+- المصدر الأساسي للتحكم2458d9b، والتصميم الأخير9a19955، وتجديد اختبار النقل وتشخيصCI في3ff3e71، واحتياطيDMG في5f06da5. نسخةالنشر الحاليةdownloads/m181-preview عند4f4a69c تتضمن مثبّتيWindows وحزمةاختبارالأجهزة وTest-M181-Installed.ps1 وبصمات584ملفًا.
+- Windowsreadiness run41985458798 ثم41986058603 نجحا بفحوصالمشاريعالسبعة:حركة ونصUnicode ونقرةCtrl+A وEnter فينافذةيملكهاالاختبار. الاختبارالنهائيأضيفإليهScroll/Drag وفحصالإفلات، ولا يُفترضنجاحهحتىrun41987165867/job127110517507 النهائي.
+- مصدرWindowsالحالي0.181.0-preview منشورإلى/workspace/setup/windows-m181. الحمولة/workspace/setup/m181-installer-stage. التغليفالأول/workspace/setup/m181-installers قديمقبلترتيبالأعمدة؛ النهائي/workspace/setup/m181-installers-r2 مع/tmp/fbs-m181-installers-final.log. البصماتوأحجامالتنزيلأعيدالتحققمنGitHub.
+- SHAالمعلم860ff2a5fab255db47e536981a2096f21eb3160dbf591281cd78bd58484484f4 والطالب06b461260f26f84c222f685026c923aef4a461bff51f9526cfef4f17db79bc16. الحزمةالجديدةFBS-Classroom-M181-Device-Tests.zip ببصمة91a68463f672577a61877d8b59bcad2133f360222b5daf229221ca3cb162d4f6.
+- نجح1502JS في/tmp/fbs-m181-js.log. اختبارالنقلالنهائيبعدتجديدleaseنجح13/13 في/tmp/fbs-m181-transport-final.log. Chromiumالنهائيبعدالأعمدةنجحفي/tmp/fbs-m181-browser-final-r2.log وصورة/workspace/outputs/FBS-Classroom-M181-Desktop.png.
+- MacIntelr2 run41986063029 فشلفيJS دونتشخيصدقيق؛ أضيفتشخيصمحدودللـworkflow. ARMr2run41986067255 فشلفيDMGNoSpaceعندنسخNodeداخلالصورة؛ أضيفت128MiBمساحةاحتياطيةوصيغةHFS+صريحة. لا تفترضالمعالجةحتىنتيجةالمحاولةالنهائية.
+- MacالنهائيالمطلوبIntelr5run41986694465/job127108991926 وARMr5run41986698311/job127109004021 عند5f06da5؛ استخدمحزمهمافقطعندالنجاح، لاالحزمالأوليةالأقدم. انتهىJSبنجاحفيكليهماعندآخرمراجعةويجريالبناء.
+- اختباراتالقفلالفعليوCGEvent/AccessibilityعلىMacوشبكةالجهازينالفعليينمازالتغيرمنفذة. WindowsLockWorkStationوMacCtrlCmdQطلباتمحليةبتأكيدمستقل، وليستإثباتًاحدوثالقفل. لا يوجدفتحقفلعنبعد.
+
+## تسليم M181 المتحقق
+
+- Windows النهائي41987165867/job127110517507 نجح بكل الخطوات و198.NET (25owned-input)، وتثبيت وإزالةالمثبّتين وبصمات584ملفًا وNode وحمايةملفغيرمملوك، وتحليلصياغةPowerShellالمجمّع.
+- Intelr5run41986694465 نجحبتجهيزالمعلم ثمفشلإنشاءDMGالطالببـResourceBusy. أضيفتإعادةمحاولةمحدودةثلاثمراتلمرشحاتداخلwork المملوكبدونحذفملفاتالمستخدم. مصدرالتغليفedb41dc3ce1ed80fd93ea166be6162ef02e35d73.
+- Intelr6run41987727361/job127112366199 نجحونشرm181-macos-preview-34-1 عندedb41dc؛ ARMr5run41986698311/job127109004021 نجحونشرm181-macos-arm-preview-12-1 عند5f06da5. كودالتطبيقواحد؛ الفرقفيالتغليفوفحوصCIوملفاتنشرWindows. لا تستخدمالحزم24/28/30للتسليمالنهائيالجديد.
+- نجحت1502JS علىالمضيفين وChromiumالنهائي. المساعدةالجديدةتحت/assistv2 وتدعمClick/Scroll/Drag/Keys ونصUnicode؛ /controlالقديممازالمعطّلًا.
+- قفلWindowsLockWorkStationوMacCtrlCmdQبتأكيدمحليمنفصلينهيالتحكمقبله، وفتحالقفلبكلمةالمرورمحليًا. لا تدّعاختبارالقفلالفعليأووصولمباشرلأجهزةالمستخدم:أكدتوفرWindowsوMacلكنلميرسلنتائجحتىالآن.
+- حزمةاختبارالأجهزةونُسخWindowsتحتdownloads/m181-preview/downloads/M181؛ ستُنشرالتقاريروالمصدرالنهائيفيdownloads/m181-final. تقاريرMacوبصماتالحزمفي/workspace/outputs/M181-Mac-final.

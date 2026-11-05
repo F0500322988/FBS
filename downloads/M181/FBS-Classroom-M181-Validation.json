@@ -1,0 +1,103 @@
+{
+  "stage": "M181",
+  "finalProduct": false,
+  "releaseKind": "development preview",
+  "applicationSource": "9a1995583cee4ab5c03bfb8e62304eb4ace9165a",
+  "implemented": [
+    "relative pointer movement",
+    "left/right/double click",
+    "scroll",
+    "complete relative drag and release",
+    "Unicode text",
+    "navigation and named keyboard keys",
+    "Ctrl/Command, Shift and Alt shortcuts",
+    "locally confirmed OS account lock request",
+    "compact Arabic responsive console",
+    "passive user-device test collectors"
+  ],
+  "javascript": {
+    "tests": 1502,
+    "passed": 1502,
+    "failed": 0,
+    "skipped": 0,
+    "realTLSTransportPassed": true,
+    "v1CompatibilityPassed": true,
+    "legacyControlRemainsDisabled": true
+  },
+  "browser": {
+    "chromiumAcceptancePassed": true,
+    "desktopActionsAndLockRequestConfirmationPassed": true,
+    "mobileOverflowChecked": true,
+    "screenshotUsesTestFixture": true
+  },
+  "windows": {
+    "run": "https://github.com/F0500322988/FBS/actions/runs/41987165867",
+    "dotnetChecks": 198,
+    "ownedFixtureActualInputPassed": true,
+    "ownedFixtureChecks": 25,
+    "ownedFixtureTypes": [
+      "relative movement",
+      "Arabic/Unicode/emoji text",
+      "left click",
+      "Ctrl+A",
+      "Enter",
+      "scroll submission",
+      "complete drag and button release"
+    ],
+    "bothInstallersExecuted": true,
+    "installedFilesHashed": 584,
+    "nodeRuntimeExecuted": true,
+    "uninstallAndUnknownFilePreservationPassed": true,
+    "deviceCollectorPowerShellParserPassed": true,
+    "actualStudentAppGuiTested": false,
+    "userDeviceTested": false,
+    "fullNetworkToNativeInputTested": false,
+    "actualOSLockTested": false,
+    "signed": false
+  },
+  "macos": {
+    "intelRun": "https://github.com/F0500322988/FBS/actions/runs/41987727361",
+    "intelRelease": "https://github.com/F0500322988/FBS/releases/tag/m181-macos-preview-34-1",
+    "appleSiliconRun": "https://github.com/F0500322988/FBS/actions/runs/41986698311",
+    "appleSiliconRelease": "https://github.com/F0500322988/FBS/releases/tag/m181-macos-arm-preview-12-1",
+    "architectures": [
+      "x86_64",
+      "arm64"
+    ],
+    "minimumOS": "13.0",
+    "bothHostNativeBuildsPassed": true,
+    "bothHostInstallRemoveAndLoopbackPassed": true,
+    "pkgDmgHashesAndContainerMagicVerified": true,
+    "userDeviceTested": false,
+    "accessibilityAndCGEventInputTested": false,
+    "actualOSLockTested": false,
+    "keychainAndScreenPermissionGuiTested": false,
+    "developerIDSigned": false,
+    "notarized": false
+  },
+  "physicalDevices": {
+    "userReportsWindowsAndMacAvailable": true,
+    "directAccessFromConversationAvailable": false,
+    "reportsReceived": 0,
+    "physicalHardwareVerified": false,
+    "crossDeviceLANPassed": null,
+    "inputPassed": null,
+    "systemLockPassed": null
+  },
+  "limits": [
+    "No secure login desktop control or remote password entry",
+    "OS lock requires separate local confirmation; submission is not lock completion",
+    "No remote unlock",
+    "Two minute consent maximum",
+    "No physical lab/40-device performance acceptance",
+    "No pixel-exact claim for the reference design",
+    "Unsigned Windows and ad-hoc Mac builds"
+  ],
+  "buildHistory": {
+    "intelEarlierJavaScriptFailureCauseConfirmed": false,
+    "armDmgNoSpaceObserved": true,
+    "explicitDmgFilesystemHeadroomAdded": true,
+    "intelHdiutilResourceBusyObserved": true,
+    "boundedOwnedCandidateRetryAdded": true
+  }
+}
