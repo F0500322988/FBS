@@ -1,0 +1,33 @@
+{
+  "stage": "M183",
+  "applicationVersion": "0.183.0-preview",
+  "buildTool": "NSIS native Linux compiler / signed Debian packages",
+  "buildPassed": true,
+  "allPayloadSha256Verified": true,
+  "unexpectedPayloadRejected": true,
+  "windowsInstallExecuted": false,
+  "windowsGuiExecuted": false,
+  "twoPcLanTested": false,
+  "installers": [
+    {
+      "role": "Teacher",
+      "file": "FBS-Classroom-Teacher-M183-Setup-PREVIEW.exe",
+      "size": 69356431,
+      "sha256": "58df89a0b0ec9bdca1551c57fdd8552706ab66d7e04c11275ee41589a8d48851",
+      "payloadFilesVerified": 296,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    },
+    {
+      "role": "Student",
+      "file": "FBS-Classroom-Student-M183-Setup-PREVIEW.exe",
+      "size": 69322463,
+      "sha256": "2a7cb40cf74ca69dc07953de5e1ff8b8d5e9c9069c5bb666892ee00d2de667d7",
+      "payloadFilesVerified": 292,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    }
+  ]
+}
