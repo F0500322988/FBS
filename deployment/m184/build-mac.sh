@@ -15,4 +15,6 @@ lipo -create "$fbs_kit_work/FBS-LabSetup-arm64" "$fbs_kit_work/FBS-LabSetup-x86_
 codesign --force --sign - --timestamp=none "$fbs_kit_output/FBS-LabSetup-Mac"
 lipo "$fbs_kit_output/FBS-LabSetup-Mac" -verify_arch arm64 x86_64
 codesign --verify --strict "$fbs_kit_output/FBS-LabSetup-Mac"
-"$fbs_kit_output/FBS-LabSetup-Mac" self-test | tee "$fbs_kit_output/Mac-provisioning-checks.log"
+xcrun swiftc -swift-version 5 -framework Foundation -framework Security "$fbs_kit_root/macos/Sources/ConnectionConfig.swift" "$fbs_kit_root/deployment/m184/KeychainConsumerCheck.swift" -o "$fbs_kit_work/keychain-consumer"
+codesign --force --sign - --timestamp=none "$fbs_kit_work/keychain-consumer"
+FBS_PROVISIONING_TEST_READER="$fbs_kit_work/keychain-consumer" "$fbs_kit_output/FBS-LabSetup-Mac" self-test | tee "$fbs_kit_output/Mac-provisioning-checks.log"

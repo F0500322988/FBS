@@ -9,7 +9,8 @@ enum ProvisioningChecks {
         func reject(_ name:String,_ action:() throws -> Void) throws { var failed=false;do {try action()}catch {failed=true};try check(failed,name) }
         let root=FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("fbs-kit-fixture-"+UUID().uuidString)
         try KitIO.privateDirectory(root)
-        let store=StudentKeychain(service:"com.fbsclassroom.provisioning-test."+UUID().uuidString,consumerExecutable:CommandLine.arguments[0])
+        let consumer=ProcessInfo.processInfo.environment["FBS_PROVISIONING_TEST_READER"] ?? CommandLine.arguments[0]
+        let store=StudentKeychain(service:"com.fbsclassroom.provisioning-test."+UUID().uuidString,consumerExecutable:consumer)
         defer { SecItemDelete(store.query as CFDictionary) }
         let profile=LabProfile(teacherHost:"192.168.50.2",fingerprint:String(repeating:"a",count:64),pairingKey:"fixture-only-pairing-key-184")
         let file=root.appendingPathComponent("lab-profile.json");try profile.writeNew(file)
@@ -33,6 +34,10 @@ enum ProvisioningChecks {
         try Data(repeating:65,count:8193).write(to:bad);try reject("oversized profile rejected") {_ = try LabProfile.read(bad)}
         let linked=root.appendingPathComponent("linked.json");try FileManager.default.createSymbolicLink(at:linked,withDestinationURL:file);try reject("symlink profile rejected") {_ = try LabProfile.read(linked)}
         try check(store.apply(profile) == "configured","real Keychain add for isolated fixture service")
+        if ProcessInfo.processInfo.environment["FBS_PROVISIONING_TEST_READER"] != nil {
+            let output=try PlatformServices.run(consumer,[store.service])
+            try check(String(data:output,encoding:.utf8)?.contains("fixtureCredentialReadWithoutUI") == true,"separate trusted consumer reads Keychain fixture without an authentication dialog")
+        }
         let restored=try store.load()!;try check(profile.matches(restored),"native student Codable configuration compatible")
         try check(restored.deviceName.hasPrefix("MAC-") && restored.deviceName.count>4,"fresh student name generated on target")
         try check(store.apply(profile) == "unchanged","same profile import idempotent")
