@@ -10,7 +10,8 @@ $results=@()
 foreach ($role in @('Teacher','Student')) {
     $registry=if ($role -eq 'Teacher') {'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\FBSClassroom.Teacher.Preview'} else {'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\FBSClassroom.Student.Preview'}
     if (Test-Path $registry) { throw 'Existing application registration; refusing install.' }
-    $target=Join-Path $fixture $role
+    $target=[IO.Path]::GetFullPath((Join-Path $fixture $role))
+    $targetPrefix=$target+[IO.Path]::DirectorySeparatorChar
     $entry=$verification.installers | Where-Object role -eq $role
     $exe=Join-Path $out $entry.file
     if ((Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.sha256) { throw 'Installer hash mismatch.' }
@@ -20,7 +21,7 @@ foreach ($role in @('Teacher','Student')) {
     if ($manifest.setupBundle -ne 'M184' -or $manifest.version -ne '0.183.0-preview') { throw 'Wrong integrated manifest.' }
     foreach ($file in $manifest.files) {
         $absolute=[IO.Path]::GetFullPath((Join-Path $target $file.path))
-        if (-not $absolute.StartsWith($target.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe installed path.' }
+        if (-not $absolute.StartsWith($targetPrefix,[StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe installed path.' }
         $item=Get-Item -LiteralPath $absolute
         if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.Length -ne $file.size -or (Get-FileHash -LiteralPath $absolute -Algorithm SHA256).Hash.ToLowerInvariant() -ne $file.sha256) { throw 'Installed payload mismatch.' }
     }
