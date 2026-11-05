@@ -3,6 +3,8 @@
 Local-network classroom management software for separate Windows and macOS labs, targeting up to 40 student endpoints per lab.
 
 ## Status
+M184 adds a separate [lab setup kit](docs/M184-DOWNLOADS-AR.md) for existing M183 installers: export a private profile locally on the teacher, import under each student account, then approve the device from the teacher. The public kit has no real lab secrets. Windows DPAPI checks (39) and Mac Intel Keychain checks (41), including an independent consumer without authentication UI, passed. The Mac helper is Universal; independent Apple Silicon execution is still queued at report time. [Results and limits](docs/M184-RESULTS-AR.md).
+
 M183 reorganizes the teacher console and native Windows/macOS student dashboard around the supplied blue/navy Arabic reference. It includes the left sidebar, lab header, five-column device grid, seven-action screen dock, large broadcast preview, lab/group cards and compact student connection card. The operational teacher console is shared browser UI; native setup remains separate. OS window chrome, fonts and DPI can differ. [UI review images](docs/M183-UI-AR.md) use labeled fixture data, not real students.
 
 All 1513 JavaScript tests and Chromium functional/visual acceptance passed. [Final Windows CI](https://github.com/F0500322988/FBS/actions/runs/42029666946) passed ten .NET projects (231 checks), both installer executions, 588 installed payload hashes, bundled Node, uninstall and unknown-file preservation. These are isolated CI checks, not full physical lab acceptance.

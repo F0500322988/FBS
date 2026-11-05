@@ -1,0 +1,42 @@
+PASS: portable profile round trip
+PASS: exported profile mode is 600
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject unusable teacher address
+PASS: reject port
+PASS: reject port
+PASS: reject fingerprint
+PASS: reject short key
+PASS: cross-platform key bound
+PASS: no control characters
+PASS: identity field rejected
+PASS: duplicate fields rejected
+PASS: oversized profile rejected
+PASS: symlink profile rejected
+PASS: real Keychain add for isolated fixture service
+PASS: separate trusted consumer reads Keychain fixture without an authentication dialog
+PASS: native student Codable configuration compatible
+PASS: fresh student name generated on target
+PASS: same profile import idempotent
+PASS: repeat import preserves device identifier
+PASS: different key cannot replace current lab
+PASS: different endpoint cannot replace current lab
+PASS: rejected import preserves student configuration
+PASS: two fresh targets do not clone identity
+PASS: native runtime receives pinned endpoint
+PASS: no teacher password in student runtime
+PASS: private kit export with required launchers
+PASS: existing destination never replaced
+PASS: missing template fails before export
+PASS: incomplete export does not create output
+{"stage":"M184","macProvisioningChecks":41,"keychainRoundTripPassed":true,"nativeStudentCompatibilityPassed":true,"actualUserLabTested":false,"secretsPrinted":false}

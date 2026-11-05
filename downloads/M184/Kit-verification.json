@@ -1,0 +1,38 @@
+{
+  "stage": "M184",
+  "ciArchiveSha256": "dff9435a5da6d84affb5c266cc77fe0ffcfec46fb9b21a2d4a2b9bce7bb68605",
+  "archiveEntries": 9,
+  "privateProfileIncluded": false,
+  "windowsPE64Verified": true,
+  "macUniversalArchitecturesVerified": [
+    "x86_64",
+    "arm64"
+  ],
+  "macLauncherExecutePermissionsVerified": true,
+  "helperSha256": {
+    "FBS-LabSetup-Windows.exe": "0bc8c280605c60c0f480abf63674b60030bcd4b75c5abbc790427a7b0ac6d46d",
+    "FBS-LabSetup-Mac": "a227514df5cf83d467044067c5ee854c8cb2c34bbfe4ef98e48a09ad379c1e8d"
+  },
+  "checks": {
+    "Windows": {
+      "stage": "M184",
+      "windowsProvisioningChecks": 39,
+      "dpapiRoundTripPassed": true,
+      "nativeStudentCompatibilityPassed": true,
+      "actualUserLabTested": false,
+      "secretsPrinted": false
+    },
+    "Mac": {
+      "stage": "M184",
+      "macProvisioningChecks": 41,
+      "keychainRoundTripPassed": true,
+      "nativeStudentCompatibilityPassed": true,
+      "actualUserLabTested": false,
+      "secretsPrinted": false
+    }
+  },
+  "finalArchiveSha256": "fbae6767a8d5e52443f45b611a5b42e22cb5662a09047bac275174eedf3cd20f",
+  "finalArchiveBytes": 65822860,
+  "finalGuideUpdated": true,
+  "testedHelperBytesPreserved": true
+}
