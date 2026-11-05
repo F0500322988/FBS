@@ -1,0 +1,33 @@
+{
+  "stage": "M179",
+  "applicationVersion": "0.179.0-preview",
+  "buildTool": "NSIS native Linux compiler / signed Debian packages",
+  "buildPassed": true,
+  "allPayloadSha256Verified": true,
+  "unexpectedPayloadRejected": true,
+  "windowsInstallExecuted": false,
+  "windowsGuiExecuted": false,
+  "twoPcLanTested": false,
+  "installers": [
+    {
+      "role": "Teacher",
+      "file": "FBS-Classroom-Teacher-M179-Setup-PREVIEW.exe",
+      "size": 69306097,
+      "sha256": "63c43c0d61f1f19f9b26b84db47a78706af3fd08c394deda267a7c49b8f239c0",
+      "payloadFilesVerified": 49,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    },
+    {
+      "role": "Student",
+      "file": "FBS-Classroom-Student-M179-Setup-PREVIEW.exe",
+      "size": 69271676,
+      "sha256": "8c901051ca97e8450518146200e820df9f7762e31820af73e722b49ce57f11d5",
+      "payloadFilesVerified": 48,
+      "installerArchitecture": "x86 Unicode NSIS bootstrap",
+      "applicationArchitecture": "Windows x64",
+      "signed": false
+    }
+  ]
+}
