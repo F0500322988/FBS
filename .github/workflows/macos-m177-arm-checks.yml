@@ -9,7 +9,7 @@ jobs:
   arm64:
     permissions:
       contents: write
-    runs-on: macos-26
+    runs-on: macos-15
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
