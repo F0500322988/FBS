@@ -7,6 +7,21 @@ if (Test-Path -LiteralPath $root) { throw 'Choose a new build directory.' }
 New-Item -ItemType Directory -Path $root | Out-Null
 $stage=Join-Path $root 'stage';$out=Join-Path $root 'installers'
 New-Item -ItemType Directory -Path $stage,$out | Out-Null
+function Get-RepositorySourceSha256([string]$Relative) {
+    $start=New-Object System.Diagnostics.ProcessStartInfo
+    $start.FileName='git';$start.UseShellExecute=$false;$start.CreateNoWindow=$true
+    $start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
+    foreach ($argument in @('-C',$repo,'show',"HEAD:$Relative")) { $start.ArgumentList.Add($argument) }
+    $process=New-Object System.Diagnostics.Process;$process.StartInfo=$start
+    $bytes=New-Object System.IO.MemoryStream
+    try {
+        if (-not $process.Start()) { throw 'Cannot read canonical repository source.' }
+        $process.StandardOutput.BaseStream.CopyTo($bytes);$process.WaitForExit()
+        if ($process.ExitCode -ne 0) { throw 'Canonical source object missing.' }
+        $hash=[Security.Cryptography.SHA256]::Create()
+        try { return [Convert]::ToHexString($hash.ComputeHash($bytes.ToArray())).ToLowerInvariant() } finally { $hash.Dispose() }
+    } finally { $bytes.Dispose();$process.Dispose() }
+}
 $baseline=@{Teacher='58df89a0b0ec9bdca1551c57fdd8552706ab66d7e04c11275ee41589a8d48851';Student='2a7cb40cf74ca69dc07953de5e1ff8b8d5e9c9069c5bb666892ee00d2de667d7'}
 foreach ($role in @('Teacher','Student')) {
     $exe=Join-Path $root "$role-M183.exe"
@@ -26,7 +41,7 @@ foreach ($role in @('Teacher','Student')) {
         # Shared runtime source must match this checkout, rather than silently shipping an old UI.
         if ($file.path -match '^Runtime/(public/.*|[^/]+\.js)$') {
             $current=Join-Path $repo ($file.path.Substring(8))
-            if (-not (Test-Path -LiteralPath $current) -or (Get-FileHash -LiteralPath $current -Algorithm SHA256).Hash.ToLowerInvariant() -ne $file.sha256) { throw 'Current shared source differs from the pinned core.' }
+            if (-not (Test-Path -LiteralPath $current) -or (Get-RepositorySourceSha256 $file.path.Substring(8)) -ne $file.sha256) { throw ('Canonical source differs from the pinned core: '+$file.path) }
         }
         $target=Join-Path (Join-Path $stage $role) $file.path
         New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
