@@ -24,7 +24,7 @@ function prepare(root){
   }
   visit('');
   // Only supported payload roots are installed; nothing else enters the package.
-  for(const file of files)if(!file.path.startsWith(role+'/')&&!file.path.startsWith('Runtime/')&&!(role==='Student'&&file.path==='Configure-Student.ps1'))throw Error('Unexpected payload file: '+file.path);
+  for(const file of files)if(!file.path.startsWith(role+'/')&&!file.path.startsWith('Runtime/')&&!file.path.startsWith('SetupKit/')&&!(role==='Student'&&file.path==='Configure-Student.ps1'))throw Error('Unexpected payload file: '+file.path);
   const lines=['; Generated from the exact packaged file list. No recursive deletion.'];
   files.forEach((file,index)=>{
    const target='$INSTDIR\\'+file.path.replaceAll('/','\\');
@@ -33,7 +33,8 @@ function prepare(root){
   });
   for(const directory of [...directories].sort((a,b)=>b.split('/').length-a.split('/').length))lines.push(`RMDir "$INSTDIR\\${directory.replaceAll('/','\\')}"`);
   fs.writeFileSync(path.join(root,'delete-'+role+'.nsh'),'\ufeff'+lines.join('\r\n')+'\r\n');
-  const manifest={role,version:'0.183.0-preview',files};
+  if(files.some(file=>file.path.endsWith('/lab-profile.json')))throw Error('Private lab profiles must never be packaged');
+  const manifest={role,version:'0.183.0-preview',setupBundle:'M184',files};
   fs.writeFileSync(path.join(root,'payload-'+role+'.json'),JSON.stringify(manifest,null,2)+'\n');result.push({role,files:files.length});
  }
  return result;

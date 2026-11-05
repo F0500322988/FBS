@@ -19,6 +19,11 @@ final class RuntimeHost {
     static func selfCheck() throws {
         let fm = FileManager.default, files = ["server.js", "student-agent.js", "classroom-messages.js", "classroom-broadcast.js", "classroom-files.js", "lab-settings.js", "atomic-json-store.js", "lab-profiles.js", "classroom-pause.js", "classroom-assistance.js", "pinned-https.js", "public/index.html", "node-x64", "node-arm64"]
         for file in files where !fm.fileExists(atPath: runtime.appendingPathComponent(file).path) { throw ConfigurationError.invalid("Missing bundled runtime: " + file) }
+        let setup = Bundle.main.resourceURL!.appendingPathComponent("SetupKit")
+        for name in ["FBS-LabSetup-Mac", "FBS-LabSetup-Windows.exe", "Prepare-Teacher-Mac.command", "Import-Student-Mac.command", "README-AR.md"] {
+            guard FileManager.default.fileExists(atPath:setup.appendingPathComponent(name).path) else { throw ConfigurationError.invalid("Missing integrated M184 setup file") }
+        }
+        guard !FileManager.default.fileExists(atPath:setup.appendingPathComponent("lab-profile.json").path) else { throw ConfigurationError.invalid("Private lab profile must not be bundled") }
         let version = try PlatformServices.run(node.path, ["--version"])
         guard String(data: version, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) == "v22.23.4" else { throw ConfigurationError.invalid("Unexpected Node runtime version") }
         try loopbackSelfCheck()

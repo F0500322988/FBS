@@ -4,6 +4,9 @@ fbs_kit_root="$(cd "$(dirname "$0")/../.." && pwd)"
 fbs_kit_output="$1"
 mkdir -p "$fbs_kit_output"
 fbs_kit_work="$(mktemp -d "${TMPDIR:-/tmp}/fbs-m184-build.XXXXXX")"
+if [[ -n "${FBS_EXISTING_KIT_HELPER:-}" ]]; then
+  cp "$FBS_EXISTING_KIT_HELPER" "$fbs_kit_output/FBS-LabSetup-Mac"
+else
 for fbs_kit_arch in arm64 x86_64; do
   xcrun swiftc -swift-version 5 -target "$fbs_kit_arch-apple-macosx13.0" -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
     -framework Foundation -framework Security -framework AppKit -framework CryptoKit \
@@ -13,6 +16,7 @@ for fbs_kit_arch in arm64 x86_64; do
 done
 lipo -create "$fbs_kit_work/FBS-LabSetup-arm64" "$fbs_kit_work/FBS-LabSetup-x86_64" -output "$fbs_kit_output/FBS-LabSetup-Mac"
 codesign --force --sign - --timestamp=none "$fbs_kit_output/FBS-LabSetup-Mac"
+fi
 lipo "$fbs_kit_output/FBS-LabSetup-Mac" -verify_arch arm64 x86_64
 codesign --verify --strict "$fbs_kit_output/FBS-LabSetup-Mac"
 xcrun swiftc -swift-version 5 -framework Foundation -framework Security "$fbs_kit_root/macos/Sources/ConnectionConfig.swift" "$fbs_kit_root/deployment/m184/KeychainConsumerCheck.swift" -o "$fbs_kit_work/keychain-consumer"

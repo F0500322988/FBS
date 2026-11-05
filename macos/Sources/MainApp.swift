@@ -31,6 +31,7 @@ import AppKit
             field("عنوان المعلم IP أو اسم الجهاز", address); field("منفذ المعلم", port); field("بصمة شهادة المعلم SHA-256 — 64 رمزًا", pin)
         }
         startButton.target = self; startButton.action = #selector(start); stack.addArrangedSubview(startButton)
+        stack.addArrangedSubview(NSButton(title: "فتح أدوات تهيئة المعمل M184", target: self, action: #selector(openSetupTools)))
         let stop = NSButton(title: "إيقاف التطبيق محليًا", target: self, action: #selector(stopHost)); stack.addArrangedSubview(stop)
         if role == .teacher { stack.addArrangedSubview(NSButton(title: "فتح لوحة المعلم", target: self, action: #selector(openTeacher))) }
         else {
@@ -70,6 +71,10 @@ import AppKit
             if loaded { do { try config.validate();start() } catch { DispatchQueue.main.async { preferences.center();preferences.makeKeyAndOrderFront(nil) } } }
         }
         window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+    }
+    @objc private func openSetupTools() {
+        guard let folder = Bundle.main.resourceURL?.appendingPathComponent("SetupKit"), FileManager.default.fileExists(atPath:folder.path) else { showError(ConfigurationError.invalid("أدوات التهيئة غير موجودة في هذه الحزمة"));return }
+        NSWorkspace.shared.open(folder)
     }
     @objc private func start() {
         guard loaded, host.process == nil else { return }

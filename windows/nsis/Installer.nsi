@@ -46,13 +46,13 @@ SetCompressor /SOLID lzma
 SetCompressorDictSize 32
 CRCCheck force
 ManifestDPIAware true
-VIProductVersion "0.183.0.0"
+VIProductVersion "0.183.184.0"
 VIAddVersionKey "ProductName" "${AppTitle}"
 VIAddVersionKey "ProductVersion" "0.183.0-preview"
 VIAddVersionKey "FileDescription" "FBS Classroom ${Role} installer"
-VIAddVersionKey "FileVersion" "0.183.0.0"
+VIAddVersionKey "FileVersion" "0.183.184.0"
 VIAddVersionKey "LegalCopyright" "FBS Classroom contributors"
-BrandingText "FBS Classroom - Windows Preview"
+BrandingText "FBS Classroom - M184 Integrated Setup Preview"
 !define MUI_ABORTWARNING
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
@@ -116,6 +116,8 @@ Section "Install"
   File /r "${StageRoot}/${Role}/${Role}/*"
   SetOutPath "$INSTDIR\Runtime"
   File /r "${StageRoot}/${Role}/Runtime/*"
+  SetOutPath "$INSTDIR\SetupKit"
+  File /r "${StageRoot}/${Role}/SetupKit/*"
   !if "${Role}" == "Student"
     SetOutPath "$INSTDIR"
     File "${StageRoot}/Student/Configure-Student.ps1"
@@ -124,6 +126,7 @@ Section "Install"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr ${RegistryRoot} "${UninstallKey}" "DisplayName" "${AppTitle}"
   WriteRegStr ${RegistryRoot} "${UninstallKey}" "DisplayVersion" "0.183.0-preview"
+  WriteRegStr ${RegistryRoot} "${UninstallKey}" "SetupBundle" "M184"
   WriteRegStr ${RegistryRoot} "${UninstallKey}" "Publisher" "FBS Classroom"
   WriteRegStr ${RegistryRoot} "${UninstallKey}" "InstallLocation" "$INSTDIR"
   WriteRegStr ${RegistryRoot} "${UninstallKey}" "DisplayIcon" "$INSTDIR\${Role}\${AppExe}"
@@ -133,6 +136,12 @@ Section "Install"
   CreateDirectory "$SMPROGRAMS\${AppTitle}"
   CreateShortcut "$SMPROGRAMS\${AppTitle}\${AppTitle}.lnk" "$INSTDIR\${Role}\${AppExe}" "" "$INSTDIR\${Role}\${AppExe}"
   CreateShortcut "$SMPROGRAMS\${AppTitle}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+  CreateShortcut "$SMPROGRAMS\${AppTitle}\M184 Setup Tools.lnk" "$INSTDIR\SetupKit"
+  !if "${Role}" == "Teacher"
+    CreateShortcut "$SMPROGRAMS\${AppTitle}\M184 Prepare Students.lnk" "$INSTDIR\SetupKit\Prepare-Teacher-Windows.cmd"
+  !else
+    CreateShortcut "$SMPROGRAMS\${AppTitle}\M184 Import Teacher Profile.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -STA -ExecutionPolicy Bypass -File "$INSTDIR\SetupKit\Import-Student-Profile.ps1"'
+  !endif
   ; No automatic launch, startup registration, firewall changes or enrollment.
 SectionEnd
 
@@ -142,6 +151,9 @@ Section "Uninstall"
   !include "${DeleteManifest}"
   Delete "$SMPROGRAMS\${AppTitle}\${AppTitle}.lnk"
   Delete "$SMPROGRAMS\${AppTitle}\Uninstall.lnk"
+  Delete "$SMPROGRAMS\${AppTitle}\M184 Setup Tools.lnk"
+  Delete "$SMPROGRAMS\${AppTitle}\M184 Prepare Students.lnk"
+  Delete "$SMPROGRAMS\${AppTitle}\M184 Import Teacher Profile.lnk"
   RMDir "$SMPROGRAMS\${AppTitle}"
   DeleteRegKey ${RegistryRoot} "${UninstallKey}"
   Delete "$INSTDIR\Uninstall.exe"

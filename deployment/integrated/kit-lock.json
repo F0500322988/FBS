@@ -1,0 +1,8 @@
+{
+  "stage": "M184",
+  "coreApplicationVersion": "0.183.0-preview",
+  "url": "https://github.com/F0500322988/FBS/raw/refs/heads/downloads/m184-final-r3/downloads/M184/FBS-Classroom-M184-Lab-Setup-Kit.zip",
+  "sha256": "fbae6767a8d5e52443f45b611a5b42e22cb5662a09047bac275174eedf3cd20f",
+  "windowsHelperSha256": "0bc8c280605c60c0f480abf63674b60030bcd4b75c5abbc790427a7b0ac6d46d",
+  "macHelperSha256": "a227514df5cf83d467044067c5ee854c8cb2c34bbfe4ef98e48a09ad379c1e8d"
+}
