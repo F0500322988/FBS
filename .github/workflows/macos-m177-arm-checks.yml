@@ -30,8 +30,8 @@ jobs:
           import pathlib,sys
           lines=pathlib.Path(sys.argv[1]).read_text(errors='replace').splitlines()
           selected=[line for line in lines if 'error:' in line or 'fatal error:' in line]
-          if not selected:selected=lines[-15:]
-          for line in selected[:20]:
+          if not selected:selected=lines[-8:]
+          for line in selected[-8:]:
               print('::error::'+line.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
           PYTHON
           fi
