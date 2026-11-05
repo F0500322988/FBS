@@ -51,9 +51,11 @@
     "appleSiliconBuildAndIsolatedInstallationPassed": true,
     "downloadedFourPkgDmgShaAndMagicVerified": true,
     "sharedSourceHashComparisons": 82,
-    "intelFinalRunStatus": "in-progress-at-report",
+    "intelFinalRunStatus": "success",
     "earlierIntelNativeM183BuildAndPackageChecksPassed": true,
-    "earlierIntelArtifactUploadFailed": "GitHub ArtifactService request timeout after 5 attempts; release skipped"
+    "earlierIntelArtifactUploadFailed": "GitHub ArtifactService request timeout after 5 attempts; release skipped",
+    "intelBuildAndIsolatedInstallationPassed": true,
+    "intelRelease": "https://github.com/F0500322988/FBS/releases/tag/m183-macos-preview-45-1"
   },
   "physicalLabM183": {
     "resultsReceived": false,

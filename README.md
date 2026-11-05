@@ -9,7 +9,7 @@ All 1513 JavaScript tests and Chromium functional/visual acceptance passed. [Fin
 
 M182 automatic full-screen teacher broadcast and managed power/wake remain available. Student capture and desktop input retain their separate consent requirements. Wake packets do not prove power-on; Mac startup from complete shutdown is hardware-dependent and not guaranteed. See [M183 guide](M183-START-HERE.md), [Arabic results](docs/M183-RESULTS-AR.md) and [device test instructions](diagnostics/M183-DEVICE-TESTS-AR.md).
 
-[Download both roles for Windows and Mac](docs/M183-DOWNLOADS-AR.md). Mac Universal packages passed Apple Silicon build, isolated install/remove, PKG/DMG and runtime checks; downloaded packages were checked again by SHA256.
+[Download both roles for Windows and Mac](docs/M183-DOWNLOADS-AR.md). Mac Universal packages passed Intel and Apple Silicon builds, isolated install/remove, PKG/DMG and runtime checks; downloaded packages were checked again by SHA256.
 
 Windows previews are unsigned; Mac requires macOS13+ and uses ad-hoc signing without Developer ID or notarization. Updated physical lab GUI, permissions, actual power/wake and target-scale performance acceptance remain pending. This is a development preview.
 
