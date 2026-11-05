@@ -43,10 +43,7 @@ jobs:
             throw
           }
       - name: Publish completed validation for the same installer bytes
-        shell: bash
+        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh release upload m184-windows-integrated-5-1 --repo "$GITHUB_REPOSITORY" "$RUNNER_TEMP"/M184-integrated/installers/Windows-integrated-installer-smoke.json "$RUNNER_TEMP"/M184-integrated/installers/Core-safety-results.json "$RUNNER_TEMP"/M184-integrated/installers/*-installed-setup-checks.log "$RUNNER_TEMP"/M184-integrated/installers/SHA256SUMS.txt
-          gh release edit m184-windows-integrated-5-1 --repo "$GITHUB_REPOSITORY" --title 'FBS Classroom M184 — Windows installers with integrated lab setup' --notes-file M184-START-HERE.md
+        run: ./deployment/integrated/publish-windows.ps1 -ReleaseTag m184-windows-integrated-5-1 -BuildRoot "$env:RUNNER_TEMP/M184-integrated"

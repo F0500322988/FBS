@@ -83,11 +83,7 @@ jobs:
             throw
           }
       - name: Publish installed validation and mark the release ready for preview testing
-        shell: bash
+        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          fbs_tag="m184-windows-integrated-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
-          gh release upload "$fbs_tag" --repo "$GITHUB_REPOSITORY" "$RUNNER_TEMP"/M184-integrated/installers/Windows-integrated-installer-smoke.json "$RUNNER_TEMP"/M184-integrated/installers/Core-safety-results.json "$RUNNER_TEMP"/M184-integrated/installers/*-installed-setup-checks.log "$RUNNER_TEMP"/M184-integrated/installers/SHA256SUMS.txt
-          gh release edit "$fbs_tag" --repo "$GITHUB_REPOSITORY" --title 'FBS Classroom M184 — Windows installers with integrated lab setup' --notes-file M184-START-HERE.md
+        run: ./deployment/integrated/publish-windows.ps1 -ReleaseTag "m184-windows-integrated-$env:GITHUB_RUN_NUMBER-$env:GITHUB_RUN_ATTEMPT" -BuildRoot "$env:RUNNER_TEMP/M184-integrated"
