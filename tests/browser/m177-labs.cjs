@@ -14,6 +14,7 @@ const publicRoot=path.resolve(__dirname,'../../public');
   await page.route('http://localhost:41999/**',async route=>{
    const url=new URL(route.request().url());let body,type='application/json',status=200;
    if(url.pathname==='/api/auth')body={required:false};
+   else if(url.pathname==='/api/lab-profiles')body={version:1,revision:0,profiles:[]};
    else if(url.pathname==='/api/lab-settings'){
     if(labUnavailable){status=503;body={error:'unavailable'};}
     else if(route.request().method()==='PUT'){const data=route.request().postDataJSON();if(labConflict||data.revision!==lab.revision){status=409;body={error:'changed'};}else{lab={...data,revision:lab.revision+1};body=lab;}}

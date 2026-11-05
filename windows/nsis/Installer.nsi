@@ -46,11 +46,11 @@ SetCompressor /SOLID lzma
 SetCompressorDictSize 32
 CRCCheck force
 ManifestDPIAware true
-VIProductVersion "0.178.0.0"
+VIProductVersion "0.179.0.0"
 VIAddVersionKey "ProductName" "${AppTitle}"
-VIAddVersionKey "ProductVersion" "0.178.0-preview"
+VIAddVersionKey "ProductVersion" "0.179.0-preview"
 VIAddVersionKey "FileDescription" "FBS Classroom ${Role} installer"
-VIAddVersionKey "FileVersion" "0.178.0.0"
+VIAddVersionKey "FileVersion" "0.179.0.0"
 VIAddVersionKey "LegalCopyright" "FBS Classroom contributors"
 BrandingText "FBS Classroom - Windows Preview"
 !define MUI_ABORTWARNING
@@ -123,7 +123,7 @@ Section "Install"
   SetOutPath "$INSTDIR"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr ${RegistryRoot} "${UninstallKey}" "DisplayName" "${AppTitle}"
-  WriteRegStr ${RegistryRoot} "${UninstallKey}" "DisplayVersion" "0.178.0-preview"
+  WriteRegStr ${RegistryRoot} "${UninstallKey}" "DisplayVersion" "0.179.0-preview"
   WriteRegStr ${RegistryRoot} "${UninstallKey}" "Publisher" "FBS Classroom"
   WriteRegStr ${RegistryRoot} "${UninstallKey}" "InstallLocation" "$INSTDIR"
   WriteRegStr ${RegistryRoot} "${UninstallKey}" "DisplayIcon" "$INSTDIR\${Role}\${AppExe}"

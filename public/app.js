@@ -470,7 +470,7 @@ async function refreshLabSettings(force=false){
   if(force||!labDirty&&(!labDraft||changed)){labDraft=structuredClone(data);labDirty=false;drawLabDraft();el('lab-result').textContent='الإعدادات المحفوظة جاهزة';}
   else if(labDirty&&labDraft.revision!==data.revision)el('lab-result').textContent='تغيرت الإعدادات في نافذة أخرى؛ أعد تحميل المحفوظ قبل الحفظ';
  }catch{if(generation!==labGeneration)return;labSnapshot=null;updateLabFilter();el('lab-result').textContent='تعذر قراءة إعدادات المعمل؛ لم تُستبدل الإعدادات الموجودة. تحقق من التخزين ثم أعد التحميل.';el('lab-save').disabled=true;}
- finally{labBusy=false;}
+ finally{labBusy=false;if(pageNow==='labs')refreshLabProfiles();}
 }
 el('lab-title').addEventListener('input',()=>{if(labDraft){labDraft.name=el('lab-title').value;markLabDirty();}});
 el('lab-platform').addEventListener('change',()=>{if(labDraft){labDraft.platform=el('lab-platform').value;markLabDirty();}});
@@ -487,9 +487,9 @@ el('lab-form').addEventListener('submit',async event=>{
  try{
   const r=await fetch('/api/lab-settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(labDraft),signal:AbortSignal.timeout(6000)});
   if(!r.ok)throw Error(r.status===409?'تغيرت الإعدادات؛ أعد تحميل المحفوظ قبل الحفظ':r.status===400?'تحقق من الأسماء ومعرّفات الأجهزة: حتى20 مجموعة و40 جهازًا لكل مجموعة، دون أسماء أو معرّفات مكررة':'تعذر حفظ الإعدادات؛ بقي الملف السابق محفوظًا');
-  const saved=await r.json();labSnapshot=saved;labDraft=structuredClone(saved);labDirty=false;drawLabDraft();updateLabFilter();el('lab-name').textContent=saved.name;el('lab-result').textContent='حُفظت إعدادات المعمل والمجموعات';
+  const saved=await r.json();labSnapshot=saved;labDraft=structuredClone(saved);labDirty=false;clearProfileRecipients();drawLabDraft();updateLabFilter();el('lab-name').textContent=saved.name;el('lab-result').textContent='حُفظت إعدادات المعمل والمجموعات';
  }catch(error){el('lab-result').textContent=error.name==='TimeoutError'?'لم يصل تأكيد الحفظ؛ أعد تحميل المحفوظ قبل المحاولة مجددًا':error.message;}
- finally{labSaving=false;for(const node of el('lab-form').querySelectorAll('input,select,textarea,button'))node.disabled=false;drawLabDraft();}
+ finally{labSaving=false;for(const node of el('lab-form').querySelectorAll('input,select,textarea,button'))node.disabled=false;drawLabDraft();updateProfileButtons();}
 });
 
 // M178: classroom overlay requests, bounded by a browser-owned ten-second lease.
@@ -530,3 +530,59 @@ setInterval(async()=>{
  finally{pauseTouching=false;}
 },2500);
 window.addEventListener('pagehide',()=>{const id=pauseSession;pauseGeneration++;pauseOwned=false;if(id)navigator.sendBeacon('/api/pause/stop',JSON.stringify({sessionId:id}));});
+
+// M179: named organization presets. Loading is explicit and never grants device trust.
+let profileSnapshot=null,profileBusy=false,profileGeneration=0,profileSelected='';
+function selectedProfile(){return profileSnapshot?.profiles.find(p=>p.id===profileSelected);}
+function updateProfileButtons(){
+ const blocked=profileBusy||labSaving,selected=!!selectedProfile();
+ el('profile-name').disabled=blocked;el('profile-select').disabled=blocked;el('profile-refresh').disabled=blocked;
+ el('profile-create').disabled=blocked||!labDraft||!profileSnapshot||profileSnapshot.profiles.length>=10||!el('profile-name').value.trim();
+ el('profile-load').disabled=blocked||!selected;el('profile-replace').disabled=blocked||!selected||!labDraft;el('profile-delete').disabled=blocked||!selected;
+}
+function renderProfileOptions(){
+ const options=[new Option('اختر ملف معمل محفوظًا','')];for(const p of profileSnapshot?.profiles||[])options.push(new Option(p.name,p.id));
+ if(profileSelected&&!options.some(o=>o.value===profileSelected))options.push(new Option('الملف غير متاح — أعد الاختيار',profileSelected));
+ el('profile-select').replaceChildren(...options);el('profile-select').value=profileSelected;updateProfileButtons();
+}
+async function refreshLabProfiles(){
+ if(profileBusy||labSaving)return;profileBusy=true;const generation=++profileGeneration;updateProfileButtons();
+ try{const r=await fetch('/api/lab-profiles',{cache:'no-store',signal:AbortSignal.timeout(4000)});if(!r.ok)throw Error();const data=await r.json();if(generation!==profileGeneration)return;if(!Array.isArray(data.profiles)||!Number.isSafeInteger(data.revision))throw Error();profileSnapshot=data;renderProfileOptions();}
+ catch{if(generation===profileGeneration){profileSnapshot=null;renderProfileOptions();el('profile-result').textContent='تعذر قراءة ملفات المعامل؛ لم تتغير إعدادات المعمل الحالي';}}
+ finally{profileBusy=false;updateProfileButtons();}
+}
+function clearProfileRecipients(){
+ labGroupId='';messageSelection.clear();fileSelection.clear();pauseSelection.clear();
+ if(!broadcastBusy&&!broadcastSession)broadcastSelection.clear();
+ messageRecipientsKey='';fileRecipientsKey='';pauseRecipientsKey='';broadcastRecipientsKey='';
+}
+async function changeProfiles(profiles,success,selected){
+ if(profileBusy||labSaving||!profileSnapshot)return;const revision=profileSnapshot.revision;profileBusy=true;profileGeneration++;updateProfileButtons();
+ try{const r=await fetch('/api/lab-profiles',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:1,revision,profiles}),signal:AbortSignal.timeout(6000)});
+  if(!r.ok)throw Error(r.status===409?'تغيرت قائمة الملفات؛ حدّث القائمة قبل المحاولة':r.status===400?'تحقق من الأسماء والمجموعات؛ الأسماء يجب أن تكون مختلفة والحد 10 ملفات':'تعذر حفظ ملفات المعامل؛ بقي الملف السابق محفوظًا');
+  const data=await r.json();profileSnapshot=data;profileSelected=selected;renderProfileOptions();el('profile-result').textContent=success;
+ }catch(e){el('profile-result').textContent=e.name==='TimeoutError'?'لم يصل تأكيد الحفظ؛ حدّث القائمة قبل إعادة المحاولة':e.message;}
+ finally{profileBusy=false;updateProfileButtons();}
+}
+el('profile-name').addEventListener('input',updateProfileButtons);
+el('profile-select').addEventListener('change',()=>{profileSelected=el('profile-select').value;updateProfileButtons();});
+el('profile-refresh').addEventListener('click',refreshLabProfiles);
+el('profile-create').addEventListener('click',()=>{
+ if(profileBusy||labSaving||!labDraft||!profileSnapshot||profileSnapshot.profiles.length>=10)return;
+ const name=el('profile-name').value.trim();if(!name)return;const profile={id:crypto.randomUUID(),name,platform:labDraft.platform,groups:structuredClone(labDraft.groups)};
+ changeProfiles([...profileSnapshot.profiles,profile],'حُفظ ملف التنظيم الجديد؛ لم تتغير إعدادات المعمل الحالية',profile.id);
+});
+el('profile-load').addEventListener('click',()=>{
+ const p=selectedProfile();if(profileBusy||labSaving||!p||!labDraft)return;
+ if(labDirty&&!confirm('استبدال المسودة غير المحفوظة بملف «'+p.name+'»؟'))return;
+ labDraft={version:1,revision:labDraft.revision,name:p.name,platform:p.platform,groups:structuredClone(p.groups)};markLabDirty();drawLabDraft();el('profile-result').textContent='حُمّل الملف إلى المسودة فقط؛ راجعها ثم اضغط حفظ إعدادات المعمل لتطبيقها';
+});
+el('profile-replace').addEventListener('click',()=>{
+ const p=selectedProfile();if(profileBusy||labSaving||!p||!labDraft||!confirm('تحديث ملف «'+p.name+'» بالمجموعات ونوع الأجهزة من المسودة؟'))return;
+ const updated={id:p.id,name:p.name,platform:labDraft.platform,groups:structuredClone(labDraft.groups)};
+ changeProfiles(profileSnapshot.profiles.map(x=>x.id===p.id?updated:x),'حُدّث الملف المحفوظ؛ بقي اسم الملف كما هو',p.id);
+});
+el('profile-delete').addEventListener('click',()=>{
+ const p=selectedProfile();if(profileBusy||labSaving||!p||!confirm('حذف ملف التنظيم «'+p.name+'»؟ تبقى إعدادات المعمل الحالية واعتماد الأجهزة.'))return;
+ changeProfiles(profileSnapshot.profiles.filter(x=>x.id!==p.id),'حُذف الملف المحفوظ؛ لم تتغير إعدادات المعمل الحالي','');
+});

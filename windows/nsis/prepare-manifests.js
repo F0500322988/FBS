@@ -33,7 +33,7 @@ function prepare(root){
   });
   for(const directory of [...directories].sort((a,b)=>b.split('/').length-a.split('/').length))lines.push(`RMDir "$INSTDIR\\${directory.replaceAll('/','\\')}"`);
   fs.writeFileSync(path.join(root,'delete-'+role+'.nsh'),'\ufeff'+lines.join('\r\n')+'\r\n');
-  const manifest={role,version:'0.178.0-preview',files};
+  const manifest={role,version:'0.179.0-preview',files};
   fs.writeFileSync(path.join(root,'payload-'+role+'.json'),JSON.stringify(manifest,null,2)+'\n');result.push({role,files:files.length});
  }
  return result;

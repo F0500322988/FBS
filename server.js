@@ -11,6 +11,7 @@ const PORT = Number(process.env.PORT || 4177);
 const HOST = '127.0.0.1'; // loopback only: demo is not a LAN-ready security implementation
 const students = new Map();
 const labSettings=require('./lab-settings').createLabSettings(process.env.FBS_LAB_SETTINGS_FILE||path.join(path.dirname(process.env.FBS_ENROLLMENT_FILE||path.join(__dirname,'data','enrollment.json')),'lab-settings.json'));
+const labProfiles=require('./lab-profiles').createLabProfiles(process.env.FBS_LAB_PROFILES_FILE||path.join(path.dirname(process.env.FBS_LAB_SETTINGS_FILE||process.env.FBS_ENROLLMENT_FILE||path.join(__dirname,'data','enrollment.json')),'lab-profiles.json'));
 function labStatus(){try{const s=labSettings.snapshot();return {name:s.name,platform:s.platform,capacity:40,settingsAvailable:true};}catch{return {name:'المعمل — تعذر قراءة الإعدادات',capacity:40,settingsAvailable:false};}}
 const demo = process.env.FBS_DEMO === '1';
 const lan = !demo && process.env.FBS_PAIRING_KEY ? createTeacherLan({secret:process.env.FBS_PAIRING_KEY,port:Number(process.env.FBS_AGENT_PORT||4180),discoveryPort:Number(process.env.FBS_DISCOVERY_PORT||4181),discoveryEnabled:process.env.FBS_DISCOVERY_ENABLED!=='0'}) : null;
@@ -166,6 +167,13 @@ const server=http.createServer((req,res)=>{
     return send(res,404,{error:'Unknown pause operation'});
    }catch{return send(res,409,{error:'Screen pause unavailable or invalid'});}
   }).catch(()=>{if(!res.headersSent)send(res,400,{error:'Invalid screen pause request'});});
+ }
+ if(url.pathname==='/api/lab-profiles'){
+  if(!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
+  if(req.method==='GET'){try{return send(res,200,labProfiles.snapshot());}catch(e){return send(res,e.status||503,{error:e.message});}}
+  if(req.method!=='PUT')return send(res,405,{error:'Method not allowed'});
+  if(!teacherOriginAllowed(req))return send(res,403,{error:'Origin rejected'});
+  return readJson(req,1048576).then(body=>{try{return send(res,200,labProfiles.save(body));}catch(e){return send(res,e.status||503,{error:e.message});}}).catch(()=>{if(!res.headersSent)send(res,400,{error:'Invalid lab profile request'});});
  }
  if(url.pathname==='/api/lab-settings'){
   if(!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});

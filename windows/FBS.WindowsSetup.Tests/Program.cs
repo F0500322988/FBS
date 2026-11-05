@@ -94,7 +94,7 @@ finally
         Directory.CreateDirectory(Path.GetDirectoryName(reportPath)!);
         File.WriteAllText(reportPath, System.Text.Json.JsonSerializer.Serialize(new
         {
-            stage = "M178", generatedAt = DateTimeOffset.UtcNow, passed = successful,
+            stage = "M179", generatedAt = DateTimeOffset.UtcNow, passed = successful,
             passedCount = passed, guiTested = false, twoPcLanTested = false, checks, failure
         }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine("A secret-free JSON report was saved.");
