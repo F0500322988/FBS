@@ -188,6 +188,7 @@ public sealed class StudentStatusForm : Form
         var filesButton = new Button { Text = "ملفات المعلم — حفظ بموافقتك", Location = new Point(145, 435), Size = new Size(250, 38) };
         filesButton.Click += (_, _) => { using var files = new TeacherFilesForm(agent.LocalControlToken); files.ShowDialog(this); };
         Controls.Add(filesButton);
+        foreach (var button in Controls.OfType<Button>()) { if (button == stop) continue; button.FlatStyle = FlatStyle.Flat; button.BackColor = Color.FromArgb(30, 84, 158); button.ForeColor = Color.White; button.FlatAppearance.BorderSize = 0; }
         localClient.DefaultRequestHeaders.Add("X-FBS-Local-Token", agent.LocalControlToken);
         consentTimer.Tick += async (_, _) =>
         {
