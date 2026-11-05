@@ -110,6 +110,8 @@ test('real TLS assistance: explicit consent, fresh screen, private ownership, re
   await until(async()=>(await assistView()).session?.sessionId===assist.body.sessionId);
   assert.equal((await api('/api/assist/command',{sessionId:assist.body.sessionId,controlToken:owner,action:{type:'text',text:'hello'}})).status,409);
   assert.equal((await assistLocal({action:'approve',sessionId:assist.body.sessionId})).status,409,'no consent without shared screen');
+  assert.equal((await fetch(local+'/frame',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jpeg,surface:'monitor',shareNonce:'stale'})})).status,400);
+  assert.equal((await fetch(local+'/share/stopped',{method:'POST',headers:{'X-FBS-Share-Token':'invalid'}})).status,403);
   await fetch(local+'/frame',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jpeg,surface:'monitor',shareNonce:(await assistView()).shareNonce})});await until(async()=>(await assistView()).sharingFresh);
   assert.equal((await assistLocal({action:'approve',sessionId:assist.body.sessionId},local)).status,403);
   assert.equal((await assistLocal({action:'approve',sessionId:assist.body.sessionId})).status,200);
@@ -120,6 +122,8 @@ test('real TLS assistance: explicit consent, fresh screen, private ownership, re
   const command=await until(async()=>{const view=await assistView();return view.session?.commands.length?view.session.commands[0]:null;});assert.equal(command.type,'text');assert.equal(command.text,'مرحبا 42');
   assert.equal((await assistLocal({action:'receipt',sessionId:assist.body.sessionId,sequence:command.sequence,state:'submitted'})).status,200);assert.equal((await api('/api/assist')).body.lastReceipt.status,'submitted');
   assert.equal((await assistLocal({action:'stop',sessionId:assist.body.sessionId})).status,200);assert.equal((await assistView()).session,null);assert.equal((await api('/api/assist')).body.status,'student-stopped');
+  assist=await api('/api/assist/start',{deviceId:'MSG-PC'});await until(async()=>(await assistView()).session?.sessionId===assist.body.sessionId);
+  assert.equal((await fetch(local+'/share/stopped',{method:'POST',headers:{'X-FBS-Share-Token':(await assistView()).shareNonce}})).status,204);assert.equal((await assistView()).sharingFresh,false);assert.equal((await assistView()).session,null);await until(async()=>(await api('/api/assist')).body.status==='student-stopped');
   assist=await api('/api/assist/start',{deviceId:'MSG-PC'});await until(async()=>(await assistView()).session?.sessionId===assist.body.sessionId);await api('/api/enrollment/revoke',{deviceId:'MSG-PC'});await until(async()=>!(await assistView()).session);assert.equal((await api('/api/assist')).body.status,'revoked');
  }finally{
   if(child&&child.exitCode===null&&child.signalCode===null){const done=once(child,'exit');child.kill();await done;}
