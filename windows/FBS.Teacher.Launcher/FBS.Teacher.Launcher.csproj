@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWindowsForms>true</UseWindowsForms><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>FBS.Teacher</AssemblyName></PropertyGroup>  <ItemGroup>
+    <ProjectReference Include="../FBS.Student.Native/FBS.Student.Native.csproj" />
+    <Compile Include="../FBS.Admin.Provision/AdministratorDirectoryAcl.cs" Link="AdministratorDirectoryAcl.cs" />
+  </ItemGroup>
+</Project>

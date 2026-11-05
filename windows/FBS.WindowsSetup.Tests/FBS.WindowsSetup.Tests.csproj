@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../FBS.Student.Native/FBS.Student.Native.csproj" />
+    <Compile Include="../FBS.Teacher.Launcher/TeacherConnectionSettings.cs" Link="TeacherConnectionSettings.cs" />
+    <Compile Include="../FBS.Teacher.Launcher/TeacherCertificateFactory.cs" Link="TeacherCertificateFactory.cs" />
+    <Compile Include="../FBS.Student.Native/StudentPairingKeyStore.cs" Link="StudentPairingKeyStore.cs" />
+  </ItemGroup>
+</Project>

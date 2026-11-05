@@ -1,0 +1,9 @@
+{
+  "operatorApproved": false,
+  "remoteInputEnabled": false,
+  "waves": [
+    {"students": 3, "approvedToProceed": false, "installer_hash_verified": false, "install_launch_verified": false, "lan_tls_verified": false, "consent_stop_verified": false, "uninstall_rollback_verified": false},
+    {"students": 8, "approvedToProceed": false, "installer_hash_verified": false, "install_launch_verified": false, "lan_tls_verified": false, "consent_stop_verified": false, "uninstall_rollback_verified": false},
+    {"students": 10, "approvedToProceed": false, "installer_hash_verified": false, "install_launch_verified": false, "lan_tls_verified": false, "consent_stop_verified": false, "uninstall_rollback_verified": false}
+  ]
+}
