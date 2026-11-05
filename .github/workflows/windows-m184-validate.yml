@@ -1,0 +1,52 @@
+name: Validate M184 built Windows installers
+on:
+  push:
+    branches: ['build/windows-m184-validate-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.23.4'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - name: Fetch the existing hash-verified build candidate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/M184-integrated/installers"
+          gh release download m184-windows-integrated-5-1 --repo "$GITHUB_REPOSITORY" --pattern '*.exe' --pattern '*.json' --dir "$RUNNER_TEMP/M184-integrated/installers"
+      - name: Core regressions with project-specific diagnostics
+        shell: pwsh
+        run: ./deployment/integrated/test-core-windows.ps1 -ReportDirectory "$env:RUNNER_TEMP/M184-integrated/installers"
+      - name: Install both roles, run the embedded helpers and uninstall
+        shell: pwsh
+        run: |
+          $log=Join-Path $env:RUNNER_TEMP 'm184-integrated-install.log'
+          try {
+            & ./deployment/integrated/test-installed-windows.ps1 -BuildRoot "$env:RUNNER_TEMP/M184-integrated" *> $log
+            Get-Content $log
+          } catch {
+            $details=@($_.Exception.Message,$_.ScriptStackTrace)+@(Get-Content $log -Tail 40 -ErrorAction SilentlyContinue)
+            foreach ($line in $details) { Write-Output ('::error::'+$line.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')) }
+            throw
+          }
+      - name: Publish completed validation for the same installer bytes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release upload m184-windows-integrated-5-1 --repo "$GITHUB_REPOSITORY" "$RUNNER_TEMP"/M184-integrated/installers/Windows-integrated-installer-smoke.json "$RUNNER_TEMP"/M184-integrated/installers/Core-safety-results.json "$RUNNER_TEMP"/M184-integrated/installers/*-installed-setup-checks.log "$RUNNER_TEMP"/M184-integrated/installers/SHA256SUMS.txt
+          gh release edit m184-windows-integrated-5-1 --repo "$GITHUB_REPOSITORY" --title 'FBS Classroom M184 — Windows installers with integrated lab setup' --notes-file M184-START-HERE.md

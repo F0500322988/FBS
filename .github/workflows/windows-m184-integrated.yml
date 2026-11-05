@@ -61,12 +61,7 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Core Windows safety regressions
         shell: pwsh
-        run: |
-          $ErrorActionPreference='Stop'
-          foreach ($name in @('FBS.NativeGate.Tests','FBS.Setup.Tests','FBS.WindowsSetup.Tests','FBS.FileDelivery.Tests','FBS.ScreenPause.WindowsTests','FBS.Assistance.Tests','FBS.Assistance.WindowsTests','FBS.Power.Tests','FBS.Broadcast.WindowsTests','FBS.Appearance.WindowsTests')) {
-            dotnet run --project "windows/$name/$name.csproj" -c Release
-            if ($LASTEXITCODE -ne 0) { throw 'Native regression failed.' }
-          }
+        run: ./deployment/integrated/test-core-windows.ps1 -ReportDirectory "$env:RUNNER_TEMP/M184-integrated/installers"
       - name: Download exact build candidate
         shell: bash
         env:
@@ -94,5 +89,5 @@ jobs:
         run: |
           set -euo pipefail
           fbs_tag="m184-windows-integrated-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
-          gh release upload "$fbs_tag" --repo "$GITHUB_REPOSITORY" "$RUNNER_TEMP"/M184-integrated/installers/Windows-integrated-installer-smoke.json "$RUNNER_TEMP"/M184-integrated/installers/*-installed-setup-checks.log "$RUNNER_TEMP"/M184-integrated/installers/SHA256SUMS.txt
+          gh release upload "$fbs_tag" --repo "$GITHUB_REPOSITORY" "$RUNNER_TEMP"/M184-integrated/installers/Windows-integrated-installer-smoke.json "$RUNNER_TEMP"/M184-integrated/installers/Core-safety-results.json "$RUNNER_TEMP"/M184-integrated/installers/*-installed-setup-checks.log "$RUNNER_TEMP"/M184-integrated/installers/SHA256SUMS.txt
           gh release edit "$fbs_tag" --repo "$GITHUB_REPOSITORY" --title 'FBS Classroom M184 — Windows installers with integrated lab setup' --notes-file M184-START-HERE.md
