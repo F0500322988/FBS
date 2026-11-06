@@ -1,0 +1,23 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto'),{spawn,execFileSync}=require('node:child_process'),{once}=require('node:events');
+test('eight digit lab key and teacher password work through real TLS heartbeat, approval and revocation',{timeout:65000},async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'fbs-m182-lan-')),cert=path.join(dir,'cert.pem'),key=path.join(dir,'key.pem');execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout',key,'-out',cert,'-subj','/CN=localhost','-days','1'],{stdio:'ignore'});
+ const env={FBS_DEMO:'0',FBS_PAIRING_KEY:'01234567',FBS_TEACHER_PASSWORD:'07654321',FBS_TLS_CERT:cert,FBS_TLS_KEY:key,FBS_ENROLLMENT_FILE:path.join(dir,'enrollment.json'),FBS_POWER_FILE:path.join(dir,'wake.json'),FBS_AGENT_PORT:'0',FBS_DISCOVERY_ENABLED:'0'},previous=Object.fromEntries(Object.keys(env).map(k=>[k,process.env[k]]));Object.assign(process.env,env);const teacher=require('../server');let child;
+ const until=async fn=>{for(let i=0;i<120;i++){const v=await fn();if(v)return v;await new Promise(r=>setTimeout(r,100));}throw Error('Managed power state timed out');};
+ try{await teacher.lan.start();await new Promise(r=>teacher.server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+teacher.server.address().port;
+ assert.equal((await fetch(base+'/api/power')).status,401);const login=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:'٠٧٦٥٤٣٢١'})});assert.equal(login.status,200);const cookie=login.headers.get('set-cookie').split(';')[0];
+ const api=async(url,body,origin)=>{const r=await fetch(base+url,{method:body===undefined?'GET':'POST',headers:{Cookie:cookie,'Content-Type':'application/json',...(origin?{Origin:origin}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});return {status:r.status,body:await r.json()};};
+ const fingerprint=crypto.createHash('sha256').update(new crypto.X509Certificate(fs.readFileSync(cert)).raw).digest('hex'),token='de'.repeat(32);
+ child=spawn(process.execPath,['student-agent.js'],{cwd:path.resolve(__dirname,'..'),env:{...process.env,FBS_DEVICE_ID:'POWER-PC',FBS_IDENTITY_FILE:path.join(dir,'identity.json'),FBS_LOCAL_PORT:'0',FBS_LOCAL_CONTROL_TOKEN:token,FBS_POWER_UI:'1',FBS_TEACHER_HOST:'127.0.0.1',FBS_TEACHER_PORT:String(teacher.lan.server.address().port),FBS_TEACHER_FINGERPRINT:fingerprint},stdio:['ignore','pipe','pipe']});
+ const port=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Student startup timed out')),8000);child.once('error',reject);let raw='';child.stdout.on('data',c=>{raw+=c;const m=raw.match(/Optional screen share: http:\/\/127\.0\.0\.1:(\d+)/);if(m){clearTimeout(timer);resolve(m[1]);}});});const local='http://127.0.0.1:'+port,headers={'X-FBS-Local-Token':token,'Content-Type':'application/json'};
+ const view=async()=>await(await fetch(local+'/power/local',{headers})).json();const ack=async(id,state,origin)=>fetch(local+'/power/local',{method:'POST',headers:{...headers,...(origin?{Origin:origin}:{})},body:JSON.stringify({requestId:id,state})});
+ assert.equal((await fetch(local+'/status/local')).status,403);
+ assert.equal((await fetch(local+'/status/local',{headers:{...headers,Origin:local}})).status,403);
+ const status=async()=>await(await fetch(local+'/status/local',{headers})).json();await until(async()=>(await status()).connected);
+ let value=await status();assert.equal(value.deviceId,'POWER-PC');assert.equal(value.approved,false);assert.equal(typeof value.labName,'string');assert.equal(JSON.stringify(value).includes(token),false);
+ await api('/api/enrollment/approve',{deviceId:'POWER-PC'});await until(async()=>(await status()).approved);value=await status();assert.equal(value.connected,true);assert.equal(value.approved,true);
+ await api('/api/enrollment/revoke',{deviceId:'POWER-PC'});await until(async()=>!(await status()).approved);assert.equal((await status()).connected,true);
+ const stopping=teacher.lan.stop();teacher.lan.server.closeAllConnections();await stopping;await until(async()=>!(await status()).connected);assert.equal((await status()).approved,false);assert.equal((await status()).labName,null);
+
+ }finally{if(child&&child.exitCode===null&&child.signalCode===null){const done=once(child,'exit');child.kill();await done;}if(teacher.server.listening){teacher.server.closeAllConnections();await new Promise(r=>teacher.server.close(r));}if(teacher.lan.server.listening)await teacher.lan.stop();for(const[k,v]of Object.entries(previous))if(v===undefined)delete process.env[k];else process.env[k]=v;fs.rmSync(dir,{recursive:true,force:true});}
+});

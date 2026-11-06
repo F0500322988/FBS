@@ -4,7 +4,7 @@ const crypto=require('node:crypto');
 const {signPreview,createAuthenticatedPreviewVerifier}=require('./authenticated-preview-channel');
 const TEACHER_ID='fbs-teacher-lan'; // Transport role label, not a human identity assertion.
 function sessionKey(secret,deviceId,sessionId){
- if(typeof secret!=='string'||secret.length<16||typeof deviceId!=='string'||!deviceId||typeof sessionId!=='string'||!sessionId)throw Error('Invalid transport binding');
+ if(!require('./credential-policy').storedKey(secret)||typeof deviceId!=='string'||!deviceId||typeof sessionId!=='string'||!sessionId)throw Error('Invalid transport binding');
  return crypto.createHmac('sha256',secret).update(JSON.stringify(['FBS-M121-preview-v1',deviceId,sessionId])).digest();
 }
 function wrapCommands(commands,{secret,deviceId,sessionId}){

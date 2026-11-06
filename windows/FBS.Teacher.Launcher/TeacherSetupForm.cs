@@ -7,9 +7,9 @@ namespace FBS.Teacher.Launcher;
 
 internal sealed class TeacherSetupForm : Form
 {
-    private readonly TextBox pairing = new() { Width = 440, UseSystemPasswordChar = true, MaxLength = 256 };
-    private readonly TextBox password = new() { Width = 440, UseSystemPasswordChar = true, MaxLength = 256 };
-    private readonly TextBox confirmation = new() { Width = 440, UseSystemPasswordChar = true, MaxLength = 256 };
+    private readonly TextBox pairing = new() { Width = 440, UseSystemPasswordChar = true, MaxLength = 8 };
+    private readonly TextBox password = new() { Width = 440, UseSystemPasswordChar = true, MaxLength = 8 };
+    private readonly TextBox confirmation = new() { Width = 440, UseSystemPasswordChar = true, MaxLength = 8 };
     private readonly TextBox certPath = new() { Width = 440, ReadOnly = true };
     private readonly TextBox keyPath = new() { Width = 440, ReadOnly = true };
     private readonly TextBox host = new() { Width = 440, Text = System.Net.Dns.GetHostName(), MaxLength = 253 };
@@ -28,8 +28,8 @@ internal sealed class TeacherSetupForm : Form
         Controls.Add(layout);
         void Add(string label, Control field) { layout.Controls.Add(new Label { Text = label, AutoSize = true }); layout.Controls.Add(field); }
         layout.Controls.Add(new Label { Text = "الإعدادات محفوظة لحساب ويندوز الحالي فقط. لا تُرسل أسرارك عبر المحادثات.", Width = 460, Height = 50 });
-        Add("مفتاح المعمل (16 حرفًا على الأقل؛ يُضبط نفسه على الطالب)", pairing);
-        Add("كلمة مرور لوحة المعلم (12 حرفًا على الأقل)", password);
+        Add("مفتاح المعمل (8 أرقام بالضبط؛ يُضبط نفسه على الطالب)", pairing);
+        Add("كلمة مرور لوحة المعلم (8 أرقام بالضبط)", password);
         Add("تأكيد كلمة المرور", confirmation);
         Add("شهادة المعلم بصيغة PEM", certPath);
         var certButton = new Button { Text = "اختيار الشهادة", AutoSize = true };
@@ -59,6 +59,11 @@ internal sealed class TeacherSetupForm : Form
 
     private void SaveSettings()
     {
+        pairing.Text = FBS.Student.Native.CredentialPolicy.NormalizeDigits(pairing.Text);
+        password.Text = FBS.Student.Native.CredentialPolicy.NormalizeDigits(password.Text);
+        confirmation.Text = FBS.Student.Native.CredentialPolicy.NormalizeDigits(confirmation.Text);
+        if (!FBS.Student.Native.CredentialPolicy.IsPin(pairing.Text) || !FBS.Student.Native.CredentialPolicy.IsPin(password.Text))
+        { status.Text = "مفتاح المعمل وكلمة المرور يجب أن يتكونا من 8 أرقام بالضبط."; return; }
         if (password.Text != confirmation.Text) { status.Text = "تأكيد كلمة المرور غير مطابق."; return; }
         try
         {

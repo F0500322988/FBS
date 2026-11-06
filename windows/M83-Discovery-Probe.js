@@ -6,7 +6,7 @@ const crypto=require('node:crypto');
 const {signature,safeEqual}=require('../lan');
 function inspect(packet,secret,now=Date.now()){
  try{
-  if(!Buffer.isBuffer(packet)||packet.length>4096||typeof secret!=='string'||secret.length<16)return {valid:false,reason:'invalid_packet'};
+  if(!Buffer.isBuffer(packet)||packet.length>4096||!require('../credential-policy').storedKey(secret))return {valid:false,reason:'invalid_packet'};
   const outer=JSON.parse(packet.toString('utf8'));
   if(typeof outer.payload!=='string'||typeof outer.mac!=='string'||!/^[0-9a-f]{64}$/i.test(outer.mac))return {valid:false,reason:'invalid_envelope'};
   if(!safeEqual(outer.mac.toLowerCase(),signature(secret,outer.payload)))return {valid:false,reason:'invalid_signature'};
@@ -16,7 +16,7 @@ function inspect(packet,secret,now=Date.now()){
  }catch{return {valid:false,reason:'malformed_packet'};}
 }
 function listen({secret,port=4181,timeoutMs=12000,expectedFingerprint}={}){
- if(typeof secret!=='string'||secret.length<16)throw Error('FBS_PAIRING_KEY is required (16+ characters)');
+ if(!require('../credential-policy').storedKey(secret))throw Error('FBS_PAIRING_KEY is required (16+ characters)');
  if(!Number.isInteger(port)||port<1||port>65535||!Number.isInteger(timeoutMs)||timeoutMs<100||timeoutMs>120000)throw Error('invalid port or timeout');
  if(expectedFingerprint && !/^[0-9a-f]{64}$/i.test(expectedFingerprint))throw Error('invalid expected fingerprint');
  return new Promise((resolve,reject)=>{

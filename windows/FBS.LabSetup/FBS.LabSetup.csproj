@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWindowsForms>true</UseWindowsForms><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AssemblyName>FBS.LabSetup</AssemblyName><Version>0.184.0-preview</Version></PropertyGroup>
   <ItemGroup>
+    <Compile Include="../FBS.Student.Native/CredentialPolicy.cs" Link="CredentialPolicy.cs" />
     <Compile Include="../FBS.Student.Native/StudentPairingKeyStore.cs" Link="StudentPairingKeyStore.cs" />
     <Compile Include="../FBS.Student.Native/StudentTeacherConnectionSettings.cs" Link="StudentTeacherConnectionSettings.cs" />
     <Compile Include="../FBS.Teacher.Launcher/TeacherConnectionSettings.cs" Link="TeacherConnectionSettings.cs" />

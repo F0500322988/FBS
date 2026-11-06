@@ -11,7 +11,7 @@ const {pinnedRequest}=require('./pinned-https');
 const fixedTeacher=configuredTeacher();
 const localControlToken=process.env.FBS_LOCAL_CONTROL_TOKEN||'';
 const secret=process.env.FBS_PAIRING_KEY;
-if(!secret||secret.length<16){console.error('FBS_PAIRING_KEY must match the teacher key (at least 16 characters).');process.exit(1);}
+if(!require('./credential-policy').storedKey(secret)){console.error('FBS_PAIRING_KEY must match the teacher key (8 digits (or an existing legacy key)).');process.exit(1);}
 const id=(process.env.FBS_DEVICE_ID||os.hostname()).replace(/[^\w.-]/g,'_').slice(0,64);
 const port=Number(process.env.FBS_DISCOVERY_PORT||4181);
 const udp=dgram.createSocket('udp4');let teacher=fixedTeacher;

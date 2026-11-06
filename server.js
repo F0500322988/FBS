@@ -84,7 +84,7 @@ const server=http.createServer((req,res)=>{
   if(!teacherPassword)return send(res,403,{error:'Login is not configured'});
   if(req.headers.origin && req.headers.origin!==`http://${HOST}:${PORT}`)return send(res,403,{error:'Origin rejected'});
   return readJson(req).then(body=>{
-   if(!constantTimeEqual(body.password||'',teacherPassword))return send(res,401,{error:'Invalid credentials'});
+   if(!constantTimeEqual(require('./credential-policy').isPin(teacherPassword) ? require('./credential-policy').normalizeDigits(body.password||'') : (body.password||''),teacherPassword))return send(res,401,{error:'Invalid credentials'});
    const token=crypto.randomBytes(32).toString('hex');sessions.set(token,Date.now()+8*60*60*1000);
    res.setHeader('Set-Cookie',`fbs_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`);
    send(res,200,{ok:true});
@@ -244,8 +244,8 @@ const server=http.createServer((req,res)=>{
  send(res,404,{error:'Not found'});
 });
 if(require.main===module){
- if(!demo&&(!teacherPassword||teacherPassword.length<12)){console.error('Set FBS_TEACHER_PASSWORD to at least 12 characters for live mode.');process.exit(1);}
- if(!demo&&!lan){console.error('Set FBS_PAIRING_KEY (minimum 16 characters) before starting live mode. Use FBS_DEMO=1 for simulated devices.');process.exit(1);}
+ if(!demo&&(!require('./credential-policy').storedPassword(teacherPassword))){console.error('Set FBS_TEACHER_PASSWORD to 8 digits (or an existing legacy password) for live mode.');process.exit(1);}
+ if(!demo&&!lan){console.error('Set FBS_PAIRING_KEY (8 digits or an existing legacy key) before starting live mode. Use FBS_DEMO=1 for simulated devices.');process.exit(1);}
  server.listen(PORT,HOST,async()=>{console.log(`FBS Classroom: http://${HOST}:${PORT} (${demo?'demo':'live'} mode)`);if(lan)try{await lan.start();}catch(e){console.error('LAN startup failed:',e.message);process.exit(1);}});
 }
 module.exports={server,lan};

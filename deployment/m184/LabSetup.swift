@@ -10,7 +10,7 @@ struct LabProfile: Codable, Equatable {
     var fingerprint: String
     var pairingKey: String
     func validate() throws {
-        guard version == 1, pairingKey.count >= 16, pairingKey.utf16.count <= 256,
+        guard version == 1, CredentialPolicy.storedKey(pairingKey), pairingKey.utf16.count <= 256,
               !pairingKey.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty,
               !pairingKey.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else { throw ConfigurationError.invalid("Invalid lab profile/key") }
         guard teacherHost == teacherHost.trimmingCharacters(in:.whitespacesAndNewlines), fingerprint.utf16.count == 64 else { throw ConfigurationError.invalid("Invalid endpoint") }

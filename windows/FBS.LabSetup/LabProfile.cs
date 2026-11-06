@@ -10,8 +10,8 @@ internal sealed record LabProfile(int Version, string TeacherHost, int TeacherPo
     internal static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
     internal void Validate()
     {
-        if (Version != 1 || string.IsNullOrWhiteSpace(PairingKey) || System.Globalization.StringInfo.ParseCombiningCharacters(PairingKey).Length < 16 || PairingKey.Length > 256 || PairingKey.Any(char.IsControl))
-            throw new InvalidDataException("Invalid lab profile or lab key (16–256 characters required).");
+        if (Version != 1 || string.IsNullOrWhiteSpace(PairingKey) || !FBS.Student.Native.CredentialPolicy.IsStoredKey(PairingKey) || PairingKey.Length > 256 || PairingKey.Any(char.IsControl))
+            throw new InvalidDataException("Invalid lab profile or lab key (8 digits or an existing legacy key required).");
         Endpoint.Validate();
         if (TeacherHost.Equals("localhost", StringComparison.OrdinalIgnoreCase) || TeacherHost.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Select the teacher LAN address, not localhost.");

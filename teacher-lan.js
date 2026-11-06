@@ -4,7 +4,7 @@ const {localIPv4,signature,safeEqual}=require('./lan');
 const {verifyMessage}=require('./device-identity');
 const {wrapCommands}=require('./authenticated-preview-transport');
 function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,discoveryEnabled=true}={}){
- if(typeof secret!=='string'||secret.length<16)throw Error('FBS_PAIRING_KEY must be at least 16 characters');
+ if(!require('./credential-policy').storedKey(secret))throw Error('FBS_PAIRING_KEY must be 8 digits (or an existing legacy key)');
  const devices=new Map();
  const frames=new Map();
  const replay=new Map();

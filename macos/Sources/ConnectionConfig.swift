@@ -1,5 +1,19 @@
 import Foundation
 
+enum CredentialPolicy {
+    static func normalize(_ value: String) -> String {
+        String(String.UnicodeScalarView(value.unicodeScalars.map { scalar in
+            let v = scalar.value
+            if (0x660...0x669).contains(v) { return UnicodeScalar(48 + v - 0x660)! }
+            if (0x6f0...0x6f9).contains(v) { return UnicodeScalar(48 + v - 0x6f0)! }
+            return scalar
+        }))
+    }
+    static func isPin(_ value: String) -> Bool { value.range(of: "^[0-9]{8}$", options: .regularExpression) != nil && value.utf8.count == 8 }
+    static func storedKey(_ value: String) -> Bool { isPin(value) || value.count >= 16 }
+    static func storedPassword(_ value: String) -> Bool { isPin(value) || value.count >= 12 }
+}
+
 enum ClassroomRole: String, Codable { case teacher, student }
 struct ConnectionConfig: Codable {
     var role: ClassroomRole
@@ -12,8 +26,8 @@ struct ConnectionConfig: Codable {
     var deviceName: String = "MAC-" + String(UUID().uuidString.prefix(8))
     func validate() throws {
         func require(_ condition: Bool, _ message: String) throws { if !condition { throw ConfigurationError.invalid(message) } }
-        try require(pairingKey.count >= 16 && pairingKey.count <= 1024, "مفتاح المعمل يجب أن يكون بين 16 و1024 محرفًا")
-        if role == .teacher { try require(teacherPassword.count >= 12 && teacherPassword.count <= 1024, "كلمة مرور المعلم يجب أن تكون بين 12 و1024 محرفًا") }
+        try require(CredentialPolicy.storedKey(pairingKey) && pairingKey.count <= 1024, "مفتاح المعمل يجب أن يكون 8 أرقام")
+        if role == .teacher { try require(CredentialPolicy.storedPassword(teacherPassword) && teacherPassword.count <= 1024, "كلمة مرور المعلم يجب أن تكون 8 أرقام") }
         else {
             try require(deviceName.range(of: "^[A-Za-z0-9_.-]{1,64}$", options: .regularExpression) != nil, "اسم الجهاز يجب أن يستخدم أحرفًا إنجليزية وأرقامًا وشرطة فقط")
             if !discovery {

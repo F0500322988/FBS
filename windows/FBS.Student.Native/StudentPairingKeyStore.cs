@@ -16,10 +16,10 @@ internal static class StudentPairingKeyStore
         var plain = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.CurrentUser);
         try
         {
-            if (plain.Length < 32 || plain.Length > 512 || plain.Length % 2 != 0)
+            if (plain.Length < 16 || plain.Length > 512 || plain.Length % 2 != 0)
                 throw new InvalidDataException("Invalid pairing key length");
             var key = Encoding.Unicode.GetString(plain);
-            if (string.IsNullOrWhiteSpace(key)) throw new InvalidDataException("Empty pairing key");
+            if (!CredentialPolicy.IsStoredKey(key)) throw new InvalidDataException("Empty pairing key");
             return key;
         }
         finally { CryptographicOperations.ZeroMemory(plain); }
@@ -27,8 +27,8 @@ internal static class StudentPairingKeyStore
 
     internal static void SaveNew(string path, string key)
     {
-        if (string.IsNullOrWhiteSpace(key) || key.Length < 16 || key.Length > 256)
-            throw new ArgumentException("Lab key must contain 16 to 256 characters", nameof(key));
+        if (!CredentialPolicy.IsStoredKey(key) || key.Length > 256)
+            throw new ArgumentException("Lab key must contain 8 digits or be an existing legacy key", nameof(key));
         var plain = Encoding.Unicode.GetBytes(key);
         try
         {

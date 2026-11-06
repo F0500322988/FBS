@@ -24,8 +24,8 @@ import AppKit
         let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .trailing; stack.spacing = 8
         let title = NSTextField(labelWithString: "🎓 FBS Classroom — macOS / iMac"); title.font = .boldSystemFont(ofSize: 22); stack.addArrangedSubview(title)
         func field(_ label: String, _ input: NSTextField) { let text = NSTextField(labelWithString: label); text.alignment = .right; stack.addArrangedSubview(text); stack.addArrangedSubview(input); input.widthAnchor.constraint(equalToConstant: 670).isActive = true; input.font = .systemFont(ofSize: 15) }
-        field("مفتاح المعمل المشترك — 16 محرفًا على الأقل", key)
-        if role == .teacher { field("كلمة مرور لوحة المعلم — 12 محرفًا على الأقل", password) }
+        field("مفتاح المعمل المشترك — 8 أرقام بالضبط", key)
+        if role == .teacher { field("كلمة مرور لوحة المعلم — 8 أرقام بالضبط", password) }
         else {
             field("اسم الجهاز بالإنجليزية", device); stack.addArrangedSubview(discovery)
             field("عنوان المعلم IP أو اسم الجهاز", address); field("منفذ المعلم", port); field("بصمة شهادة المعلم SHA-256 — 64 رمزًا", pin)
@@ -79,7 +79,13 @@ import AppKit
     @objc private func start() {
         guard loaded, host.process == nil else { return }
         do {
-            let updated = ConnectionConfig(role: role, pairingKey: key.stringValue, teacherPassword: password.stringValue, teacherHost: address.stringValue, teacherPort: Int(port.stringValue) ?? 0, fingerprint: pin.stringValue, discovery: discovery.state == .on, deviceName: device.stringValue)
+            let updated = ConnectionConfig(role: role, pairingKey: key.stringValue == config.pairingKey ? config.pairingKey : CredentialPolicy.normalize(key.stringValue), teacherPassword: password.stringValue == config.teacherPassword ? config.teacherPassword : CredentialPolicy.normalize(password.stringValue), teacherHost: address.stringValue, teacherPort: Int(port.stringValue) ?? 0, fingerprint: pin.stringValue, discovery: discovery.state == .on, deviceName: device.stringValue)
+            if updated.pairingKey != config.pairingKey && !CredentialPolicy.isPin(updated.pairingKey) {
+                throw ConfigurationError.invalid("مفتاح المعمل يجب أن يتكون من 8 أرقام بالضبط")
+            }
+            if role == .teacher && updated.teacherPassword != config.teacherPassword && !CredentialPolicy.isPin(updated.teacherPassword) {
+                throw ConfigurationError.invalid("كلمة المرور يجب أن تتكون من 8 أرقام بالضبط")
+            }
             try updated.validate(); try PlatformServices.save(updated); config = updated
             let fingerprint = try host.start(updated)
             if let fingerprint = fingerprint { connection.stringValue = "عنوان الشبكة: \(PlatformServices.ipv4())\nالمنفذ: 4180\nبصمة المعلم: \(fingerprint)" }

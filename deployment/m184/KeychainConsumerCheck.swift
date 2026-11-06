@@ -12,7 +12,7 @@ import Darwin
             var item:CFTypeRef?
             guard SecItemCopyMatching(query as CFDictionary,&item) == errSecSuccess,let data=item as? Data else { exit(1) }
             let config=try JSONDecoder().decode(ConnectionConfig.self,from:data);try config.validate()
-            guard config.role == .student,config.teacherHost == "192.168.50.2",config.pairingKey == "fixture-only-pairing-key-184",config.fingerprint == String(repeating:"a",count:64) else { exit(1) }
+            guard config.role == .student,config.teacherHost == "192.168.50.2",config.pairingKey == "01234567",config.fingerprint == String(repeating:"a",count:64) else { exit(1) }
             print("{\"fixtureCredentialReadWithoutUI\":true}")
         } catch { exit(1) }
     }

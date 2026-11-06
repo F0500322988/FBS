@@ -6,6 +6,13 @@ using FBS.Student.Native;
 
 int passed = 0;
 void Check(bool ok, string name) { if (!ok) throw new Exception("FAIL: " + name); Console.WriteLine("PASS: " + name); passed++; }
+Check(CredentialPolicy.IsPin("01234567"), "eight digit PIN preserves leading zero");
+foreach (var value in new[] { "1234567", "123456789", "abcdefgh", "1234 678", "12345678\n", "" })
+    Check(!CredentialPolicy.IsPin(value), "reject invalid new PIN");
+Check(CredentialPolicy.NormalizeDigits("٠١٢٣٤٥٦٧") == "01234567", "normalize Arabic digits");
+Check(CredentialPolicy.NormalizeDigits("۰۱۲۳۴۵۶۷") == "01234567", "normalize Persian digits");
+Check(CredentialPolicy.IsStoredKey("01234567") && CredentialPolicy.IsStoredPassword("01234567"), "eight digits accepted by stored configuration");
+Check(CredentialPolicy.IsStoredKey("existing-legacy-key") && CredentialPolicy.IsStoredPassword("existing-legacy-password"), "legacy configuration remains readable");
 Check(AgentReadiness.IsReady(HttpStatusCode.OK, "{\"inputEnabled\":false,\"session\":null}"), "student agent empty-session readiness accepted");
 Check(AgentReadiness.IsReady(HttpStatusCode.OK, "{\"inputEnabled\":false,\"session\":{\"sessionId\":\"fixture\"}}"), "student agent active-session readiness accepted");
 foreach (var body in new[] { "{}", "[]", "broken", "{\"inputEnabled\":true,\"session\":null}", "{\"inputEnabled\":false,\"session\":\"invalid\"}", new string('x', 8193) })

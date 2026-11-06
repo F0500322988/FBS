@@ -25,7 +25,16 @@ xcrun swiftc -swift-version 5 -framework AppKit "$fbs_mac_root/macos/Sources/Stu
 python3 "$fbs_mac_root/deployment/integrated/fetch-kit.py" "$fbs_mac_work/SetupKit"
 cp "$fbs_mac_root/deployment/integrated/Import-Student-Mac.command" "$fbs_mac_work/SetupKit/Import-Student-Mac.command"
 chmod 755 "$fbs_mac_work/SetupKit/Import-Student-Mac.command"
-FBS_EXISTING_KIT_HELPER="$fbs_mac_work/SetupKit/FBS-LabSetup-Mac" bash "$fbs_mac_root/deployment/m184/build-mac.sh" "$fbs_mac_output/setup-verification"
+if [[ -n "${FBS_CURRENT_WINDOWS_HELPER:-}" ]]; then
+  bash "$fbs_mac_root/deployment/m184/build-mac.sh" "$fbs_mac_output/setup-verification"
+  cp "$fbs_mac_output/setup-verification/FBS-LabSetup-Mac" "$fbs_mac_work/SetupKit/FBS-LabSetup-Mac"
+  cp "$FBS_CURRENT_WINDOWS_HELPER" "$fbs_mac_work/SetupKit/FBS-LabSetup-Windows.exe"
+  rm "$fbs_mac_work/SetupKit/Tests/Windows-provisioning-checks.log" "$fbs_mac_work/SetupKit/Tests/Mac-provisioning-checks.log"
+  cp "$fbs_mac_root/M185-START-HERE.md" "$fbs_mac_work/SetupKit/M185-START-HERE.md"
+  cp "$fbs_mac_root/deployment/m184/README-AR.md" "$fbs_mac_work/SetupKit/README-AR.md"
+else
+  FBS_EXISTING_KIT_HELPER="$fbs_mac_work/SetupKit/FBS-LabSetup-Mac" bash "$fbs_mac_root/deployment/m184/build-mac.sh" "$fbs_mac_output/setup-verification"
+fi
 cp "$fbs_mac_output/setup-verification/Mac-provisioning-checks.log" "$fbs_mac_output/embedded-M184-provisioning-checks.log"
 for fbs_arch in arm64 x64; do
   fbs_mac_archive="node-v22.23.4-darwin-$fbs_arch.tar.gz"
@@ -50,7 +59,7 @@ for fbs_role in Teacher Student; do
   cp "$fbs_mac_work/node-v22.23.4-darwin-arm64/LICENSE" "$fbs_mac_app/Contents/Resources/Runtime/Node-LICENSE.txt"
   python3 - "$fbs_mac_app/Contents/Info.plist" "$fbs_role" "$fbs_role_lower" <<'PY'
 import plistlib,sys
-plist={'CFBundleExecutable':'FBSClassroom','CFBundleIdentifier':'com.fbsclassroom.'+sys.argv[3]+'.preview','CFBundleName':'FBS Classroom '+sys.argv[2],'CFBundlePackageType':'APPL','CFBundleShortVersionString':'0.183.0','CFBundleVersion':'0.183.184','LSMinimumSystemVersion':'13.0','NSHighResolutionCapable':True,'NSAppleEventsUsageDescription':'يستخدم التطبيق أوامر طاقة النظام من المعلم المعتمد لإدارة أجهزة المعمل.', 'NSLocalNetworkUsageDescription':'يحتاج FBS Classroom إلى الاتصال بأجهزة المعمل داخل الشبكة المحلية.','FBSRole':sys.argv[3],'NSAppTransportSecurity':{'NSAllowsLocalNetworking':True}}
+plist={'CFBundleExecutable':'FBSClassroom','CFBundleIdentifier':'com.fbsclassroom.'+sys.argv[3]+'.preview','CFBundleName':'FBS Classroom '+sys.argv[2],'CFBundlePackageType':'APPL','CFBundleShortVersionString':'0.183.0','CFBundleVersion':'0.183.185','LSMinimumSystemVersion':'13.0','NSHighResolutionCapable':True,'NSAppleEventsUsageDescription':'يستخدم التطبيق أوامر طاقة النظام من المعلم المعتمد لإدارة أجهزة المعمل.', 'NSLocalNetworkUsageDescription':'يحتاج FBS Classroom إلى الاتصال بأجهزة المعمل داخل الشبكة المحلية.','FBSRole':sys.argv[3],'NSAppTransportSecurity':{'NSAllowsLocalNetworking':True}}
 with open(sys.argv[1],'wb') as stream:plistlib.dump(plist,stream)
 PY
   chmod 755 "$fbs_mac_app/Contents/MacOS/FBSClassroom"

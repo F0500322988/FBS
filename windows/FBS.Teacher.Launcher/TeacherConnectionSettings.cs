@@ -14,9 +14,9 @@ internal sealed record TeacherConnectionSettings(int Version, string PairingKey,
 
     internal void Validate()
     {
-        if (Version != 1 || string.IsNullOrWhiteSpace(PairingKey) || PairingKey.Length < 16 ||
-            string.IsNullOrWhiteSpace(Password) || Password.Length < 12)
-            throw new InvalidDataException("مفتاح المعمل يحتاج 16 حرفًا على الأقل وكلمة المرور 12 حرفًا على الأقل.");
+        if (Version != 1 || !FBS.Student.Native.CredentialPolicy.IsStoredKey(PairingKey) ||
+            !FBS.Student.Native.CredentialPolicy.IsStoredPassword(Password))
+            throw new InvalidDataException("مفتاح المعمل وكلمة المرور يجب أن يتكونا من 8 أرقام.");
         using var certificate = X509Certificate2.CreateFromPemFile(CertificatePath, PrivateKeyPath);
         var now = DateTime.UtcNow;
         if (!certificate.HasPrivateKey || certificate.NotBefore.ToUniversalTime() > now || certificate.NotAfter.ToUniversalTime() <= now)

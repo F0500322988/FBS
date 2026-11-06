@@ -7,8 +7,8 @@ namespace FBS.Student.Native;
 
 internal sealed class StudentNetworkSetupForm : Form
 {
-    private readonly TextBox key = new() { Width = 390, UseSystemPasswordChar = true, MaxLength = 256 };
-    private readonly TextBox confirm = new() { Width = 390, UseSystemPasswordChar = true, MaxLength = 256 };
+    private readonly TextBox key = new() { Width = 390, UseSystemPasswordChar = true, MaxLength = 8 };
+    private readonly TextBox confirm = new() { Width = 390, UseSystemPasswordChar = true, MaxLength = 8 };
     private readonly Label status = new() { Width = 410, Height = 70 };
     internal static string KeyFile => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FBSClassroom", "pairing.dpapi");
@@ -24,7 +24,7 @@ internal sealed class StudentNetworkSetupForm : Form
             FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
         Controls.Add(layout);
         layout.Controls.Add(new Label { Text = "أدخل مفتاح المعمل الذي يقدمه المسؤول. الاتصال لا يمنح التحكم ولا يبدأ مشاركة الشاشة تلقائيًا.", Width = 410, Height = 60 });
-        layout.Controls.Add(new Label { Text = "مفتاح المعمل (16 حرفًا على الأقل)", AutoSize = true });
+        layout.Controls.Add(new Label { Text = "مفتاح المعمل (8 أرقام بالضبط)", AutoSize = true });
         layout.Controls.Add(key);
         layout.Controls.Add(new Label { Text = "تأكيد المفتاح", AutoSize = true });
         layout.Controls.Add(confirm);
@@ -37,9 +37,11 @@ internal sealed class StudentNetworkSetupForm : Form
 
     private void SaveKey()
     {
-        if (string.IsNullOrWhiteSpace(key.Text) || key.Text.Length < 16 || key.Text != confirm.Text)
+        key.Text = CredentialPolicy.NormalizeDigits(key.Text);
+        confirm.Text = CredentialPolicy.NormalizeDigits(confirm.Text);
+        if (!CredentialPolicy.IsPin(key.Text) || key.Text != confirm.Text)
         {
-            status.Text = "أدخل مفتاحًا من 16 حرفًا على الأقل، مع تأكيد مطابق.";
+            status.Text = "أدخل مفتاحًا من 8 أرقام بالضبط، مع تأكيد مطابق.";
             return;
         }
         try

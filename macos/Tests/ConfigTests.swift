@@ -4,6 +4,12 @@ import Foundation
         var count = 0
         func check(_ condition: @autoclosure () -> Bool) { precondition(condition()); count += 1 }
         func rejected(_ config: ConnectionConfig) { do { try config.validate(); fatalError("Invalid configuration accepted") } catch { count += 1 } }
+        check(CredentialPolicy.isPin("01234567"))
+        for value in ["1234567", "123456789", "abcdefgh", "1234 678", "12345678\n", ""] { check(!CredentialPolicy.isPin(value)) }
+        check(CredentialPolicy.normalize("٠١٢٣٤٥٦٧") == "01234567")
+        check(CredentialPolicy.normalize("۰۱۲۳۴۵۶۷") == "01234567")
+        let pinTeacher = ConnectionConfig(role: .teacher, pairingKey: "01234567", teacherPassword: "07654321")
+        try pinTeacher.validate(); count += 1
         var config = ConnectionConfig(role: .student, pairingKey: "test-only-lab-key-123", teacherHost: "teacher.local", fingerprint: String(repeating: "a", count: 64), deviceName: "MAC-01")
         try config.validate(); count += 1
         let restored = try JSONDecoder().decode(ConnectionConfig.self, from: JSONEncoder().encode(config)); check(restored.deviceName == config.deviceName)

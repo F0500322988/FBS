@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$ReleaseTag,[Parameter(Mandatory=$true)][string]$BuildRoot,[switch]$CreateVerifiedRelease)
+param([Parameter(Mandatory=$true)][string]$ReleaseTag,[Parameter(Mandatory=$true)][string]$BuildRoot,[switch]$CreateVerifiedRelease,[string]$NotesFile="M184-START-HERE.md")
 $ErrorActionPreference='Stop'
 $PSNativeCommandUseErrorActionPreference=$false
 $out=Join-Path $BuildRoot 'installers'
@@ -21,10 +21,10 @@ if ($CreateVerifiedRelease) {
 foreach ($file in $files) { if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw ('Validation asset missing: '+[IO.Path]::GetFileName($file)) } }
 if ($CreateVerifiedRelease) {
     # Publish all tested bytes and reports in one operation, respecting immutable releases.
-    $command=@('release','create',$ReleaseTag,'--repo',$env:GITHUB_REPOSITORY,'--target',$env:GITHUB_SHA,'--prerelease','--title','FBS Classroom M184 - verified Windows installers with integrated setup','--notes-file','M184-START-HERE.md')+$files
+    $command=@('release','create',$ReleaseTag,'--repo',$env:GITHUB_REPOSITORY,'--target',$env:GITHUB_SHA,'--prerelease','--title',('FBS Classroom '+$(if ($ReleaseTag.StartsWith('m185-')) {'M185'} else {'M184'})+' - verified Windows installers with integrated setup'),'--notes-file',$NotesFile)+$files
     Invoke-ReleaseCommand $command
 } else {
     # The normal build workflow keeps its candidate draft until these checks complete.
     Invoke-ReleaseCommand (@('release','upload',$ReleaseTag,'--repo',$env:GITHUB_REPOSITORY,'--clobber')+$files)
-    Invoke-ReleaseCommand @('release','edit',$ReleaseTag,'--repo',$env:GITHUB_REPOSITORY,'--draft=false','--title','FBS Classroom M184 - verified Windows installers with integrated setup','--notes-file','M184-START-HERE.md')
+    Invoke-ReleaseCommand @('release','edit',$ReleaseTag,'--repo',$env:GITHUB_REPOSITORY,'--draft=false','--title',('FBS Classroom '+$(if ($ReleaseTag.StartsWith('m185-')) {'M185'} else {'M184'})+' - verified Windows installers with integrated setup'),'--notes-file',$NotesFile)
 }

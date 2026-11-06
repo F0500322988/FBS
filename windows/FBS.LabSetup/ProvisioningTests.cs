@@ -16,7 +16,7 @@ internal static class ProvisioningTests
         void Reject(Action action, string name) { bool failed = false; try { action(); } catch { failed = true; } Check(failed, name); }
         var temp = Path.Combine(Path.GetTempPath(), "fbs-lab-setup-" + Guid.NewGuid().ToString("N")); StudentProvisioning.MakePrivateDirectory(temp);
         // Only known fixture files are removed below; never use recursive deletion.
-        var profile = new LabProfile(1, "192.168.50.2", 4180, new string('a', 64), "fixture-only-pairing-key-184"); profile.Validate();
+        var profile = new LabProfile(1, "192.168.50.2", 4180, new string('a', 64), "01234567"); profile.Validate();
         var file = Path.Combine(temp, "profile.json"); profile.WriteNew(file);
         Check(LabProfile.Read(file) == profile, "portable profile round trip");
         foreach (var host in new[] { "127.0.0.1", "127.1", "localhost", "x.localhost", "0.0.0.0", "169.254.2.3", "224.0.0.1", "255.255.255.255", "999.2.3.4", "teacher..local", "https://teacher", "teacher.local/", "teacher.local\n" })
