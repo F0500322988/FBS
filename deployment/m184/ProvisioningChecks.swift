@@ -12,7 +12,7 @@ enum ProvisioningChecks {
         let consumer=ProcessInfo.processInfo.environment["FBS_PROVISIONING_TEST_READER"] ?? CommandLine.arguments[0]
         let store=StudentKeychain(service:"com.fbsclassroom.provisioning-test."+UUID().uuidString,consumerExecutable:consumer)
         defer { SecItemDelete(store.query as CFDictionary) }
-        let profile=LabProfile(teacherHost:"192.168.50.2",fingerprint:String(repeating:"a",count:64),pairingKey:"01234567")
+        let profile=LabProfile(teacherHost:"192.168.50.2",fingerprint:String(repeating:"a",count:64),pairingKey:"012")
         let file=root.appendingPathComponent("lab-profile.json");try profile.writeNew(file)
         try check(LabProfile.read(file) == profile,"portable profile round trip")
         var attrs=stat();_ = lstat(file.path,&attrs);try check(attrs.st_mode & 0o777 == 0o600,"exported profile mode is 600")
@@ -29,7 +29,7 @@ enum ProvisioningChecks {
         // Use JSONSerialization here to guarantee a genuinely additional field regardless of encoder whitespace.
         var object=try JSONSerialization.jsonObject(with:Data(raw.utf8)) as! [String:Any];object["deviceId"]="CLONE";try JSONSerialization.data(withJSONObject:object).write(to:bad)
         try reject("identity field rejected") {_ = try LabProfile.read(bad)}
-        let duplicate="{\"version\":1,\"version\":1,\"teacherHost\":\"192.168.50.2\",\"teacherPort\":4180,\"fingerprint\":\""+profile.fingerprint+"\",\"pairingKey\":\"01234567\"}"
+        let duplicate="{\"version\":1,\"version\":1,\"teacherHost\":\"192.168.50.2\",\"teacherPort\":4180,\"fingerprint\":\""+profile.fingerprint+"\",\"pairingKey\":\"012\"}"
         try Data(duplicate.utf8).write(to:bad);try reject("duplicate fields rejected") {_ = try LabProfile.read(bad)}
         try Data(repeating:65,count:8193).write(to:bad);try reject("oversized profile rejected") {_ = try LabProfile.read(bad)}
         let linked=root.appendingPathComponent("linked.json");try FileManager.default.createSymbolicLink(at:linked,withDestinationURL:file);try reject("symlink profile rejected") {_ = try LabProfile.read(linked)}

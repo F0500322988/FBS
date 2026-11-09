@@ -36,7 +36,7 @@ if os.environ.get('FBS_BUILD_CURRENT_CORE') == '1':
   target=root/'stage'/role/'SetupKit'
   shutil.copy2(helper/'FBS.LabSetup.exe',target/'FBS-LabSetup-Windows.exe')
   shutil.copy2(mac,target/'FBS-LabSetup-Mac')
-  shutil.copy2(repo/'M185-START-HERE.md',target/'M185-START-HERE.md')
+  shutil.copy2(repo/'M186-START-HERE.md',target/'M186-START-HERE.md')
   shutil.copy2(repo/'deployment/m184/README-AR.md',target/'README-AR.md')
   # Old evidence describes the locked bootstrap helper, not the rebuilt binaries.
   shutil.rmtree(target/'Tests')

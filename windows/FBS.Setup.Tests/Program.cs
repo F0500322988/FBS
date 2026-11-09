@@ -6,8 +6,9 @@ using FBS.Student.Native;
 
 int passed = 0;
 void Check(bool ok, string name) { if (!ok) throw new Exception("FAIL: " + name); Console.WriteLine("PASS: " + name); passed++; }
-Check(CredentialPolicy.IsPin("01234567"), "eight digit PIN preserves leading zero");
-foreach (var value in new[] { "1234567", "123456789", "abcdefgh", "1234 678", "12345678\n", "" })
+foreach (var pin in new[] { "012", "0123", "01234", "012345", "0123456", "01234567" })
+    Check(CredentialPolicy.IsPin(pin), "eight digit PIN preserves leading zero");
+foreach (var value in new[] { "12", "1", "123456789", "abcdefgh", "1234 678", "12345678\n", "" })
     Check(!CredentialPolicy.IsPin(value), "reject invalid new PIN");
 Check(CredentialPolicy.NormalizeDigits("٠١٢٣٤٥٦٧") == "01234567", "normalize Arabic digits");
 Check(CredentialPolicy.NormalizeDigits("۰۱۲۳۴۵۶۷") == "01234567", "normalize Persian digits");

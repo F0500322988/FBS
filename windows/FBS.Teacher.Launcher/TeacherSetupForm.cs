@@ -28,8 +28,8 @@ internal sealed class TeacherSetupForm : Form
         Controls.Add(layout);
         void Add(string label, Control field) { layout.Controls.Add(new Label { Text = label, AutoSize = true }); layout.Controls.Add(field); }
         layout.Controls.Add(new Label { Text = "الإعدادات محفوظة لحساب ويندوز الحالي فقط. لا تُرسل أسرارك عبر المحادثات.", Width = 460, Height = 50 });
-        Add("مفتاح المعمل (8 أرقام بالضبط؛ يُضبط نفسه على الطالب)", pairing);
-        Add("كلمة مرور لوحة المعلم (8 أرقام بالضبط)", password);
+        Add("مفتاح المعمل (من 3 إلى 8 أرقام؛ يُضبط نفسه على الطالب)", pairing);
+        Add("كلمة مرور لوحة المعلم (من 3 إلى 8 أرقام)", password);
         Add("تأكيد كلمة المرور", confirmation);
         Add("شهادة المعلم بصيغة PEM", certPath);
         var certButton = new Button { Text = "اختيار الشهادة", AutoSize = true };
@@ -63,7 +63,7 @@ internal sealed class TeacherSetupForm : Form
         password.Text = FBS.Student.Native.CredentialPolicy.NormalizeDigits(password.Text);
         confirmation.Text = FBS.Student.Native.CredentialPolicy.NormalizeDigits(confirmation.Text);
         if (!FBS.Student.Native.CredentialPolicy.IsPin(pairing.Text) || !FBS.Student.Native.CredentialPolicy.IsPin(password.Text))
-        { status.Text = "مفتاح المعمل وكلمة المرور يجب أن يتكونا من 8 أرقام بالضبط."; return; }
+        { status.Text = "مفتاح المعمل وكلمة المرور يجب أن يتكونا من 3 إلى 8 أرقام."; return; }
         if (password.Text != confirmation.Text) { status.Text = "تأكيد كلمة المرور غير مطابق."; return; }
         try
         {

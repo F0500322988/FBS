@@ -9,7 +9,7 @@ enum CredentialPolicy {
             return scalar
         }))
     }
-    static func isPin(_ value: String) -> Bool { value.range(of: "^[0-9]{8}$", options: .regularExpression) != nil && value.utf8.count == 8 }
+    static func isPin(_ value: String) -> Bool { value.range(of: "^[0-9]{3,8}$", options: .regularExpression) != nil && (3...8).contains(value.utf8.count) }
     static func storedKey(_ value: String) -> Bool { isPin(value) || value.count >= 16 }
     static func storedPassword(_ value: String) -> Bool { isPin(value) || value.count >= 12 }
 }
@@ -26,8 +26,8 @@ struct ConnectionConfig: Codable {
     var deviceName: String = "MAC-" + String(UUID().uuidString.prefix(8))
     func validate() throws {
         func require(_ condition: Bool, _ message: String) throws { if !condition { throw ConfigurationError.invalid(message) } }
-        try require(CredentialPolicy.storedKey(pairingKey) && pairingKey.count <= 1024, "مفتاح المعمل يجب أن يكون 8 أرقام")
-        if role == .teacher { try require(CredentialPolicy.storedPassword(teacherPassword) && teacherPassword.count <= 1024, "كلمة مرور المعلم يجب أن تكون 8 أرقام") }
+        try require(CredentialPolicy.storedKey(pairingKey) && pairingKey.count <= 1024, "مفتاح المعمل يجب أن يكون من 3 إلى 8 أرقام")
+        if role == .teacher { try require(CredentialPolicy.storedPassword(teacherPassword) && teacherPassword.count <= 1024, "كلمة مرور المعلم يجب أن تكون من 3 إلى 8 أرقام") }
         else {
             try require(deviceName.range(of: "^[A-Za-z0-9_.-]{1,64}$", options: .regularExpression) != nil, "اسم الجهاز يجب أن يستخدم أحرفًا إنجليزية وأرقامًا وشرطة فقط")
             if !discovery {

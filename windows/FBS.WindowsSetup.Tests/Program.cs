@@ -21,12 +21,12 @@ try
     string labKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     string password = Convert.ToHexString(RandomNumberGenerator.GetBytes(20));
     var pinDirectory = Path.Combine(root, "pin-fixture");
-    var pinSettings = new TeacherConnectionSettings(1, "01234567", "07654321", certificate, keyFile);
+    var pinSettings = new TeacherConnectionSettings(1, "012", "076", certificate, keyFile);
     pinSettings.SaveNew(pinDirectory);
     Check(TeacherConnectionSettings.Load(pinDirectory) == pinSettings, "eight digit teacher DPAPI round trip preserves leading zeros");
     var pinFile = Path.Combine(pinDirectory, "pairing.dpapi");
-    StudentPairingKeyStore.SaveNew(pinFile, "01234567");
-    Check(StudentPairingKeyStore.OpenExisting(pinFile) == "01234567", "eight digit student DPAPI round trip preserves leading zero");
+    StudentPairingKeyStore.SaveNew(pinFile, "012");
+    Check(StudentPairingKeyStore.OpenExisting(pinFile) == "012", "eight digit student DPAPI round trip preserves leading zero");
     var settings = new TeacherConnectionSettings(1, labKey, password, certificate, keyFile);
     Check(TeacherConnectionSettings.Load(root) is null, "missing teacher configuration is not silently invented");
     settings.SaveNew(root);

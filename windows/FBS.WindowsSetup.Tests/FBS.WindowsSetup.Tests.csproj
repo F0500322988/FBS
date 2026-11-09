@@ -7,7 +7,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../FBS.Student.Native/CredentialPolicy.cs" Link="CredentialPolicy.cs" />
     <ProjectReference Include="../FBS.Student.Native/FBS.Student.Native.csproj" />
     <Compile Include="../FBS.Teacher.Launcher/TeacherConnectionSettings.cs" Link="TeacherConnectionSettings.cs" />
     <Compile Include="../FBS.Teacher.Launcher/TeacherCertificateFactory.cs" Link="TeacherCertificateFactory.cs" />

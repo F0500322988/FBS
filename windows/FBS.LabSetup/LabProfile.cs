@@ -11,7 +11,7 @@ internal sealed record LabProfile(int Version, string TeacherHost, int TeacherPo
     internal void Validate()
     {
         if (Version != 1 || string.IsNullOrWhiteSpace(PairingKey) || !FBS.Student.Native.CredentialPolicy.IsStoredKey(PairingKey) || PairingKey.Length > 256 || PairingKey.Any(char.IsControl))
-            throw new InvalidDataException("Invalid lab profile or lab key (8 digits or an existing legacy key required).");
+            throw new InvalidDataException("Invalid lab profile or lab key (3 to 8 digits or an existing legacy key required).");
         Endpoint.Validate();
         if (TeacherHost.Equals("localhost", StringComparison.OrdinalIgnoreCase) || TeacherHost.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Select the teacher LAN address, not localhost.");

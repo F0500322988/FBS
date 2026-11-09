@@ -244,8 +244,8 @@ const server=http.createServer((req,res)=>{
  send(res,404,{error:'Not found'});
 });
 if(require.main===module){
- if(!demo&&(!require('./credential-policy').storedPassword(teacherPassword))){console.error('Set FBS_TEACHER_PASSWORD to 8 digits (or an existing legacy password) for live mode.');process.exit(1);}
- if(!demo&&!lan){console.error('Set FBS_PAIRING_KEY (8 digits or an existing legacy key) before starting live mode. Use FBS_DEMO=1 for simulated devices.');process.exit(1);}
+ if(!demo&&(!require('./credential-policy').storedPassword(teacherPassword))){console.error('Set FBS_TEACHER_PASSWORD to 3 to 8 digits (or an existing legacy password) for live mode.');process.exit(1);}
+ if(!demo&&!lan){console.error('Set FBS_PAIRING_KEY (3 to 8 digits or an existing legacy key) before starting live mode. Use FBS_DEMO=1 for simulated devices.');process.exit(1);}
  server.listen(PORT,HOST,async()=>{console.log(`FBS Classroom: http://${HOST}:${PORT} (${demo?'demo':'live'} mode)`);if(lan)try{await lan.start();}catch(e){console.error('LAN startup failed:',e.message);process.exit(1);}});
 }
 module.exports={server,lan};

@@ -16,7 +16,7 @@ internal sealed record TeacherConnectionSettings(int Version, string PairingKey,
     {
         if (Version != 1 || !FBS.Student.Native.CredentialPolicy.IsStoredKey(PairingKey) ||
             !FBS.Student.Native.CredentialPolicy.IsStoredPassword(Password))
-            throw new InvalidDataException("مفتاح المعمل وكلمة المرور يجب أن يتكونا من 8 أرقام.");
+            throw new InvalidDataException("مفتاح المعمل وكلمة المرور يجب أن يتكونا من 3 إلى 8 أرقام.");
         using var certificate = X509Certificate2.CreateFromPemFile(CertificatePath, PrivateKeyPath);
         var now = DateTime.UtcNow;
         if (!certificate.HasPrivateKey || certificate.NotBefore.ToUniversalTime() > now || certificate.NotAfter.ToUniversalTime() <= now)

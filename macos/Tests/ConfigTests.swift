@@ -4,8 +4,8 @@ import Foundation
         var count = 0
         func check(_ condition: @autoclosure () -> Bool) { precondition(condition()); count += 1 }
         func rejected(_ config: ConnectionConfig) { do { try config.validate(); fatalError("Invalid configuration accepted") } catch { count += 1 } }
-        check(CredentialPolicy.isPin("01234567"))
-        for value in ["1234567", "123456789", "abcdefgh", "1234 678", "12345678\n", ""] { check(!CredentialPolicy.isPin(value)) }
+        for value in ["012", "0123", "01234", "012345", "0123456", "01234567"] { check(CredentialPolicy.isPin(value)) }
+        for value in ["12", "1", "123456789", "abcdefgh", "1234 678", "12345678\n", ""] { check(!CredentialPolicy.isPin(value)) }
         check(CredentialPolicy.normalize("٠١٢٣٤٥٦٧") == "01234567")
         check(CredentialPolicy.normalize("۰۱۲۳۴۵۶۷") == "01234567")
         let pinTeacher = ConnectionConfig(role: .teacher, pairingKey: "01234567", teacherPassword: "07654321")

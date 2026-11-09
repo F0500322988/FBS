@@ -24,7 +24,7 @@ internal sealed class StudentNetworkSetupForm : Form
             FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
         Controls.Add(layout);
         layout.Controls.Add(new Label { Text = "أدخل مفتاح المعمل الذي يقدمه المسؤول. الاتصال لا يمنح التحكم ولا يبدأ مشاركة الشاشة تلقائيًا.", Width = 410, Height = 60 });
-        layout.Controls.Add(new Label { Text = "مفتاح المعمل (8 أرقام بالضبط)", AutoSize = true });
+        layout.Controls.Add(new Label { Text = "مفتاح المعمل (من 3 إلى 8 أرقام)", AutoSize = true });
         layout.Controls.Add(key);
         layout.Controls.Add(new Label { Text = "تأكيد المفتاح", AutoSize = true });
         layout.Controls.Add(confirm);
@@ -41,7 +41,7 @@ internal sealed class StudentNetworkSetupForm : Form
         confirm.Text = CredentialPolicy.NormalizeDigits(confirm.Text);
         if (!CredentialPolicy.IsPin(key.Text) || key.Text != confirm.Text)
         {
-            status.Text = "أدخل مفتاحًا من 8 أرقام بالضبط، مع تأكيد مطابق.";
+            status.Text = "أدخل مفتاحًا من 3 إلى 8 أرقام، مع تأكيد مطابق.";
             return;
         }
         try

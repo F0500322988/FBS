@@ -1,6 +1,6 @@
 # Run once under the same Windows account that launches FBS Student.
 $ErrorActionPreference='Stop'
-$secret=Read-Host 'Enter the lab pairing key (exactly 8 digits)' -AsSecureString
+$secret=Read-Host 'Enter the lab pairing key (3 to 8 digits)' -AsSecureString
 $ptr=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret)
 try {
     $value=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
@@ -10,7 +10,7 @@ try {
         elseif ($n -ge 0x6f0 -and $n -le 0x6f9) { [char](48+$n-0x6f0) }
         else { $_ }
     })
-    if ($value -cnotmatch '^[0-9]{8}$') { throw 'Lab key must contain exactly 8 digits' }
+    if ($value -cnotmatch '^[0-9]{3,8}$') { throw 'Lab key must contain 3 to 8 digits' }
     $secret=ConvertTo-SecureString $value -AsPlainText -Force
     $value=$null
 }
