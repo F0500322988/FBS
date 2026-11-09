@@ -9,7 +9,7 @@ enum CredentialPolicy {
             return scalar
         }))
     }
-    static func isPin(_ value: String) -> Bool { value.range(of: "^[0-9]{3,8}$", options: .regularExpression) != nil && (3...8).contains(value.utf8.count) }
+    static func isPin(_ value: String) -> Bool { (3...8).contains(value.utf8.count) && value.utf8.allSatisfy { (48...57).contains($0) } }
     static func storedKey(_ value: String) -> Bool { isPin(value) || value.count >= 16 }
     static func storedPassword(_ value: String) -> Bool { isPin(value) || value.count >= 12 }
 }

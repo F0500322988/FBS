@@ -10,7 +10,7 @@ try {
         elseif ($n -ge 0x6f0 -and $n -le 0x6f9) { [char](48+$n-0x6f0) }
         else { $_ }
     })
-    if ($value -cnotmatch '^[0-9]{3,8}$') { throw 'Lab key must contain 3 to 8 digits' }
+    if ($value -cnotmatch '\A[0-9]{3,8}\z') { throw 'Lab key must contain 3 to 8 digits' }
     $secret=ConvertTo-SecureString $value -AsPlainText -Force
     $value=$null
 }
