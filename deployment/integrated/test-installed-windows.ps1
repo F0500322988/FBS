@@ -59,10 +59,32 @@ foreach ($role in @('Teacher','Student')) {
     $menu=Join-Path $programs "FBS Classroom $role Preview"
     $shell=New-Object -ComObject WScript.Shell
     $toolLink=Join-Path $menu 'M184 Setup Tools.lnk'
-    if (-not (Test-Path -LiteralPath $toolLink) -or $shell.CreateShortcut($toolLink).TargetPath -ne (Join-Path $target 'SetupKit')) { throw 'Setup shortcut missing or wrong.' }
     $action=Join-Path $menu $(if ($role -eq 'Teacher') {'M184 Prepare Students.lnk'} else {'M184 Import Teacher Profile.lnk'})
-    if (-not (Test-Path -LiteralPath $action)) { throw 'Setup action shortcut missing.' }
-    if ($role -eq 'Student' -and -not $shell.CreateShortcut($action).Arguments.Contains('Import-Student-Profile.ps1')) { throw 'Student profile action is not wired to the picker.' }
+    if ($role -eq 'Teacher') {
+        if (-not (Test-Path -LiteralPath $toolLink) -or $shell.CreateShortcut($toolLink).TargetPath -ne (Join-Path $target 'SetupKit')) { throw 'Teacher setup shortcut missing.' }
+        if (-not (Test-Path -LiteralPath $action)) { throw 'Teacher preparation shortcut missing.' }
+    } else {
+        if ((Test-Path -LiteralPath $toolLink) -or (Test-Path -LiteralPath $action) -or (Test-Path (Join-Path $menu 'FBS Classroom Student Preview.lnk'))) { throw 'Student console/setup shortcut unexpectedly exposed.' }
+        $startup=Get-ItemPropertyValue 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' 'FBS Classroom Student Agent'
+        if ($startup -ne ('"'+(Join-Path $target 'Student/FBS.Student.Native.exe')+'"')) { throw 'Student startup registration mismatch.' }
+        Start-Sleep -Seconds 2
+        $agents=@(Get-Process -Name FBS.Student.Native -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq (Join-Path $target 'Student/FBS.Student.Native.exe') })
+        if ($agents.Count -ne 1 -or $agents[0].MainWindowHandle -ne 0) { throw 'Agent not running in background without a console.' }
+        $profile=Join-Path $fixture 'owned-agent-profile.json'
+        @{version=1;teacherHost='192.0.2.10';teacherPort=4180;fingerprint=('a'*64);pairingKey='012'} | ConvertTo-Json | Set-Content $profile
+        & (Join-Path $target 'SetupKit/FBS-LabSetup-Windows.exe') import $profile
+        if ($LASTEXITCODE -ne 0) { throw 'Provisioning a waiting background agent failed.' }
+        Remove-Item $profile
+        $childFound=$false
+        for ($attempt=0;$attempt -lt 50;$attempt++) {
+            $children=@(Get-CimInstance Win32_Process -Filter ("ParentProcessId="+$agents[0].Id) | Where-Object { $_.Name -eq 'node.exe' })
+            if ($children.Count -eq 1) { $childFound=$true;break }
+            Start-Sleep -Milliseconds 500
+        }
+        if (-not $childFound) { throw 'Background agent did not load imported profile and start its network child.' }
+        $agents[0].Refresh()
+        if ($agents[0].HasExited -or $agents[0].MainWindowHandle -ne 0) { throw 'Provisioning exposed the student console.' }
+    }
     $marker=Join-Path $target 'preserve-user-file.txt';[IO.File]::WriteAllText($marker,'Owned fixture marker; preserve unknown files.');$markerHash=(Get-FileHash $marker).Hash
     Start-Process -FilePath (Join-Path $target 'Uninstall.exe') -ArgumentList '/S' -PassThru -Wait | Out-Null
     $deadline=[DateTime]::UtcNow.AddSeconds(45)
@@ -71,12 +93,13 @@ foreach ($role in @('Teacher','Student')) {
         if ($remaining.Count -eq 0 -and -not (Test-Path $registry) -and -not (Test-Path (Join-Path $target 'Uninstall.exe'))) { break }
         Start-Sleep -Milliseconds 250
     } while ([DateTime]::UtcNow -lt $deadline)
+    if ($role -eq 'Student' -and (Get-ItemPropertyValue 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' 'FBS Classroom Student Agent' -ErrorAction SilentlyContinue)) { throw 'Student startup registration survived uninstall.' }
     if ($remaining.Count -or (Test-Path $registry) -or (Test-Path (Join-Path $target 'Uninstall.exe'))) { throw 'Uninstall did not remove its owned payload.' }
     if ((Get-FileHash $marker).Hash -ne $markerHash -or @(Get-ChildItem $target -Recurse -File).Count -ne 1) { throw 'Unknown-file preservation failed.' }
     if (Test-Path -LiteralPath $action) { throw 'Owned setup shortcut remained after uninstall.' }
     Remove-Item -LiteralPath $marker
     [IO.Directory]::Delete($target)
-    $results+=@{officialIconVerified=$true;role=$role;installed=$true;setupBundle='M184';payloadFilesVerified=$manifest.files.Count;embeddedHelperChecks=39;embeddedHelperExecuted=$true;profilePickerParsed=$true;profilePickerGuiTested=$false;shortcutsVerified=$true;uninstalled=$true;unknownFilePreserved=$true;actualStudentAppGuiTested=$false}
+    $results+=@{studentBackgroundAgentVerified=($role -eq 'Student');startupRegisteredAndRemoved=($role -eq 'Student');officialIconVerified=$true;role=$role;installed=$true;setupBundle='M184';payloadFilesVerified=$manifest.files.Count;embeddedHelperChecks=39;embeddedHelperExecuted=$true;profilePickerParsed=$true;profilePickerGuiTested=$false;shortcutsVerified=$true;uninstalled=$true;unknownFilePreserved=$true;actualStudentAppGuiTested=$false}
 }
 [IO.Directory]::Delete($fixture)
 @{stage='M184';coreVersion='0.183.0-preview';installerExecuted=$true;isolatedRunner=$true;privateProfilesPackaged=$false;installers=$results} | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $out 'Windows-integrated-installer-smoke.json')

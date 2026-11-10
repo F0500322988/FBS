@@ -12,8 +12,9 @@ enum PlatformServices {
     static func keychain(_ role: ClassroomRole) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "com.fbsclassroom.macos.preview", kSecAttrAccount as String: role.rawValue]
     }
-    static func load(_ role: ClassroomRole) throws -> ConnectionConfig? {
+    static func load(_ role: ClassroomRole, allowInteraction: Bool = true) throws -> ConnectionConfig? {
         var query = keychain(role); query[kSecReturnData as String] = true; query[kSecMatchLimit as String] = kSecMatchLimitOne
+        if !allowInteraction { query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
         var item: CFTypeRef?; let status = SecItemCopyMatching(query as CFDictionary, &item)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess, let data = item as? Data else { throw ConfigurationError.invalid("تعذر فتح إعدادات Keychain؛ لم يتم حذفها أو استبدالها") }

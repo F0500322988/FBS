@@ -138,19 +138,32 @@ Section "Install"
   WriteRegDWORD ${RegistryRoot} "${UninstallKey}" "NoModify" 1
   WriteRegDWORD ${RegistryRoot} "${UninstallKey}" "NoRepair" 1
   CreateDirectory "$SMPROGRAMS\${AppTitle}"
-  CreateShortcut "$SMPROGRAMS\${AppTitle}\${AppTitle}.lnk" "$INSTDIR\${Role}\${AppExe}" "" "$INSTDIR\${Role}\${AppExe}"
-  CreateShortcut "$SMPROGRAMS\${AppTitle}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-  CreateShortcut "$SMPROGRAMS\${AppTitle}\M184 Setup Tools.lnk" "$INSTDIR\SetupKit"
   !if "${Role}" == "Teacher"
+  CreateShortcut "$SMPROGRAMS\${AppTitle}\${AppTitle}.lnk" "$INSTDIR\${Role}\${AppExe}" "" "$INSTDIR\${Role}\${AppExe}"
+  !endif
+  CreateShortcut "$SMPROGRAMS\${AppTitle}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+  !if "${Role}" == "Teacher"
+    CreateShortcut "$SMPROGRAMS\${AppTitle}\M184 Setup Tools.lnk" "$INSTDIR\SetupKit"
     CreateShortcut "$SMPROGRAMS\${AppTitle}\M184 Prepare Students.lnk" "$INSTDIR\SetupKit\Prepare-Teacher-Windows.cmd"
   !else
-    CreateShortcut "$SMPROGRAMS\${AppTitle}\M184 Import Teacher Profile.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -STA -ExecutionPolicy Bypass -File "$INSTDIR\SetupKit\Import-Student-Profile.ps1"'
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "FBS Classroom Student Agent" '"$INSTDIR\Student\FBS.Student.Native.exe"'
+    Exec '"$INSTDIR\Student\FBS.Student.Native.exe"'
   !endif
-  ; No automatic launch, startup registration, firewall changes or enrollment.
 SectionEnd
 
 Section "Uninstall"
   Call un.SetShellContext
+  !if "${Role}" == "Student"
+    ExecWait '"$INSTDIR\Student\FBS.Student.Native.exe" --stop-agent' $0
+    ${If} $0 != 0
+      MessageBox MB_ICONSTOP "تعذر إيقاف وكيل الطالب. راجع مسؤول المعمل قبل الإزالة."
+      Abort
+    ${EndIf}
+    ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "FBS Classroom Student Agent"
+    ${If} $0 == '"$INSTDIR\Student\FBS.Student.Native.exe"'
+      DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "FBS Classroom Student Agent"
+    ${EndIf}
+  !endif
   ; Delete only files packaged by this build. Unknown files and LocalAppData stay.
   !include "${DeleteManifest}"
   Delete "$SMPROGRAMS\${AppTitle}\${AppTitle}.lnk"

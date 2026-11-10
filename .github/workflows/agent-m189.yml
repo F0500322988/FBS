@@ -1,0 +1,150 @@
+name: M189 managed student background agent
+on:
+  push:
+    branches: ['build/m189-agent-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-kit:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build and test provisioning helper compatible with a running agent
+        shell: pwsh
+        run: |
+          dotnet publish windows/FBS.LabSetup/FBS.LabSetup.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$env:RUNNER_TEMP/agent-kit"
+          if ($LASTEXITCODE -ne 0) { throw 'Helper build failed' }
+          & "$env:RUNNER_TEMP/agent-kit/FBS.LabSetup.exe" self-test | Tee-Object "$env:RUNNER_TEMP/agent-kit/Windows-provisioning-checks.log"
+          if ($LASTEXITCODE -ne 0) { throw 'Helper tests failed' }
+          Copy-Item "$env:RUNNER_TEMP/agent-kit/FBS.LabSetup.exe" "$env:RUNNER_TEMP/agent-kit/FBS-LabSetup-Windows.exe"
+      - name: Publish tested helper for dependent packages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "m189-windows-helper-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'M189 managed agent provisioning helper' --notes-file M189-START-HERE.md "$RUNNER_TEMP/agent-kit/FBS-LabSetup-Windows.exe" "$RUNNER_TEMP/agent-kit/Windows-provisioning-checks.log"
+  macos:
+    needs: windows-kit
+    runs-on: macos-26-intel
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.23.4'
+      - name: Fetch verified compatible Windows provisioning helper
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/windows-helper"
+          gh release download "m189-windows-helper-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --pattern FBS-LabSetup-Windows.exe --dir "$RUNNER_TEMP/windows-helper"
+      - name: Verify settings fields, scrolling, buttons and ICNS; build and install both Universal apps
+        run: |
+          set +e
+          FBS_MAC_RELEASE_STAGE=M189 FBS_CURRENT_RELEASE_NOTES="$GITHUB_WORKSPACE/M189-START-HERE.md" FBS_CURRENT_WINDOWS_HELPER="$RUNNER_TEMP/windows-helper/FBS-LabSetup-Windows.exe" FBS_MAC_INSTALL_SMOKE=1 bash macos/build.sh "$RUNNER_TEMP/m189-mac" > "$RUNNER_TEMP/m189-build.log" 2>&1
+          fbs_status=$?
+          set -e
+          cat "$RUNNER_TEMP/m189-build.log"
+          if [ "$fbs_status" -ne 0 ]; then
+            python3 - "$RUNNER_TEMP/m189-build.log" <<'PYTHON'
+          import sys
+          from pathlib import Path
+          lines=Path(sys.argv[1]).read_text(errors='replace').splitlines()
+          selected=[s for s in lines if 'error:' in s or 'failed' in s.lower() or 'Precondition' in s]
+          for s in (selected or lines[-25:])[-20:]:print('::error::'+s.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PYTHON
+            exit "$fbs_status"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: M189-settings-layout-evidence
+          path: |
+            ${{ runner.temp }}/m189-mac/settings-snapshots/*.png
+            ${{ runner.temp }}/m189-mac/*.json
+            ${{ runner.temp }}/m189-build.log
+      - name: Publish checked Mac apps and setup helper for the Windows build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp "$RUNNER_TEMP/m189-mac/setup-verification/FBS-LabSetup-Mac" "$RUNNER_TEMP/m189-mac/FBS-LabSetup-Mac"
+          gh release create "m189-macos-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'M189 official FBS icon and macOS settings repair — Intel + Apple Silicon' --notes-file M189-START-HERE.md "$RUNNER_TEMP"/m189-mac/*.pkg "$RUNNER_TEMP"/m189-mac/*.dmg "$RUNNER_TEMP"/m189-mac/*.json "$RUNNER_TEMP"/m189-mac/*.log "$RUNNER_TEMP"/m189-mac/settings-snapshots/*.png "$RUNNER_TEMP/m189-mac/FBS-LabSetup-Mac" "$RUNNER_TEMP/m189-mac/SHA256SUMS.txt"
+  windows-build:
+    needs: macos
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.23.4'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - name: Shared runtime regression suite including three to eight digit TLS and login
+        run: node --test tests/*.test.js
+      - name: Download helper built from this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mac-helper"
+          gh release download "m189-macos-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --pattern FBS-LabSetup-Mac --dir "$RUNNER_TEMP/mac-helper"
+          gh release download "m189-windows-helper-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --pattern FBS-LabSetup-Windows.exe --dir "$RUNNER_TEMP/mac-helper"
+      - name: Rebuild native apps and Windows setup helper; stage current shared runtime
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y p7zip-full
+          FBS_BUILD_CURRENT_CORE=1 FBS_CURRENT_WINDOWS_HELPER="$RUNNER_TEMP/mac-helper/FBS-LabSetup-Windows.exe" FBS_CURRENT_MAC_HELPER="$RUNNER_TEMP/mac-helper/FBS-LabSetup-Mac" python3 deployment/integrated/stage-windows.py "$RUNNER_TEMP/M189-integrated"
+      - name: Build and verify both installers
+        run: |
+          FBS_RELEASE_STAGE=M189 bash windows/nsis/build-linux.sh "$RUNNER_TEMP/M189-integrated/stage" "$RUNNER_TEMP/M189-integrated/installers" > "$RUNNER_TEMP/m189-nsis.log" 2>&1 || { tail -n 80 "$RUNNER_TEMP/m189-nsis.log"; exit 1; }
+          cp "$RUNNER_TEMP"/M189-integrated/stage/payload-*.json "$RUNNER_TEMP/M189-integrated/installers/"
+          cp "$RUNNER_TEMP/M189-integrated/current-windows-helper/FBS.LabSetup.exe" "$RUNNER_TEMP/M189-integrated/installers/FBS-LabSetup-Windows.exe"
+      - name: Create draft candidate pending Windows installation checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "m189-windows-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --draft --title 'M189 Windows — awaiting installed checks' --notes-file M189-START-HERE.md "$RUNNER_TEMP"/M189-integrated/installers/*.exe "$RUNNER_TEMP"/M189-integrated/installers/*.json
+  windows-installed:
+    needs: windows-build
+    runs-on: windows-2022
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.23.4'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - name: Native Windows regression suite including three to eight digit DPAPI round trips
+        shell: pwsh
+        run: ./deployment/integrated/test-core-windows.ps1 -ReportDirectory "$env:RUNNER_TEMP/M189-integrated/installers"
+      - name: Fetch exact candidate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "m189-windows-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --pattern '*.exe' --pattern '*.json' --dir "$RUNNER_TEMP/M189-integrated/installers"
+      - name: Install both roles and execute embedded three to eight digit provisioning fixtures
+        shell: pwsh
+        run: ./deployment/integrated/test-installed-windows.ps1 -BuildRoot "$env:RUNNER_TEMP/M189-integrated"
+      - name: Publish checked installers
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./deployment/integrated/publish-windows.ps1 -ReleaseTag "m189-windows-$env:GITHUB_RUN_NUMBER-$env:GITHUB_RUN_ATTEMPT" -BuildRoot "$env:RUNNER_TEMP/M189-integrated" -NotesFile M189-START-HERE.md
+          if ($LASTEXITCODE -ne 0) { throw 'Release publish failed' }

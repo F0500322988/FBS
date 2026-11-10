@@ -36,8 +36,6 @@ internal static class Program
                 var root = registry?.GetValue("InstallLocation") as string;
                 if (root is null || registry?.GetValue("DisplayVersion") as string != "0.183.0-preview") throw new IOException("Install Student M183 for this Windows account first.");
                 var executable = Path.Combine(root, "Student", "FBS.Student.Native.exe"); FileSafety.Regular(executable, 2_000_000);
-                if (Process.GetProcessesByName("FBS.Student.Native").Any(p => p.SessionId == Process.GetCurrentProcess().SessionId))
-                    throw new IOException("Close the student application first, then run setup again.");
                 var state = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FBSClassroom");
                 var outcome = StudentProvisioning.Apply(profile, state);
                 Console.WriteLine("إعداد الطالب: " + outcome + " | المعلم: " + profile.TeacherHost + ":" + profile.TeacherPort);
@@ -49,7 +47,7 @@ internal static class Program
         catch (Exception)
         {
             // Never render exception messages containing JSON, paths supplied as profile data, or decrypted configuration.
-            Console.Error.WriteLine("تعذر إكمال الإعداد. أغلق تطبيق الطالب، وتحقق من تثبيت M183 وحساب المستخدم وإعداد المعلم وملف الحزمة. الإعدادات الموجودة لا تُستبدل تلقائيًا. راجع README-AR.md.");
+            Console.Error.WriteLine("تعذر إكمال الإعداد. تحقق من تثبيت Student Agent M189 وحساب المستخدم وإعداد المعلم وملف الحزمة. الإعدادات الموجودة لا تُستبدل تلقائيًا. راجع README-AR.md.");
             return 1;
         }
     }

@@ -143,7 +143,6 @@ struct StudentKeychain {
                 let profile=try LabProfile.read(URL(fileURLWithPath:args[1]))
                 let app=URL(fileURLWithPath:"/Applications/FBS Classroom Student.app")
                 guard let bundle=Bundle(url:app),bundle.object(forInfoDictionaryKey:"CFBundleShortVersionString") as? String == "0.183.0",bundle.bundleIdentifier == "com.fbsclassroom.student.preview" else { throw ConfigurationError.invalid("Install Student M183 first") }
-                guard NSRunningApplication.runningApplications(withBundleIdentifier:"com.fbsclassroom.student.preview").isEmpty else { throw ConfigurationError.invalid("Close student app first") }
                 let outcome=try StudentKeychain(consumerExecutable:app.appendingPathComponent("Contents/MacOS/FBSClassroom").path).apply(profile)
                 print("إعداد الطالب: \(outcome) | المعلم: \(profile.teacherHost):\(profile.teacherPort)")
                 print("اعتمد هوية الجهاز من لوحة المعلم. أذونات macOS المطلوبة تُمنح محليًا؛ لم يُمنح التحكم تلقائيًا.")
@@ -153,7 +152,7 @@ struct StudentKeychain {
         } catch {
             // No decoded JSON, lab key, teacher password or private key in terminal/log errors.
             if let safe = error as? ConfigurationError { fputs((safe.errorDescription ?? "Setup validation failed")+"\n",stderr) }
-            fputs("تعذر إكمال الإعداد. أغلق تطبيق الطالب وتحقق من تثبيت M183 وحساب المستخدم وإعداد المعلم وملف الحزمة. الإعدادات الموجودة لا تُستبدل تلقائيًا. راجع README-AR.md.\n",stderr);exit(1)
+            fputs("تعذر إكمال الإعداد. تحقق من تثبيت Student Agent M189 وحساب المستخدم وإعداد المعلم وملف الحزمة. الإعدادات الموجودة لا تُستبدل تلقائيًا. راجع README-AR.md.\n",stderr);exit(1)
         }
     }
 }

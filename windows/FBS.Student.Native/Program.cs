@@ -10,15 +10,44 @@ namespace FBS.Student.Native;
 internal static class Program
 {
     [STAThread]
-    private static void Main()
+    private static void Main(string[] args)
     {
+        if (args.Contains("--stop-agent", StringComparer.Ordinal)) { Environment.ExitCode = StudentAgentContext.RequestStop(); return; }
         ApplicationConfiguration.Initialize();
-        Application.Run(new StudentStatusForm());
+        var configure = args.Contains("--configure", StringComparer.Ordinal);
+        if (configure)
+        {
+            using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+            if (!new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
+            { MessageBox.Show("الإعداد المتقدم متاح لمسؤول المعمل. استخدم حزمة تهيئة المعلم لتجهيز حساب الطالب.", "FBS Classroom"); return; }
+            if (StudentAgentContext.RequestStop() != 0) { MessageBox.Show("تعذر إيقاف الوكيل للصيانة.", "FBS Classroom"); return; }
+            var credential = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FBSClassroom", "pairing.dpapi");
+            if (!File.Exists(credential)) { using var keySetup = new StudentNetworkSetupForm(); if (keySetup.ShowDialog() != DialogResult.OK) return; }
+            using (var connection = new StudentTeacherConnectionForm(StudentTeacherConnectionSettings.Load())) { connection.ShowDialog(); }
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Application.ExecutablePath) { UseShellExecute = true });
+        }
+        else
+        {
+            using var single = new System.Threading.Mutex(true, @"Local\FBS.Classroom.StudentAgent", out var created);
+            if (!created) return;
+            using (var agent = new StudentAgentContext()) { Application.Run(agent); }
+            single.ReleaseMutex();
+        }
     }
 }
 
 public sealed class StudentStatusForm : Form
 {
+    private readonly bool backgroundAgent;
+    private int lastUnreadMessages;
+    private TeacherMessagesForm? agentMessages;
+    private TeacherFilesForm? agentFiles;
+    private readonly HashSet<string> notifiedFiles = new();
+    protected override void SetVisibleCore(bool value)
+    {
+        base.SetVisibleCore(backgroundAgent ? false : value);
+    }
+
     private readonly Label status = new();
     private readonly Button stop = new();
     private readonly Button messagesButton = new();
@@ -122,8 +151,11 @@ public sealed class StudentStatusForm : Form
         dashboard=new StudentDashboard(()=>{advancedWindow.Show(this);advancedWindow.Activate();},()=>StopControl(),()=>messagesButton.PerformClick(),()=>filesButton.PerformClick());Controls.Add(dashboard);ClientSize=new Size(340,422);MinimumSize=new Size(340,450);FormClosed+=(_,_)=>advancedWindow.Dispose();
     }
     private PowerController? power;
-    public StudentStatusForm()
+    public StudentStatusForm() : this(false) { }
+    public StudentStatusForm(bool backgroundAgent)
     {
+        this.backgroundAgent = backgroundAgent;
+        ShowInTaskbar = !backgroundAgent;
         Icon = FBS.Student.Native.ApplicationBranding.LoadIcon();
         FormClosed += (_, _) => enrollmentStartup.Close();
         Text = "FBS Classroom — جهاز الطالب";
@@ -225,11 +257,12 @@ public sealed class StudentStatusForm : Form
             }
             await CheckPending();
             await RefreshDashboard();
+            if (backgroundAgent) await BackgroundNotificationsAsync();
         };
         consentTimer.Start();
         tray.Icon = Icon;
         tray.Text = "FBS Classroom — التحكم يحتاج موافقتك";
-        tray.Visible = true;
+        tray.Visible = !backgroundAgent;
         var connectionMenu = new ContextMenuStrip();
         var editConnection = new ToolStripMenuItem("إعداد عنوان المعلم وبصمة الشهادة");
         editConnection.Click += (_, _) =>
@@ -252,13 +285,51 @@ public sealed class StudentStatusForm : Form
         tray.ContextMenuStrip = connectionMenu;
         FormClosed += (_, _) => connectionMenu.Dispose();
         tray.DoubleClick += (_, _) => { Show(); WindowState = FormWindowState.Normal; Activate(); };
-        Shown += async (_, _) =>
+        if (!backgroundAgent) Shown += async (_, _) => await StartNetworkAgentAsync();
+        FormClosed += (_, _) => { nativeInput.Disable(); inputGate.Deactivate(); agentMessages?.Dispose(); agentFiles?.Dispose(); screenPause?.Dispose(); assistance?.Dispose(); power?.Dispose(); localConsent.ResetActive(); consentTimer.Stop(); consentTimer.Dispose(); localClient.Dispose(); agent.Dispose(); tray.Dispose(); sessionBanner.Dispose(); };
+    }
+
+    internal async System.Threading.Tasks.Task StartNetworkAgentAsync()
+    {
+        if (IsDisposed) return;
+        await agent.StartAsync(allowSetup: !backgroundAgent);
+        if (!IsDisposed && agent.Running)
         {
-            status.Text = "جارٍ تشغيل وكيل الطالب — التحكم يحتاج موافقتك؛ يمكنك إيقافه في أي وقت";
-            await agent.StartAsync();
-            if (!IsDisposed) { status.Text = agent.Status + " — التحكم يحتاج موافقتك؛ يمكنك إيقافه في أي وقت"; screenPause ??= new ScreenPauseController(agent.LocalControlToken); assistance ??= new AssistanceController(agent.LocalControlToken); power ??= new PowerController(agent.LocalControlToken); stop.Enabled = true; }
-        };
-        FormClosed += (_, _) => { nativeInput.Disable(); inputGate.Deactivate(); screenPause?.Dispose(); assistance?.Dispose(); power?.Dispose(); localConsent.ResetActive(); consentTimer.Stop(); consentTimer.Dispose(); localClient.Dispose(); agent.Dispose(); tray.Dispose(); sessionBanner.Dispose(); };
+            status.Text = agent.Status;
+            screenPause ??= new ScreenPauseController(agent.LocalControlToken);
+            assistance ??= new AssistanceController(agent.LocalControlToken);
+            power ??= new PowerController(agent.LocalControlToken);
+            stop.Enabled = true;
+        }
+    }
+
+    private bool notifying;
+    private async Task BackgroundNotificationsAsync()
+    {
+        if (notifying || IsDisposed) return;
+        notifying = true;
+        try
+        {
+            var raw = await localClient.GetStringAsync("http://127.0.0.1:4190/control/local");
+            using var state = JsonDocument.Parse(raw);
+            if (IsDisposed) return;
+            if (state.RootElement.TryGetProperty("unreadMessages", out var unread))
+            {
+                var count = unread.GetInt32();
+                if (count > lastUnreadMessages && (agentMessages is null || agentMessages.IsDisposed))
+                { agentMessages = new TeacherMessagesForm(agent.LocalControlToken); agentMessages.Show(); }
+                lastUnreadMessages = count;
+            }
+            var files = await localClient.GetStringAsync("http://127.0.0.1:4190/files/local");
+            using var offers = JsonDocument.Parse(files);
+            if (IsDisposed) return;
+            var ids = offers.RootElement.GetProperty("files").EnumerateArray().Select(x => x.GetProperty("id").GetString()!).ToHashSet();
+            if (ids.Except(notifiedFiles).Any() && (agentFiles is null || agentFiles.IsDisposed))
+            { agentFiles = new TeacherFilesForm(agent.LocalControlToken); agentFiles.Show(); }
+            notifiedFiles.Clear(); notifiedFiles.UnionWith(ids);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or ObjectDisposedException or JsonException) { }
+        finally { notifying = false; }
     }
 
     private bool polling;

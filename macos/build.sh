@@ -33,6 +33,7 @@ xcrun swiftc -swift-version 5 -framework CryptoKit "$fbs_mac_root/macos/Sources/
 xcrun swiftc -swift-version 5 -framework AppKit "$fbs_mac_root/macos/Sources/StudentDashboard.swift" "$fbs_mac_root/macos/Tests/DashboardTests.swift" -o "$fbs_mac_work/dashboard-tests"
 "$fbs_mac_work/dashboard-tests" "$fbs_mac_output/Student-M183-macOS.png" > "$fbs_mac_output/dashboard-render.json"
 python3 "$fbs_mac_root/deployment/integrated/fetch-kit.py" "$fbs_mac_work/SetupKit"
+for fbs_template in Prepare-Teacher-Windows.cmd Prepare-Teacher-Mac.command Setup-Student-Windows.cmd Setup-Student-Mac.command README-AR.md; do cp "$fbs_mac_root/deployment/m184/$fbs_template" "$fbs_mac_work/SetupKit/$fbs_template";done
 cp "$fbs_mac_root/deployment/integrated/Import-Student-Mac.command" "$fbs_mac_work/SetupKit/Import-Student-Mac.command"
 chmod 755 "$fbs_mac_work/SetupKit/Import-Student-Mac.command"
 if [[ -n "${FBS_CURRENT_WINDOWS_HELPER:-}" ]]; then
@@ -62,6 +63,7 @@ for fbs_role in Teacher Student; do
   cp "$fbs_mac_root"/*.js "$fbs_mac_app/Contents/Resources/Runtime/"
   cp "$fbs_mac_root"/public/* "$fbs_mac_app/Contents/Resources/Runtime/public/"
   ditto "$fbs_mac_work/SetupKit" "$fbs_mac_app/Contents/Resources/SetupKit"
+  if [[ "$fbs_role" == Student ]]; then cp "$fbs_mac_root/macos/agent/Uninstall-Student-Agent.command" "$fbs_mac_app/Contents/Resources/SetupKit/";fi
   for fbs_arch in arm64 x64; do
     cp "$fbs_mac_work/node-v22.23.4-darwin-$fbs_arch/bin/node" "$fbs_mac_app/Contents/Resources/Runtime/node-$fbs_arch"
     chmod 755 "$fbs_mac_app/Contents/Resources/Runtime/node-$fbs_arch"
@@ -70,7 +72,7 @@ for fbs_role in Teacher Student; do
   cp "$fbs_mac_work/node-v22.23.4-darwin-arm64/LICENSE" "$fbs_mac_app/Contents/Resources/Runtime/Node-LICENSE.txt"
   python3 - "$fbs_mac_app/Contents/Info.plist" "$fbs_role" "$fbs_role_lower" <<'PY'
 import plistlib,sys
-plist={'CFBundleIconFile':'FBSClassroom.icns','CFBundleExecutable':'FBSClassroom','CFBundleIdentifier':'com.fbsclassroom.'+sys.argv[3]+'.preview','CFBundleName':'FBS Classroom '+sys.argv[2],'CFBundlePackageType':'APPL','CFBundleShortVersionString':'0.183.0','CFBundleVersion':'0.183.188','LSMinimumSystemVersion':'13.0','NSHighResolutionCapable':True,'NSAppleEventsUsageDescription':'يستخدم التطبيق أوامر طاقة النظام من المعلم المعتمد لإدارة أجهزة المعمل.', 'NSLocalNetworkUsageDescription':'يحتاج FBS Classroom إلى الاتصال بأجهزة المعمل داخل الشبكة المحلية.','FBSRole':sys.argv[3],'NSAppTransportSecurity':{'NSAllowsLocalNetworking':True}}
+plist={'LSUIElement':sys.argv[3]=='student','CFBundleIconFile':'FBSClassroom.icns','CFBundleExecutable':'FBSClassroom','CFBundleIdentifier':'com.fbsclassroom.'+sys.argv[3]+'.preview','CFBundleName':'FBS Classroom '+sys.argv[2],'CFBundlePackageType':'APPL','CFBundleShortVersionString':'0.183.0','CFBundleVersion':'0.183.189','LSMinimumSystemVersion':'13.0','NSHighResolutionCapable':True,'NSAppleEventsUsageDescription':'يستخدم التطبيق أوامر طاقة النظام من المعلم المعتمد لإدارة أجهزة المعمل.', 'NSLocalNetworkUsageDescription':'يحتاج FBS Classroom إلى الاتصال بأجهزة المعمل داخل الشبكة المحلية.','FBSRole':sys.argv[3],'NSAppTransportSecurity':{'NSAllowsLocalNetworking':True}}
 with open(sys.argv[1],'wb') as stream:plistlib.dump(plist,stream)
 PY
   chmod 755 "$fbs_mac_app/Contents/MacOS/FBSClassroom"
@@ -78,10 +80,31 @@ PY
   codesign --verify --deep --strict --verbose=2 "$fbs_mac_app"
   "$fbs_mac_app/Contents/MacOS/FBSClassroom" --self-check > "$fbs_mac_output/$fbs_role-bundle-self-check.json"
   fbs_mac_pkg="$fbs_mac_output/FBS-Classroom-$fbs_role-$fbs_mac_release_stage-macOS-Universal-PREVIEW.pkg"
-  pkgbuild --root "$fbs_mac_work/$fbs_role-root" --identifier "com.fbsclassroom.$fbs_role_lower.preview" --version 0.188.0 --install-location /Applications --ownership recommended "$fbs_mac_pkg"
+  if [[ "$fbs_role" == Student ]]; then
+    python3 - "$fbs_mac_app/Contents/MacOS/FBSClassroom" "$fbs_mac_output/Student-background-agent-smoke.json" <<'AGENT_TEST'
+import subprocess,sys,pathlib,json
+p=subprocess.run([sys.argv[1],'--agent-smoke-check'],capture_output=True,text=True,timeout=20)
+if p.returncode:raise SystemExit(p.stderr or p.stdout)
+report=json.loads(p.stdout.strip().splitlines()[-1]);assert report['backgroundAgentSmokePassed'] and report['visibleWindows']==0
+pathlib.Path(sys.argv[2]).write_text(json.dumps(report,indent=2)+'\n')
+AGENT_TEST
+    mkdir -p "$fbs_mac_work/Student-package-root/Applications" "$fbs_mac_work/Student-package-root/Library/LaunchAgents"
+    ditto "$fbs_mac_app" "$fbs_mac_work/Student-package-root/Applications/FBS Classroom Student.app"
+    cp "$fbs_mac_root/macos/agent/com.fbsclassroom.student.agent.plist" "$fbs_mac_work/Student-package-root/Library/LaunchAgents/"
+    chmod 644 "$fbs_mac_work/Student-package-root/Library/LaunchAgents/com.fbsclassroom.student.agent.plist"
+    plutil -lint "$fbs_mac_work/Student-package-root/Library/LaunchAgents/com.fbsclassroom.student.agent.plist"
+    pkgbuild --root "$fbs_mac_work/Student-package-root" --identifier "com.fbsclassroom.student.preview" --version 0.189.0 --install-location / --ownership recommended "$fbs_mac_pkg"
+  else
+    pkgbuild --root "$fbs_mac_work/$fbs_role-root" --identifier "com.fbsclassroom.$fbs_role_lower.preview" --version 0.189.0 --install-location /Applications --ownership recommended "$fbs_mac_pkg"
+  fi
   mkdir -p "$fbs_mac_work/$fbs_role-dmg"
-  ditto "$fbs_mac_app" "$fbs_mac_work/$fbs_role-dmg/FBS Classroom $fbs_role.app"
-  ln -s /Applications "$fbs_mac_work/$fbs_role-dmg/Applications"
+  if [[ "$fbs_role" == Student ]]; then
+    cp "$fbs_mac_pkg" "$fbs_mac_work/$fbs_role-dmg/"
+    cp "${FBS_CURRENT_RELEASE_NOTES:-$fbs_mac_root/M186-START-HERE.md}" "$fbs_mac_work/$fbs_role-dmg/START-HERE-AR.md"
+  else
+    ditto "$fbs_mac_app" "$fbs_mac_work/$fbs_role-dmg/FBS Classroom $fbs_role.app"
+    ln -s /Applications "$fbs_mac_work/$fbs_role-dmg/Applications"
+  fi
   fbs_mac_dmg="$fbs_mac_output/FBS-Classroom-$fbs_role-$fbs_mac_release_stage-macOS-Universal-PREVIEW.dmg"
   # Reserve filesystem overhead explicitly; automatic sizing can under-allocate the image.
   fbs_mac_dmg_kib="$(du -sk "$fbs_mac_work/$fbs_role-dmg" | awk '{print $1}')"
@@ -106,7 +129,16 @@ PY
   fbs_mac_mount="$fbs_mac_work/$fbs_role-mounted"
   mkdir -p "$fbs_mac_mount"
   hdiutil attach "$fbs_mac_dmg" -readonly -nobrowse -mountpoint "$fbs_mac_mount"
-  python3 "$fbs_mac_root/macos/verify-payload.py" "$fbs_mac_app" "$fbs_mac_mount" "$fbs_mac_output/$fbs_role-dmg-payload-verification.json"
+  if [[ "$fbs_role" == Student ]]; then
+    python3 - "$fbs_mac_pkg" "$fbs_mac_mount/$(basename "$fbs_mac_pkg")" "$fbs_mac_output/Student-dmg-payload-verification.json" <<'DMG_AGENT'
+import hashlib,json,pathlib,sys
+original,mounted,report=map(pathlib.Path,sys.argv[1:]);digest=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert digest(original)==digest(mounted)
+report.write_text(json.dumps({'studentAgentPackageSha256Verified':True,'pkgSha256':digest(original),'includesManagedLoginItem':True})+'\n')
+DMG_AGENT
+  else
+    python3 "$fbs_mac_root/macos/verify-payload.py" "$fbs_mac_app" "$fbs_mac_mount" "$fbs_mac_output/$fbs_role-dmg-payload-verification.json"
+  fi
   hdiutil detach "$fbs_mac_mount"
   if [[ "${FBS_MAC_INSTALL_SMOKE:-0}" == 1 ]]; then
     # Enabled only on the disposable hosted runner; never overwrite a preexisting app.
@@ -114,14 +146,37 @@ PY
     if [[ -e "$fbs_mac_installed" || -L "$fbs_mac_installed" ]]; then echo 'Smoke-test target already exists; refusing install or removal.' >&2; exit 2; fi
     sudo -n /usr/sbin/installer -pkg "$fbs_mac_pkg" -target /
     python3 "$fbs_mac_root/macos/verify-payload.py" "$fbs_mac_app" /Applications "$fbs_mac_output/$fbs_role-installed-payload-verification.json"
+    if [[ "$fbs_role" == Student ]]; then
+      python3 - "$fbs_mac_output/Student-launch-agent-check.json" <<'LAUNCH_AGENT'
+import subprocess,os,re,time,json,sys,pathlib
+job='gui/'+str(os.getuid())+'/com.fbsclassroom.student.agent'
+old=subprocess.run(['launchctl','print',job],capture_output=True)
+assert old.returncode != 0,'Refusing to replace an existing managed login agent'
+subprocess.run(['launchctl','bootstrap','gui/'+str(os.getuid()),'/Library/LaunchAgents/com.fbsclassroom.student.agent.plist'],check=True,timeout=15)
+try:
+ for attempt in range(40):
+  state=subprocess.run(['launchctl','print',job],capture_output=True,text=True,timeout=5)
+  if re.search(r'pid = [1-9][0-9]*',state.stdout):break
+  time.sleep(0.25)
+ else:raise RuntimeError('Managed login agent did not start')
+ pathlib.Path(sys.argv[1]).write_text(json.dumps({'launchAgentBootstrapped':True,'runningPidObserved':True,'actualUserLoginTested':False})+'\n')
+finally:
+ subprocess.run(['launchctl','bootout',job],check=True,timeout=15)
+ time.sleep(1)
+LAUNCH_AGENT
+    fi
     codesign --verify --deep --strict "$fbs_mac_installed"
     "$fbs_mac_installed/Contents/MacOS/FBSClassroom" --self-check > "$fbs_mac_output/$fbs_role-installed-self-check.json"
     sudo -n python3 "$fbs_mac_root/macos/remove-smoke-app.py" "$fbs_mac_installed" "$fbs_mac_output/$fbs_role-installed-payload-verification.json"
+    if [[ "$fbs_role" == Student ]]; then
+      cmp "$fbs_mac_root/macos/agent/com.fbsclassroom.student.agent.plist" /Library/LaunchAgents/com.fbsclassroom.student.agent.plist
+      sudo -n rm /Library/LaunchAgents/com.fbsclassroom.student.agent.plist
+    fi
     sudo -n pkgutil --forget "com.fbsclassroom.$fbs_role_lower.preview"
   fi
 done
 (cd "$fbs_mac_output" && shasum -a 256 ./*.pkg ./*.dmg > SHA256SUMS.txt)
 python3 - "$fbs_mac_output" <<'PY'
 import json,pathlib,sys,platform,os
-out=pathlib.Path(sys.argv[1]);report={'stage':os.environ.get('FBS_MAC_RELEASE_STAGE','M184'),'platform':'macOS','coreApplicationVersion':'0.183.0','integratedSetupKit':'M184','embeddedKitTested':True,'officialApplicationIconIncluded':True,'minimumOS':'13.0','architectures':['arm64','x86_64'],'nativeBuildPassed':True,'selfCheckHostArchitecture':platform.machine(),'otherArchitectureExecuted':False,'pkgPayloadVerified':True,'dmgVerified':True,'bundleAdHocSigned':True,'developerIDSigned':False,'notarized':False,'guiTested':False,'nativeSettingsLayoutTested':True,'settingsLightAndDarkTested':True,'keychainTested':False,'screenRecordingTested':False,'twoMacLanTested':False,'installedOnMacTested':os.environ.get('FBS_MAC_INSTALL_SMOKE')=='1','uninstallOnIsolatedRunnerTested':os.environ.get('FBS_MAC_INSTALL_SMOKE')=='1','files':[p.name for p in sorted(out.glob('*')) if p.suffix in ('.pkg','.dmg')]};(out/'macOS-validation.json').write_text(json.dumps(report,indent=2)+'\n')
+out=pathlib.Path(sys.argv[1]);report={'stage':os.environ.get('FBS_MAC_RELEASE_STAGE','M184'),'platform':'macOS','coreApplicationVersion':'0.183.0','integratedSetupKit':'M184','embeddedKitTested':True,'officialApplicationIconIncluded':True,'studentBackgroundAgent':True,'studentManagedLoginItemIncluded':True,'minimumOS':'13.0','architectures':['arm64','x86_64'],'nativeBuildPassed':True,'selfCheckHostArchitecture':platform.machine(),'otherArchitectureExecuted':False,'pkgPayloadVerified':True,'dmgVerified':True,'bundleAdHocSigned':True,'developerIDSigned':False,'notarized':False,'guiTested':False,'nativeSettingsLayoutTested':True,'settingsLightAndDarkTested':True,'keychainTested':False,'screenRecordingTested':False,'twoMacLanTested':False,'installedOnMacTested':os.environ.get('FBS_MAC_INSTALL_SMOKE')=='1','uninstallOnIsolatedRunnerTested':os.environ.get('FBS_MAC_INSTALL_SMOKE')=='1','files':[p.name for p in sorted(out.glob('*')) if p.suffix in ('.pkg','.dmg')]};(out/'macOS-validation.json').write_text(json.dumps(report,indent=2)+'\n')
 PY

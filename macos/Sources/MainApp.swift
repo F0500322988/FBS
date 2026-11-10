@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 
 @MainActor final class ClassroomApp: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?, dashboard: StudentDashboardView?
@@ -22,7 +23,11 @@ import AppKit
     private var power: PowerController?
     private var assistance: AssistanceController?
     private var screenPause: ScreenPauseController?
+    private var lastUnreadMessages = 0
+    private var notifiedFiles = Set<String>()
     private var loaded = false, pollTimer: Timer?
+    private var backgroundStudent: Bool { role == .student && !CommandLine.arguments.contains("--configure") }
+    private var agentSmokeCheck: Bool { CommandLine.arguments.contains("--agent-smoke-check") }
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let value = Bundle.main.object(forInfoDictionaryKey: "FBSRole") as? String, let parsed = ClassroomRole(rawValue: value) else { showError(ConfigurationError.invalid("دور التطبيق غير صالح")); NSApp.terminate(nil); return }; role = parsed
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: role == .teacher ? 580 : 820), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
@@ -44,14 +49,38 @@ import AppKit
             guard let self = self else { return }
             if self.role == .teacher { NSWorkspace.shared.open(url) } else { self.screenPause?.stop(); self.screenPause = ScreenPauseController(self.host); self.assistance?.stop(); self.assistance = AssistanceController(self.host); self.messageButton.isEnabled = true; self.viewButton.isEnabled = true; self.shareButton.isEnabled = true; self.filesButton.isEnabled = true; self.broadcast?.stop(); self.broadcast = BroadcastWindow(self.host); self.power?.stop(); self.power = PowerController(self.host) }
         }
-        do { config = try PlatformServices.load(role) ?? ConnectionConfig(role: role, pairingKey: ""); loaded = true; key.stringValue = config.pairingKey; password.stringValue = config.teacherPassword; address.stringValue = config.teacherHost; port.stringValue = String(config.teacherPort); pin.stringValue = config.fingerprint; device.stringValue = config.deviceName; discovery.state = config.discovery ? .on : .off }
+        do { config = (agentSmokeCheck ? nil : (try PlatformServices.load(role, allowInteraction: !backgroundStudent))) ?? ConnectionConfig(role: role, pairingKey: ""); loaded = true; key.stringValue = config.pairingKey; password.stringValue = config.teacherPassword; address.stringValue = config.teacherHost; port.stringValue = String(config.teacherPort); pin.stringValue = config.fingerprint; device.stringValue = config.deviceName; discovery.state = config.discovery ? .on : .off }
         catch { startButton.isEnabled = false; showError(error) }
         pollTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in
-            guard let self = self, self.role == .student, self.host.process?.isRunning == true else { return }
+            guard let self = self, self.role == .student else { return }
+            if self.backgroundStudent && self.host.process == nil {
+                if !self.agentSmokeCheck, let saved = try? PlatformServices.load(.student, allowInteraction: false) {
+                    self.config = saved; self.loaded = true
+                    self.key.stringValue = saved.pairingKey; self.device.stringValue = saved.deviceName
+                    self.address.stringValue = saved.teacherHost; self.port.stringValue = String(saved.teacherPort)
+                    self.pin.stringValue = saved.fingerprint; self.discovery.state = saved.discovery ? .on : .off
+                    self.start()
+                }
+                return
+            }
+            guard self.host.process?.isRunning == true else { return }
             self.host.get("/status/local") { [weak self] result in guard let self = self else { return };if case .success(let value) = result { self.dashboard?.update(value) } else { self.dashboard?.disconnect() } }
+            if self.backgroundStudent {
+                self.host.get("/files/local") { [weak self] result in
+                    guard let self = self, case .success(let json) = result else { return }
+                    let ids = Set((json["files"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String })
+                    if !ids.subtracting(self.notifiedFiles).isEmpty { self.openFiles() }
+                    self.notifiedFiles = ids
+                }
+            }
             self.host.get("/control/local") { [weak self] result in
                 guard let self = self else { return }
+                if self.backgroundStudent, case .success(let json) = result {
+                    let unread = json["unreadMessages"] as? Int ?? 0
+                    if unread > self.lastUnreadMessages { self.openMessages() }
+                    self.lastUnreadMessages = unread
+                }
                 if case .success(let json) = result { self.messageButton.title = "رسائل المعلم (\(json["unreadMessages"] as? Int ?? 0) غير مقروءة)"; self.viewButton.title = json["broadcastAvailable"] as? Bool == true ? "● شاشة المعلم متاحة — فتح العرض" : "عرض شاشة المعلم" }
             }
             }
@@ -72,9 +101,21 @@ import AppKit
             preferences.contentView = form
             settingsWindow = preferences
             window.setContentSize(NSSize(width:340,height:422)); let dashboard = StudentDashboardView(frame:NSRect(x:0,y:0,width:340,height:422));self.dashboard = dashboard;dashboard.settingsAction = { [weak self] in self?.settingsWindow?.center();self?.settingsWindow?.makeKeyAndOrderFront(nil) };dashboard.stopAction = { [weak self] in self?.assistance?.stopCurrent() };window.contentView = dashboard
-            if loaded { do { try config.validate();start() } catch { DispatchQueue.main.async { preferences.center();preferences.makeKeyAndOrderFront(nil) } } }
+            if loaded && backgroundStudent { do { try config.validate();start() } catch { /* Wait for administrator provisioning without a student dialog. */ } }
+            if !backgroundStudent { preferences.center(); preferences.makeKeyAndOrderFront(nil) }
         }
-        window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+        if !backgroundStudent && role == .teacher { window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true) }
+        if agentSmokeCheck {
+            Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self = self else { exit(2) }
+                    let visible = NSApp.windows.filter { $0.isVisible }.count
+                    guard self.backgroundStudent, visible == 0, NSApp.activationPolicy() == .accessory else { fputs("Agent unexpectedly displayed a window or Dock application\n", stderr); exit(2) }
+                    print("{\"backgroundAgentSmokePassed\":true,\"visibleWindows\":0,\"unconfiguredAgentWaitsWithoutSetup\":true,\"keychainAccessed\":false}")
+                    NSApp.terminate(nil)
+                }
+            }
+        }
     }
     @objc private func openSetupTools() {
         guard let folder = Bundle.main.resourceURL?.appendingPathComponent("SetupKit"), FileManager.default.fileExists(atPath:folder.path) else { showError(ConfigurationError.invalid("أدوات التهيئة غير موجودة في هذه الحزمة"));return }
@@ -91,6 +132,7 @@ import AppKit
                 throw ConfigurationError.invalid("كلمة المرور يجب أن تتكون من 3 إلى 8 أرقام")
             }
             try updated.validate(); try PlatformServices.save(updated); config = updated
+            if role == .student && !backgroundStudent { connection.stringValue = "حُفظ الإعداد. أعد تشغيل وكيل الطالب لتطبيق تغييرات الاتصال."; return }
             let fingerprint = try host.start(updated)
             if let fingerprint = fingerprint { connection.stringValue = "عنوان الشبكة: \(PlatformServices.ipv4())\nالمنفذ: 4180\nبصمة المعلم: \(fingerprint)" }
             else { connection.stringValue = "اسم الجهاز: \(updated.deviceName) — مشاركة الشاشة والرسائل تتطلب اعتماد المعلم" }
@@ -102,8 +144,8 @@ import AppKit
     @objc private func openMessages() { if messages == nil || messages!.isClosed { messages = MessagesWindow(host) }; messages?.show() }
     @objc private func openBroadcast() { if broadcast == nil || broadcast!.isClosed { broadcast = BroadcastWindow(host) }; broadcast?.show() }
     @objc private func openShare() { if let url = host.baseURL { NSWorkspace.shared.open(url) } }
-    private func showError(_ error: Error) { let alert = NSAlert(); alert.messageText = "FBS Classroom"; alert.informativeText = error.localizedDescription; alert.runModal() }
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    private func showError(_ error: Error) { if backgroundStudent { fputs("FBS Classroom agent: configuration or runtime unavailable; contact lab administrator.\n", stderr); return }; let alert = NSAlert(); alert.messageText = "FBS Classroom"; alert.informativeText = error.localizedDescription; alert.runModal() }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { !backgroundStudent }
     func applicationWillTerminate(_ notification: Notification) { pollTimer?.invalidate(); power?.stop(); broadcast?.stop(); screenPause?.stop(); assistance?.stop(); host.stop() }
 }
 @main @MainActor struct Main {
@@ -111,7 +153,15 @@ import AppKit
         if CommandLine.arguments.contains("--self-check") {
             do { try RuntimeHost.selfCheck(); exit(0) } catch { fputs("Bundle self-check failed: \(error.localizedDescription)\n", stderr); exit(1) }
         }
-        let app = NSApplication.shared; app.setActivationPolicy(.regular); let delegate = ClassroomApp(); app.delegate = delegate
-        withExtendedLifetime(delegate) { app.run() }
+        let app = NSApplication.shared
+        let student = Bundle.main.object(forInfoDictionaryKey: "FBSRole") as? String == "student"
+        let configure = CommandLine.arguments.contains("--configure")
+        if student && configure && !ManagedSettingsAuthorization.authorize() { exit(1) }
+        app.setActivationPolicy(student && !configure ? .accessory : .regular)
+        let delegate = ClassroomApp(); app.delegate = delegate
+        signal(SIGTERM, SIG_IGN)
+        let termination = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        termination.setEventHandler { app.terminate(nil) }; termination.resume()
+        withExtendedLifetime((delegate, termination)) { app.run() }
     }
 }

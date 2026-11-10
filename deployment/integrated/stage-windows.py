@@ -16,6 +16,7 @@ for role,digest in [('Teacher','58df89a0b0ec9bdca1551c57fdd8552706ab66d7e04c1127
   destination=root/'stage'/role/relative;destination.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,destination)
 kit=root/'public-kit';subprocess.run([sys.executable,str(repo/'deployment/integrated/fetch-kit.py'),str(kit)],check=True)
 shutil.copy2(repo/'deployment/integrated/Import-Student-Profile.ps1',kit/'Import-Student-Profile.ps1')
+for template in ['Prepare-Teacher-Windows.cmd','Prepare-Teacher-Mac.command','Setup-Student-Windows.cmd','Setup-Student-Mac.command','README-AR.md']:shutil.copy2(repo/'deployment/m184'/template,kit/template)
 for role in ['Teacher','Student']:shutil.copytree(kit,root/'stage'/role/'SetupKit')
 print('M183 pinned core and M184 pinned tools staged for both roles; no private profile.')
 
@@ -30,13 +31,16 @@ if os.environ.get('FBS_BUILD_CURRENT_CORE') == '1':
   shutil.rmtree(runtime/'public');shutil.copytree(repo/'public',runtime/'public')
   if role == 'Student':shutil.copy2(repo/'windows/Configure-Student.ps1',root/'stage'/role/'Configure-Student.ps1')
  helper=root/'current-windows-helper'
- subprocess.run(['dotnet','publish',str(repo/'windows/FBS.LabSetup/FBS.LabSetup.csproj'),'-c','Release','-r','win-x64','--self-contained','true','-p:EnableWindowsTargeting=true','-p:PublishSingleFile=true','-p:IncludeNativeLibrariesForSelfExtract=true','-o',str(helper)],check=True)
+ if os.environ.get('FBS_CURRENT_WINDOWS_HELPER'):
+  helper.mkdir();shutil.copy2(os.environ['FBS_CURRENT_WINDOWS_HELPER'],helper/'FBS.LabSetup.exe')
+ else:
+  subprocess.run(['dotnet','publish',str(repo/'windows/FBS.LabSetup/FBS.LabSetup.csproj'),'-c','Release','-r','win-x64','--self-contained','true','-p:EnableWindowsTargeting=true','-p:PublishSingleFile=true','-p:IncludeNativeLibrariesForSelfExtract=true','-o',str(helper)],check=True)
  mac=Path(os.environ['FBS_CURRENT_MAC_HELPER']);assert mac.is_file()
  for role in ['Teacher','Student']:
   target=root/'stage'/role/'SetupKit'
   shutil.copy2(helper/'FBS.LabSetup.exe',target/'FBS-LabSetup-Windows.exe')
   shutil.copy2(mac,target/'FBS-LabSetup-Mac')
-  shutil.copy2(repo/'M188-START-HERE.md',target/'M188-START-HERE.md')
+  shutil.copy2(repo/'M189-START-HERE.md',target/'M189-START-HERE.md')
   shutil.copy2(repo/'deployment/m184/README-AR.md',target/'README-AR.md')
   # Old evidence describes the locked bootstrap helper, not the rebuilt binaries.
   shutil.rmtree(target/'Tests')

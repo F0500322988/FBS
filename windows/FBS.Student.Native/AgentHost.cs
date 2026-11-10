@@ -21,7 +21,7 @@ internal sealed class AgentHost : IDisposable
     public bool Running => !disposed && process is { HasExited: false };
     public string Status { get; private set; } = "لم يتم تشغيل وكيل الشبكة";
 
-    public async Task StartAsync()
+    public async Task StartAsync(bool allowSetup = true)
     {
         if (disposed || starting || Running) return;
         starting = true;
@@ -35,6 +35,7 @@ internal sealed class AgentHost : IDisposable
         if (!File.Exists(node) || !File.Exists(agent)) { Status = "ملفات وكيل الشبكة غير موجودة"; return; }
         if (!File.Exists(credential))
         {
+            if (!allowSetup) { Status = "انتظار استيراد حزمة المعلم بواسطة مسؤول المعمل"; return; }
             using var setup = new StudentNetworkSetupForm();
             if (setup.ShowDialog() != DialogResult.OK) { Status = "لم يكتمل إعداد مفتاح المعمل"; return; }
         }
@@ -42,6 +43,7 @@ internal sealed class AgentHost : IDisposable
         var connection = StudentTeacherConnectionSettings.Load();
         if (connection is null)
         {
+            if (!allowSetup) { Status = "انتظار تهيئة عنوان المعلم بواسطة مسؤول المعمل"; return; }
             using var setup = new StudentTeacherConnectionForm();
             if (setup.ShowDialog() != DialogResult.OK) { Status = "لم يكتمل اختيار اتصال المعلم"; return; }
             connection = setup.Settings ?? throw new InvalidDataException("Missing teacher connection settings");
