@@ -13,7 +13,10 @@ fbs_mac_release_stage="${FBS_MAC_RELEASE_STAGE:-M184}"
 fbs_mac_sdk="$(xcrun --sdk macosx --show-sdk-path)"
 iconutil --convert iconset "$fbs_mac_root/assets/branding/FBS-Classroom.icns" --output "$fbs_mac_work/official-icon.iconset"
 xcrun swiftc -swift-version 5 -framework AppKit "$fbs_mac_root/macos/Sources/ConnectionConfig.swift" "$fbs_mac_root/macos/Sources/ConnectionSettingsForm.swift" "$fbs_mac_root/macos/Sources/StudentDashboard.swift" "$fbs_mac_root/macos/Tests/SettingsLayoutTests.swift" -o "$fbs_mac_work/settings-layout-tests"
-"$fbs_mac_work/settings-layout-tests" "$fbs_mac_output/settings-snapshots" | tee "$fbs_mac_output/settings-layout-tests.json"
+python3 - "$fbs_mac_work/settings-layout-tests" "$fbs_mac_output/settings-snapshots" <<'UI_TEST' | tee "$fbs_mac_output/settings-layout-tests.json"
+import subprocess,sys
+subprocess.run(sys.argv[1:],check=True,timeout=90)
+UI_TEST
 
 for fbs_arch in arm64 x86_64; do
   xcrun swiftc -swift-version 5 -O -target "$fbs_arch-apple-macosx13.0" -sdk "$fbs_mac_sdk" \

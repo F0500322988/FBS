@@ -31,9 +31,11 @@ private final class SettingsDocumentView: NSView {
         autohidesScrollers = true
         scrollerStyle = .overlay
         documentView = document
+        document.translatesAutoresizingMaskIntoConstraints = false
         stack.orientation = .vertical
         stack.alignment = .trailing
         stack.spacing = 8
+        stack.translatesAutoresizingMaskIntoConstraints = false
         document.addSubview(stack)
         let title = NSTextField(labelWithString: "🎓 FBS Classroom — macOS / iMac")
         title.font = .boldSystemFont(ofSize: 22)
@@ -74,20 +76,16 @@ private final class SettingsDocumentView: NSView {
             stack.addArrangedSubview(label)
             label.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
-    }
-    override func layout() {
-        super.layout()
-        // The clip view manages document coordinates. Size its document explicitly
-        // instead of leaving its origin/height underdetermined by Auto Layout.
-        let width = max(1, contentView.bounds.width)
-        let stackWidth = max(1, width - 50)
-        stack.setFrameSize(NSSize(width: stackWidth, height: max(1, stack.frame.height)))
-        stack.layoutSubtreeIfNeeded()
-        let height = max(1, stack.fittingSize.height)
-        let frame = NSRect(x: 25, y: 20, width: stackWidth, height: height)
-        if stack.frame != frame { stack.frame = frame }
-        let size = NSSize(width: width, height: max(contentView.bounds.height, height + 40))
-        if document.frame.size != size { document.setFrameSize(size) }
+        NSLayoutConstraint.activate([
+            document.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            document.topAnchor.constraint(equalTo: contentView.topAnchor),
+            document.widthAnchor.constraint(equalTo: contentView.widthAnchor),
+            document.heightAnchor.constraint(greaterThanOrEqualTo: contentView.heightAnchor),
+            stack.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 25),
+            stack.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -25),
+            stack.topAnchor.constraint(equalTo: document.topAnchor, constant: 20),
+            stack.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -20)
+        ])
     }
     required init?(coder: NSCoder) { nil }
 }

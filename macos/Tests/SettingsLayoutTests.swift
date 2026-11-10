@@ -7,7 +7,7 @@ import AppKit
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         var count = 0
         func check(_ condition: @autoclosure () -> Bool, _ name: String) {
-            precondition(condition(), name); count += 1
+            precondition(condition(), name); count += 1; fputs("PASS: " + name + "\n", stderr)
         }
         for theme in [NSAppearance.Name.aqua, .darkAqua] {
             app.appearance = NSAppearance(named: theme)
