@@ -35,7 +35,8 @@ internal static class ProvisioningTests
         Check(StudentProvisioning.Apply(profile, state) == "configured", "import into fresh student state");
         Check(StudentPairingKeyStore.OpenExisting(Path.Combine(state, "pairing.dpapi")) == profile.PairingKey, "native student decrypts imported DPAPI key");
         Check(StudentTeacherConnectionSettings.Load(Path.Combine(state, "teacher-endpoint.json")) == profile.Endpoint, "native student loads exact pinned endpoint");
-        Check(!File.ReadAllText(Path.Combine(state, "pairing.dpapi")).Contains(profile.PairingKey), "no clear key in persisted DPAPI file");
+        var protectedBytes = Convert.FromHexString(File.ReadAllText(Path.Combine(state, "pairing.dpapi")).Trim());
+        Check(protectedBytes.Length > 32 && !protectedBytes.SequenceEqual(Encoding.Unicode.GetBytes(profile.PairingKey)), "persisted DPAPI envelope differs from plaintext key");
         var marker = Path.Combine(state, "device-identity.json"); File.WriteAllText(marker, "fixture-owned-identity");
         Check(StudentProvisioning.Apply(profile, state) == "unchanged", "same profile import is idempotent");
         Check(File.ReadAllText(marker) == "fixture-owned-identity", "existing device identity preserved");

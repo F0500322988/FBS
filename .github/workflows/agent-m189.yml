@@ -151,7 +151,16 @@ jobs:
         run: gh release download "m189-windows-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --pattern '*.exe' --pattern '*.json' --dir "$RUNNER_TEMP/M189-integrated/installers"
       - name: Install both roles and execute embedded three to eight digit provisioning fixtures
         shell: pwsh
-        run: ./deployment/integrated/test-installed-windows.ps1 -BuildRoot "$env:RUNNER_TEMP/M189-integrated"
+        run: |
+          $log=Join-Path $env:RUNNER_TEMP 'm189-installed-agent.log'
+          try {
+            & ./deployment/integrated/test-installed-windows.ps1 -BuildRoot "$env:RUNNER_TEMP/M189-integrated" *> $log
+            Get-Content $log
+          } catch {
+            $details=@($_.Exception.Message,$_.ScriptStackTrace)+@(Get-Content $log -Tail 30 -ErrorAction SilentlyContinue)
+            foreach ($line in $details) { Write-Output ('::error::'+$line.ToString().Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')) }
+            throw
+          }
       - name: Publish checked installers
         shell: pwsh
         env:

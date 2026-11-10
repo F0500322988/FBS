@@ -54,8 +54,12 @@ foreach ($role in @('Teacher','Student')) {
     if ((& $node --version) -ne 'v22.23.4') { throw 'Wrong bundled Node version.' }
     foreach ($name in @('server.js','student-agent.js','classroom-assistance.js','classroom-power.js')) { & $node --check (Join-Path $target "Runtime/$name"); if ($LASTEXITCODE -ne 0) { throw 'Installed runtime syntax failed.' } }
     $log=Join-Path $out "$role-installed-setup-checks.log"
-    & (Join-Path $target 'SetupKit/FBS-LabSetup-Windows.exe') self-test | Tee-Object $log
-    if ($LASTEXITCODE -ne 0) { throw 'Installed M184 helper tests failed.' }
+    $PSNativeCommandUseErrorActionPreference=$false
+    $ErrorActionPreference='Continue'
+    & (Join-Path $target 'SetupKit/FBS-LabSetup-Windows.exe') self-test 2>&1 | Tee-Object $log
+    $helperExitCode=$LASTEXITCODE
+    $ErrorActionPreference='Stop'
+    if ($helperExitCode -ne 0) { throw ('Installed helper tests failed: '+((Get-Content $log -Tail 12) -join ' | ')) }
     $tokens=$null;$parseErrors=$null
     [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $target 'SetupKit/Import-Student-Profile.ps1'),[ref]$tokens,[ref]$parseErrors) | Out-Null
     if ($parseErrors.Count) { throw 'Installed profile picker script did not parse.' }
