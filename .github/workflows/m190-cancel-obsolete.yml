@@ -1,0 +1,17 @@
+name: Cancel superseded M190 build attempts
+on:
+  push:
+    branches: ['ops/m190-cancel-obsolete']
+permissions:
+  actions: write
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Free runners used by superseded desktop candidates
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run cancel 42804179894 --repo "$GITHUB_REPOSITORY" || true
+          gh run cancel 42804807245 --repo "$GITHUB_REPOSITORY" || true
