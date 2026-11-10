@@ -15,6 +15,7 @@ internal sealed class StudentNetworkSetupForm : Form
 
     internal StudentNetworkSetupForm()
     {
+        Icon = FBS.Student.Native.ApplicationBranding.LoadIcon();
         Text = "FBS Classroom — إعداد اتصال الطالب";
         RightToLeft = RightToLeft.Yes;
         RightToLeftLayout = true;

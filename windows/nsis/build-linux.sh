@@ -28,10 +28,11 @@ for fbs_role in Teacher Student; do
   "${fbs_docker[@]}" run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
     --user "$(id -u):$(id -g)" \
     --mount "type=bind,src=$fbs_builder_root,dst=/builder,readonly" \
+    --mount "type=bind,src=$fbs_builder_root/../../assets/branding,dst=/branding,readonly" \
     --mount "type=bind,src=$fbs_stage_root,dst=/stage,readonly" \
     --mount "type=bind,src=$fbs_output_root,dst=/out" \
     fbs-nsis-tools:local makensis -V3 -DStageRoot=/stage -DOutputRoot=/out \
-    "-DRole=$fbs_role" "-DReleaseStage=$fbs_release_stage" "-DDeleteManifest=/stage/delete-$fbs_role.nsh" /builder/Installer.nsi
+    "-DAppIcon=/branding/FBS-Classroom.ico" "-DRole=$fbs_role" "-DReleaseStage=$fbs_release_stage" "-DDeleteManifest=/stage/delete-$fbs_role.nsh" /builder/Installer.nsi
 done
 for fbs_role in Teacher Student; do
   "${fbs_docker[@]}" run --rm --network none --cap-drop ALL --security-opt no-new-privileges \

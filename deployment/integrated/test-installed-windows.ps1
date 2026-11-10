@@ -6,6 +6,20 @@ $verification=Get-Content (Join-Path $out 'installer-verification.json') -Raw | 
 $fixture=Join-Path $env:TEMP ('FBS-M184-integrated-'+[Guid]::NewGuid().ToString('N'))
 if (Test-Path $fixture) { throw 'Fixture already exists.' }
 New-Item -ItemType Directory -Path $fixture | Out-Null
+Add-Type -AssemblyName System.Drawing
+function Test-OfficialIcon([string]$Executable) {
+    $actual=[System.Drawing.Icon]::ExtractAssociatedIcon($Executable)
+    if ($null -eq $actual) { throw 'Executable icon is missing.' }
+    $expected=[System.Drawing.Icon]::new((Join-Path $PWD 'assets/branding/FBS-Classroom.ico'),$actual.Size)
+    $actualBitmap=$actual.ToBitmap();$expectedBitmap=$expected.ToBitmap()
+    try {
+        for ($y=0;$y -lt $actualBitmap.Height;$y++) {
+            for ($x=0;$x -lt $actualBitmap.Width;$x++) {
+                if ($actualBitmap.GetPixel($x,$y).ToArgb() -ne $expectedBitmap.GetPixel($x,$y).ToArgb()) { throw 'Executable icon differs from the official FBS logo.' }
+            }
+        }
+    } finally { $actualBitmap.Dispose();$expectedBitmap.Dispose();$actual.Dispose();$expected.Dispose() }
+}
 $results=@()
 foreach ($role in @('Teacher','Student')) {
     $registry=if ($role -eq 'Teacher') {'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\FBSClassroom.Teacher.Preview'} else {'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\FBSClassroom.Student.Preview'}
@@ -15,8 +29,11 @@ foreach ($role in @('Teacher','Student')) {
     $entry=$verification.installers | Where-Object role -eq $role
     $exe=Join-Path $out $entry.file
     if ((Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.sha256) { throw 'Installer hash mismatch.' }
+    Test-OfficialIcon $exe
     $installed=Start-Process -FilePath $exe -ArgumentList @('/S',"/D=$target") -PassThru -Wait
     if ($installed.ExitCode -ne 0) { throw 'Installer execution failed.' }
+    $application=if ($role -eq 'Teacher') {'Teacher/FBS.Teacher.exe'} else {'Student/FBS.Student.Native.exe'}
+    Test-OfficialIcon (Join-Path $target $application)
     $manifest=Get-Content (Join-Path $out "payload-$role.json") -Raw | ConvertFrom-Json
     if ($manifest.setupBundle -ne 'M184' -or $manifest.version -ne '0.183.0-preview') { throw 'Wrong integrated manifest.' }
     foreach ($file in $manifest.files) {
@@ -59,7 +76,7 @@ foreach ($role in @('Teacher','Student')) {
     if (Test-Path -LiteralPath $action) { throw 'Owned setup shortcut remained after uninstall.' }
     Remove-Item -LiteralPath $marker
     [IO.Directory]::Delete($target)
-    $results+=@{role=$role;installed=$true;setupBundle='M184';payloadFilesVerified=$manifest.files.Count;embeddedHelperChecks=39;embeddedHelperExecuted=$true;profilePickerParsed=$true;profilePickerGuiTested=$false;shortcutsVerified=$true;uninstalled=$true;unknownFilePreserved=$true;actualStudentAppGuiTested=$false}
+    $results+=@{officialIconVerified=$true;role=$role;installed=$true;setupBundle='M184';payloadFilesVerified=$manifest.files.Count;embeddedHelperChecks=39;embeddedHelperExecuted=$true;profilePickerParsed=$true;profilePickerGuiTested=$false;shortcutsVerified=$true;uninstalled=$true;unknownFilePreserved=$true;actualStudentAppGuiTested=$false}
 }
 [IO.Directory]::Delete($fixture)
 @{stage='M184';coreVersion='0.183.0-preview';installerExecuted=$true;isolatedRunner=$true;privateProfilesPackaged=$false;installers=$results} | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $out 'Windows-integrated-installer-smoke.json')

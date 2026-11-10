@@ -16,6 +16,7 @@ internal sealed class TeacherAdminAuditForm : Form
     private readonly Label status = new() { AutoSize = true, MaximumSize = new System.Drawing.Size(470, 0), Text = "لم يبدأ الفحص" };
     internal TeacherAdminAuditForm()
     {
+        Icon = FBS.Student.Native.ApplicationBranding.LoadIcon();
         Text = "FBS Classroom - فحص إدارة أجهزة المعمل";
         Width = 560; Height = 310; StartPosition = FormStartPosition.CenterScreen;
         RightToLeft = RightToLeft.Yes; RightToLeftLayout = true;

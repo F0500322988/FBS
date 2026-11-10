@@ -18,6 +18,7 @@ internal sealed class TeacherSetupForm : Form
 
     internal TeacherSetupForm()
     {
+        Icon = FBS.Student.Native.ApplicationBranding.LoadIcon();
         Text = "FBS Classroom — إعداد المعلم لأول مرة";
         RightToLeft = RightToLeft.Yes;
         RightToLeftLayout = true;

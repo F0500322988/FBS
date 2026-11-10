@@ -21,10 +21,10 @@ if ($CreateVerifiedRelease) {
 foreach ($file in $files) { if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw ('Validation asset missing: '+[IO.Path]::GetFileName($file)) } }
 if ($CreateVerifiedRelease) {
     # Publish all tested bytes and reports in one operation, respecting immutable releases.
-    $command=@('release','create',$ReleaseTag,'--repo',$env:GITHUB_REPOSITORY,'--target',$env:GITHUB_SHA,'--prerelease','--title',('FBS Classroom '+$(if ($ReleaseTag.StartsWith('m186-')) {'M186'} elseif ($ReleaseTag.StartsWith('m185-')) {'M185'} else {'M184'})+' - verified Windows installers with integrated setup'),'--notes-file',$NotesFile)+$files
+    $command=@('release','create',$ReleaseTag,'--repo',$env:GITHUB_REPOSITORY,'--target',$env:GITHUB_SHA,'--prerelease','--title',('FBS Classroom '+$(if ($ReleaseTag.StartsWith('m188-')) {'M188'} elseif ($ReleaseTag.StartsWith('m186-')) {'M186'} elseif ($ReleaseTag.StartsWith('m185-')) {'M185'} else {'M184'})+' - verified Windows installers with integrated setup'),'--notes-file',$NotesFile)+$files
     Invoke-ReleaseCommand $command
 } else {
     # The normal build workflow keeps its candidate draft until these checks complete.
     Invoke-ReleaseCommand (@('release','upload',$ReleaseTag,'--repo',$env:GITHUB_REPOSITORY,'--clobber')+$files)
-    Invoke-ReleaseCommand @('release','edit',$ReleaseTag,'--repo',$env:GITHUB_REPOSITORY,'--draft=false','--title',('FBS Classroom '+$(if ($ReleaseTag.StartsWith('m186-')) {'M186'} elseif ($ReleaseTag.StartsWith('m185-')) {'M185'} else {'M184'})+' - verified Windows installers with integrated setup'),'--notes-file',$NotesFile)
+    Invoke-ReleaseCommand @('release','edit',$ReleaseTag,'--repo',$env:GITHUB_REPOSITORY,'--draft=false','--title',('FBS Classroom '+$(if ($ReleaseTag.StartsWith('m188-')) {'M188'} elseif ($ReleaseTag.StartsWith('m186-')) {'M186'} elseif ($ReleaseTag.StartsWith('m185-')) {'M185'} else {'M184'})+' - verified Windows installers with integrated setup'),'--notes-file',$NotesFile)
 }

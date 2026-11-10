@@ -124,6 +124,7 @@ public sealed class StudentStatusForm : Form
     private PowerController? power;
     public StudentStatusForm()
     {
+        Icon = FBS.Student.Native.ApplicationBranding.LoadIcon();
         FormClosed += (_, _) => enrollmentStartup.Close();
         Text = "FBS Classroom — جهاز الطالب";
         RightToLeft = RightToLeft.Yes;
@@ -226,7 +227,7 @@ public sealed class StudentStatusForm : Form
             await RefreshDashboard();
         };
         consentTimer.Start();
-        tray.Icon = SystemIcons.Information;
+        tray.Icon = Icon;
         tray.Text = "FBS Classroom — التحكم يحتاج موافقتك";
         tray.Visible = true;
         var connectionMenu = new ContextMenuStrip();

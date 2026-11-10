@@ -53,6 +53,10 @@ VIAddVersionKey "FileDescription" "FBS Classroom ${Role} installer"
 VIAddVersionKey "FileVersion" "0.183.184.0"
 VIAddVersionKey "LegalCopyright" "FBS Classroom contributors"
 BrandingText "FBS Classroom - M184 Integrated Setup Preview"
+!ifdef AppIcon
+  !define MUI_ICON "${AppIcon}"
+  !define MUI_UNICON "${AppIcon}"
+!endif
 !define MUI_ABORTWARNING
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
