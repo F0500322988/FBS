@@ -145,6 +145,7 @@ import Darwin
     @objc private func openBroadcast() { if broadcast == nil || broadcast!.isClosed { broadcast = BroadcastWindow(host) }; broadcast?.show() }
     @objc private func openShare() { if let url = host.baseURL { NSWorkspace.shared.open(url) } }
     private func showError(_ error: Error) { if backgroundStudent { fputs("FBS Classroom agent: configuration or runtime unavailable; contact lab administrator.\n", stderr); return }; let alert = NSAlert(); alert.messageText = "FBS Classroom"; alert.informativeText = error.localizedDescription; alert.runModal() }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { !backgroundStudent }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { !backgroundStudent }
     func applicationWillTerminate(_ notification: Notification) { pollTimer?.invalidate(); power?.stop(); broadcast?.stop(); screenPause?.stop(); assistance?.stop(); host.stop() }
 }

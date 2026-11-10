@@ -242,6 +242,7 @@ public sealed class StudentStatusForm : Form
         localClient.DefaultRequestHeaders.Add("X-FBS-Local-Token", agent.LocalControlToken);
         consentTimer.Tick += async (_, _) =>
         {
+            if (backgroundAgent && !agent.Ready) { ClearPending(); return; }
             // Local expiry and agent-liveness checks happen before any network operation.
             if (currentSession is not null &&
                 (DateTimeOffset.UtcNow >= sessionExpiresAt ||
@@ -293,7 +294,7 @@ public sealed class StudentStatusForm : Form
     {
         if (IsDisposed) return;
         await agent.StartAsync(allowSetup: !backgroundAgent);
-        if (!IsDisposed && agent.Running)
+        if (!IsDisposed && agent.Ready)
         {
             status.Text = agent.Status;
             screenPause ??= new ScreenPauseController(agent.LocalControlToken);

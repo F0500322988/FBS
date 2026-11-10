@@ -44,8 +44,15 @@ internal static class Program
             }
             Console.Error.WriteLine("Use: export [teacher-LAN-IP] [new-output-folder] | import lab-profile.json"); return 2;
         }
-        catch (Exception)
+        catch (Exception error)
         {
+            if (args.Length == 1 && args[0] == "self-test")
+            {
+                Console.Error.WriteLine("Provisioning self-test failure: " + error.GetType().Name);
+                if (error.Message.StartsWith("FAIL: ", StringComparison.Ordinal)) Console.Error.WriteLine(error.Message);
+                Console.Error.WriteLine(error.StackTrace);
+                return 1;
+            }
             // Never render exception messages containing JSON, paths supplied as profile data, or decrypted configuration.
             Console.Error.WriteLine("تعذر إكمال الإعداد. تحقق من تثبيت Student Agent M189 وحساب المستخدم وإعداد المعلم وملف الحزمة. الإعدادات الموجودة لا تُستبدل تلقائيًا. راجع README-AR.md.");
             return 1;

@@ -19,10 +19,21 @@ jobs:
       - name: Build and test provisioning helper compatible with a running agent
         shell: pwsh
         run: |
-          dotnet publish windows/FBS.LabSetup/FBS.LabSetup.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$env:RUNNER_TEMP/agent-kit"
-          if ($LASTEXITCODE -ne 0) { throw 'Helper build failed' }
-          & "$env:RUNNER_TEMP/agent-kit/FBS.LabSetup.exe" self-test | Tee-Object "$env:RUNNER_TEMP/agent-kit/Windows-provisioning-checks.log"
-          if ($LASTEXITCODE -ne 0) { throw 'Helper tests failed' }
+          $PSNativeCommandUseErrorActionPreference=$false
+          function Invoke-CheckedNative([string]$Command,[string[]]$Arguments,[string]$Log) {
+            $ErrorActionPreference='Continue'
+            $lines=@(& $Command @Arguments 2>&1 | Tee-Object -FilePath $Log)
+            $code=$LASTEXITCODE
+            $ErrorActionPreference='Stop'
+            $lines | ForEach-Object { Write-Output $_ }
+            if ($code -ne 0) {
+              foreach ($line in ($lines | Select-Object -Last 18)) { Write-Output ('::error::'+$line.ToString().Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')) }
+              throw 'Native helper build/test failed; see its exact diagnostics above.'
+            }
+          }
+          New-Item -ItemType Directory "$env:RUNNER_TEMP/agent-kit" -Force | Out-Null
+          Invoke-CheckedNative 'dotnet' @('publish','windows/FBS.LabSetup/FBS.LabSetup.csproj','-c','Release','-r','win-x64','--self-contained','true','-p:PublishSingleFile=true','-p:IncludeNativeLibrariesForSelfExtract=true','-o',"$env:RUNNER_TEMP/agent-kit") "$env:RUNNER_TEMP/agent-kit/build.log"
+          Invoke-CheckedNative "$env:RUNNER_TEMP/agent-kit/FBS.LabSetup.exe" @('self-test') "$env:RUNNER_TEMP/agent-kit/Windows-provisioning-checks.log"
           Copy-Item "$env:RUNNER_TEMP/agent-kit/FBS.LabSetup.exe" "$env:RUNNER_TEMP/agent-kit/FBS-LabSetup-Windows.exe"
       - name: Publish tested helper for dependent packages
         shell: bash

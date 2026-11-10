@@ -17,8 +17,10 @@ internal sealed class AgentHost : IDisposable
     private readonly CancellationTokenSource lifetime = new();
     private bool starting;
     private bool disposed;
+    private bool ready;
     public string LocalControlToken { get; } = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     public bool Running => !disposed && process is { HasExited: false };
+    public bool Ready => ready && Running;
     public string Status { get; private set; } = "لم يتم تشغيل وكيل الشبكة";
 
     public async Task StartAsync(bool allowSetup = true)
@@ -83,6 +85,7 @@ internal sealed class AgentHost : IDisposable
                     var body = await response.Content.ReadAsStringAsync(lifetime.Token);
                     if (AgentReadiness.IsReady(response.StatusCode, body) && !owned.HasExited)
                     {
+                        ready = true;
                         Status = "وكيل الطالب جاهز محليًا؛ انتظار الاتصال بالمعلم";
                         return;
                     }
@@ -108,6 +111,7 @@ internal sealed class AgentHost : IDisposable
 
     private void StopOwnedProcess()
     {
+        ready = false;
         try { if (process is { HasExited: false }) process.Kill(entireProcessTree: true); } catch { }
         process?.Dispose();
         process = null;
