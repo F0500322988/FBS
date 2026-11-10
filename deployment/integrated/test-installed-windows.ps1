@@ -30,7 +30,11 @@ foreach ($role in @('Teacher','Student')) {
     $exe=Join-Path $out $entry.file
     if ((Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.sha256) { throw 'Installer hash mismatch.' }
     Test-OfficialIcon $exe
-    $installed=Start-Process -FilePath $exe -ArgumentList @('/S',"/D=$target") -PassThru -Wait
+    # Start-Process -Wait also waits for descendants on Windows. The agent is
+    # deliberately long-lived, so wait only for the installer process itself.
+    $installed=Start-Process -FilePath $exe -ArgumentList @('/S',"/D=$target") -PassThru
+    if (-not $installed.WaitForExit(120000)) { throw 'Installer process did not finish within two minutes.' }
+    $installed.Refresh()
     if ($installed.ExitCode -ne 0) { throw 'Installer execution failed.' }
     $application=if ($role -eq 'Teacher') {'Teacher/FBS.Teacher.exe'} else {'Student/FBS.Student.Native.exe'}
     Test-OfficialIcon (Join-Path $target $application)
