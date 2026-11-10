@@ -16,6 +16,11 @@ internal sealed class TeacherDesktopForm : Form
         Icon = FBS.Student.Native.ApplicationBranding.LoadIcon();
         Width = 1280; Height = 850; MinimumSize = new Size(900, 600);
         Controls.Add(browser);
+        var menu = new MenuStrip { RightToLeft = RightToLeft.Yes };
+        var setup = new ToolStripMenuItem("إعداد أجهزة الطلاب");
+        setup.Click += (_, _) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "SetupKit"))) { UseShellExecute = true });
+        menu.Items.Add(setup); Controls.Add(menu); MainMenuStrip = menu;
         Shown += async (_, _) => {
             try { await OpenDashboard(); }
             catch { if (Smoke) { Environment.ExitCode = 2; Close(); return; } MessageBox.Show(this, "تعذر فتح لوحة المعلم المدمجة. تحقق من تثبيت Microsoft Edge WebView2 Runtime ومن جاهزية خادم المعلم.", "FBS Classroom"); Close(); }

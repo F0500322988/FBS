@@ -101,6 +101,10 @@ import Darwin
             }
         }
         let menu = NSMenu(), item = NSMenuItem(); menu.addItem(item); let appMenu = NSMenu(); appMenu.addItem(withTitle: "إنهاء FBS Classroom", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); item.submenu = appMenu
+        if role == .teacher {
+            let setupItem = NSMenuItem(title: "إعداد أجهزة الطلاب", action: #selector(openSetupTools), keyEquivalent: "")
+            setupItem.target = self; appMenu.insertItem(setupItem, at: 0)
+        }
         let editItem = NSMenuItem(), editMenu = NSMenu(title: "تحرير")
         for (title, action, key) in [("قص", #selector(NSText.cut(_:)), "x"), ("نسخ", #selector(NSText.copy(_:)), "c"), ("لصق", #selector(NSText.paste(_:)), "v"), ("تحديد الكل", #selector(NSText.selectAll(_:)), "a")] {
             editMenu.addItem(withTitle: title, action: action, keyEquivalent: key)

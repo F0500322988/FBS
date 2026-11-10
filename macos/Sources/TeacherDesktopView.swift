@@ -86,6 +86,20 @@ import WebKit
         panel.begin { result in completionHandler(result == .OK ? panel.url : nil) }
     }
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? { nil }
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        let alert = NSAlert(); alert.messageText = "FBS Classroom"; alert.informativeText = message; alert.runModal(); completionHandler()
+    }
+    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+        let alert = NSAlert(); alert.messageText = "FBS Classroom"; alert.informativeText = message
+        alert.addButton(withTitle: "تأكيد"); alert.addButton(withTitle: "إلغاء")
+        completionHandler(alert.runModal() == .alertFirstButtonReturn)
+    }
+    func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+        let alert = NSAlert(); alert.messageText = "FBS Classroom"; alert.informativeText = prompt
+        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 26)); input.stringValue = defaultText ?? ""
+        alert.accessoryView = input; alert.addButton(withTitle: "حفظ"); alert.addButton(withTitle: "إلغاء")
+        completionHandler(alert.runModal() == .alertFirstButtonReturn ? input.stringValue : nil)
+    }
     func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {
         let panel = NSOpenPanel(); panel.canChooseDirectories = false; panel.canChooseFiles = true; panel.allowsMultipleSelection = parameters.allowsMultipleSelection
         panel.begin { result in completionHandler(result == .OK ? panel.urls : nil) }
