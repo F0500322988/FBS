@@ -4,13 +4,21 @@ import AppKit
     private var settingsWindow: NSWindow?, dashboard: StudentDashboardView?
     private var window: NSWindow!, role = ClassroomRole.student
     private var config: ConnectionConfig!, host = RuntimeHost(), messages: MessagesWindow?, broadcast: BroadcastWindow?, filesWindow: FilesWindow?
-    private let key = NSSecureTextField(), password = NSSecureTextField(), address = NSTextField(), port = NSTextField(), pin = NSTextField(), device = NSTextField()
-    private let discovery = NSButton(checkboxWithTitle: "اكتشاف المعلم تلقائيًا داخل الشبكة", target: nil, action: nil)
-    private let state = NSTextField(wrappingLabelWithString: "التحكم يحتاج موافقتك؛ يمكنك إيقافه في أي وقت")
-    private let connection = NSTextField(wrappingLabelWithString: "")
-    private let startButton = NSButton(title: "حفظ الإعداد وتشغيل البرنامج", target: nil, action: nil)
-    private let filesButton = NSButton(title: "ملفات المعلم — حفظ بموافقتك", target: nil, action: nil)
-    private let messageButton = NSButton(title: "رسائل المعلم", target: nil, action: nil), viewButton = NSButton(title: "عرض شاشة المعلم", target: nil, action: nil), shareButton = NSButton(title: "مشاركة شاشة الطالب بموافقته", target: nil, action: nil)
+    private var form: ConnectionSettingsForm!
+    private var key: NSSecureTextField { form.key }
+    private var password: NSSecureTextField { form.password }
+    private var address: NSTextField { form.address }
+    private var port: NSTextField { form.port }
+    private var pin: NSTextField { form.pin }
+    private var device: NSTextField { form.device }
+    private var discovery: NSButton { form.discovery }
+    private var state: NSTextField { form.state }
+    private var connection: NSTextField { form.connection }
+    private var startButton: NSButton { form.startButton }
+    private var filesButton: NSButton { form.filesButton }
+    private var messageButton: NSButton { form.messageButton }
+    private var viewButton: NSButton { form.viewButton }
+    private var shareButton: NSButton { form.shareButton }
     private var power: PowerController?
     private var assistance: AssistanceController?
     private var screenPause: ScreenPauseController?
@@ -21,27 +29,16 @@ import AppKit
         window.title = "FBS Classroom — " + (role == .teacher ? "المعلم" : "الطالب") + " — macOS Preview"
         window.isReleasedWhenClosed = false
         window.backgroundColor = NSColor(calibratedRed: 0.94, green: 0.96, blue: 1, alpha: 1)
-        let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .trailing; stack.spacing = 8
-        let title = NSTextField(labelWithString: "🎓 FBS Classroom — macOS / iMac"); title.font = .boldSystemFont(ofSize: 22); stack.addArrangedSubview(title)
-        func field(_ label: String, _ input: NSTextField) { let text = NSTextField(labelWithString: label); text.alignment = .right; stack.addArrangedSubview(text); stack.addArrangedSubview(input); input.widthAnchor.constraint(equalToConstant: 670).isActive = true; input.font = .systemFont(ofSize: 15) }
-        field("مفتاح المعمل المشترك — من 3 إلى 8 أرقام", key)
-        if role == .teacher { field("كلمة مرور لوحة المعلم — من 3 إلى 8 أرقام", password) }
-        else {
-            field("اسم الجهاز بالإنجليزية", device); stack.addArrangedSubview(discovery)
-            field("عنوان المعلم IP أو اسم الجهاز", address); field("منفذ المعلم", port); field("بصمة شهادة المعلم SHA-256 — 64 رمزًا", pin)
-        }
-        startButton.target = self; startButton.action = #selector(start); stack.addArrangedSubview(startButton)
-        stack.addArrangedSubview(NSButton(title: "فتح أدوات تهيئة المعمل M184", target: self, action: #selector(openSetupTools)))
-        let stop = NSButton(title: "إيقاف التطبيق محليًا", target: self, action: #selector(stopHost)); stack.addArrangedSubview(stop)
-        if role == .teacher { stack.addArrangedSubview(NSButton(title: "فتح لوحة المعلم", target: self, action: #selector(openTeacher))) }
-        else {
-            filesButton.target = self; filesButton.action = #selector(openFiles); messageButton.target = self; messageButton.action = #selector(openMessages); viewButton.target = self; viewButton.action = #selector(openBroadcast); shareButton.target = self; shareButton.action = #selector(openShare)
-            for button in [messageButton, viewButton, shareButton, filesButton] { button.isEnabled = false; stack.addArrangedSubview(button) }
-        }
-        connection.isSelectable = true; connection.alignment = .right; state.alignment = .right
-        stack.addArrangedSubview(connection); stack.addArrangedSubview(state)
-        stack.translatesAutoresizingMaskIntoConstraints = false; window.contentView!.addSubview(stack)
-        NSLayoutConstraint.activate([stack.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor, constant: 25), stack.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -25), stack.topAnchor.constraint(equalTo: window.contentView!.topAnchor, constant: 20)])
+        form = ConnectionSettingsForm(role: role)
+        startButton.target = self; startButton.action = #selector(start)
+        form.setupButton.target = self; form.setupButton.action = #selector(openSetupTools)
+        form.stopButton.target = self; form.stopButton.action = #selector(stopHost)
+        form.teacherButton.target = self; form.teacherButton.action = #selector(openTeacher)
+        filesButton.target = self; filesButton.action = #selector(openFiles)
+        messageButton.target = self; messageButton.action = #selector(openMessages)
+        viewButton.target = self; viewButton.action = #selector(openBroadcast)
+        shareButton.target = self; shareButton.action = #selector(openShare)
+        if role == .teacher { window.contentView = form }
         host.status = { [weak self] message in self?.state.stringValue = message }
         host.ready = { [weak self] url in
             guard let self = self else { return }
@@ -66,7 +63,14 @@ import AppKit
         }
         editItem.submenu = editMenu; menu.addItem(editItem); NSApp.mainMenu = menu
         if role == .student {
-            let configurationView = window.contentView!; window.contentView = NSView(frame:window.contentView!.bounds); let preferences = NSWindow(contentRect:NSRect(x:0,y:0,width:720,height:min(820,NSScreen.main?.visibleFrame.height ?? 900)-80),styleMask:[.titled,.closable,.miniaturizable],backing:.buffered,defer:false);preferences.isReleasedWhenClosed = false;preferences.title = "FBS Classroom — إعدادات الطالب";let scroll=NSScrollView();scroll.hasVerticalScroller=true;scroll.autohidesScrollers=true;configurationView.setFrameSize(NSSize(width:720,height:820));scroll.documentView=configurationView;preferences.contentView=scroll; settingsWindow = preferences
+            let preferences = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720,
+                height: max(400, min(740, (NSScreen.main?.visibleFrame.height ?? 900) - 100))),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+            preferences.isReleasedWhenClosed = false
+            preferences.title = "FBS Classroom — إعدادات الطالب"
+            preferences.contentMinSize = NSSize(width: 620, height: 360)
+            preferences.contentView = form
+            settingsWindow = preferences
             window.setContentSize(NSSize(width:340,height:422)); let dashboard = StudentDashboardView(frame:NSRect(x:0,y:0,width:340,height:422));self.dashboard = dashboard;dashboard.settingsAction = { [weak self] in self?.settingsWindow?.center();self?.settingsWindow?.makeKeyAndOrderFront(nil) };dashboard.stopAction = { [weak self] in self?.assistance?.stopCurrent() };window.contentView = dashboard
             if loaded { do { try config.validate();start() } catch { DispatchQueue.main.async { preferences.center();preferences.makeKeyAndOrderFront(nil) } } }
         }

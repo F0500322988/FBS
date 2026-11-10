@@ -1,0 +1,56 @@
+name: M187 macOS settings visibility repair
+on:
+  push:
+    branches: ['build/m187-settings-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-26-intel
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.23.4'
+      - name: Fetch unchanged Windows provisioning helper verified in M186
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/windows-helper"
+          gh release download m186-windows-2-1 --repo "$GITHUB_REPOSITORY" --pattern FBS-LabSetup-Windows.exe --dir "$RUNNER_TEMP/windows-helper"
+          printf '%s  %s\n' 'e729bfddea4a67be63dd44c39b79758b71c16c773afbe1b8b0e0365f99be0bd0' "$RUNNER_TEMP/windows-helper/FBS-LabSetup-Windows.exe" | shasum -a 256 --check
+      - name: Test real settings controls and dashboard buttons; build and install Universal PKG and DMG
+        run: |
+          set +e
+          FBS_MAC_RELEASE_STAGE=M187 FBS_CURRENT_RELEASE_NOTES="$GITHUB_WORKSPACE/M187-START-HERE.md" FBS_CURRENT_WINDOWS_HELPER="$RUNNER_TEMP/windows-helper/FBS-LabSetup-Windows.exe" FBS_MAC_INSTALL_SMOKE=1 bash macos/build.sh "$RUNNER_TEMP/m187-mac" > "$RUNNER_TEMP/m187-build.log" 2>&1
+          fbs_status=$?
+          set -e
+          cat "$RUNNER_TEMP/m187-build.log"
+          if [ "$fbs_status" -ne 0 ]; then
+            python3 - "$RUNNER_TEMP/m187-build.log" <<'PYTHON'
+          import sys
+          from pathlib import Path
+          lines=Path(sys.argv[1]).read_text(errors='replace').splitlines()
+          selected=[s for s in lines if 'error:' in s or 'failed' in s.lower() or 'Precondition' in s]
+          for s in (selected or lines[-25:])[-20:]:print('::error::'+s.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PYTHON
+            exit "$fbs_status"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: M187-settings-snapshots-and-checks
+          path: |
+            ${{ runner.temp }}/m187-mac/settings-snapshots/*.png
+            ${{ runner.temp }}/m187-mac/*.json
+            ${{ runner.temp }}/m187-build.log
+      - name: Publish checked teacher and student macOS installers and screenshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "m187-macos-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'M187 macOS — settings visibility and readable buttons — Intel + Apple Silicon' --notes-file M187-START-HERE.md "$RUNNER_TEMP"/m187-mac/*.pkg "$RUNNER_TEMP"/m187-mac/*.dmg "$RUNNER_TEMP"/m187-mac/*.json "$RUNNER_TEMP"/m187-mac/*.log "$RUNNER_TEMP"/m187-mac/settings-snapshots/*.png "$RUNNER_TEMP/m187-mac/SHA256SUMS.txt"
