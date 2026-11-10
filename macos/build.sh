@@ -20,7 +20,7 @@ UI_TEST
 
 for fbs_arch in arm64 x86_64; do
   xcrun swiftc -swift-version 5 -O -target "$fbs_arch-apple-macosx13.0" -sdk "$fbs_mac_sdk" \
-    -framework AppKit -framework WebKit -framework Security -framework CryptoKit -framework ApplicationServices -framework Carbon "$fbs_mac_root"/macos/Sources/*.swift -o "$fbs_mac_work/FBS-$fbs_arch"
+    -framework AppKit -framework WebKit -framework ScreenCaptureKit -framework Security -framework CryptoKit -framework ApplicationServices -framework Carbon "$fbs_mac_root"/macos/Sources/*.swift -o "$fbs_mac_work/FBS-$fbs_arch"
 done
 xcrun lipo -create "$fbs_mac_work/FBS-arm64" "$fbs_mac_work/FBS-x86_64" -output "$fbs_mac_work/FBSClassroom"
 xcrun lipo "$fbs_mac_work/FBSClassroom" -verify_arch arm64 x86_64

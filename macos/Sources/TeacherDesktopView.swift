@@ -1,5 +1,6 @@
 import AppKit
 import WebKit
+import ScreenCaptureKit
 
 // The dashboard runs in the application's window. The native capability never enters a URL or page script.
 @MainActor final class TeacherDesktopView: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandlerWithReply, WKDownloadDelegate {
@@ -42,8 +43,29 @@ import WebKit
               message.frameInfo.securityOrigin.host == "127.0.0.1",
               message.frameInfo.securityOrigin.port == origin.port,
               message.body as? String == "capture" else { replyHandler(nil, "Capture origin rejected"); return }
-        guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess(),
-              let image = CGDisplayCreateImage(CGMainDisplayID()) else { replyHandler(nil, "Screen recording permission required"); return }
+        guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else { replyHandler(nil, "Screen recording permission required"); return }
+        Task { @MainActor in
+            do { self.replyWithImage(try await self.captureMainDisplay(), replyHandler: replyHandler) }
+            catch { replyHandler(nil, "Screen capture unavailable; check macOS recording permission") }
+        }
+    }
+    private func captureMainDisplay() async throws -> CGImage {
+        if #available(macOS 14.0, *) {
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            guard let display = content.displays.first(where: { $0.displayID == CGMainDisplayID() }) else { throw ConfigurationError.invalid("Main display unavailable") }
+            let configuration = SCStreamConfiguration(); configuration.width = 1280; configuration.height = 720; configuration.showsCursor = true
+            return try await SCScreenshotManager.captureImage(contentFilter: SCContentFilter(display: display, excludingWindows: []), configuration: configuration)
+        }
+        // macOS 13 compatibility. The system tool still requires the application's recording permission.
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("fbs-teacher-frame-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let file = folder.appendingPathComponent("frame.jpg")
+        _ = try PlatformServices.run("/usr/sbin/screencapture", ["-x", "-m", "-t", "jpg", file.path])
+        guard let image = NSImage(contentsOf: file)?.cgImage(forProposedRect: nil, context: nil, hints: nil) else { throw ConfigurationError.invalid("Screen capture unavailable") }
+        return image
+    }
+    private func replyWithImage(_ image: CGImage, replyHandler: @escaping (Any?, String?) -> Void) {
         let size = NSSize(width: 1280, height: 720)
         let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 1280, pixelsHigh: 720, bitsPerSample: 8, samplesPerPixel: 3, hasAlpha: false, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
         NSGraphicsContext.saveGraphicsState()
