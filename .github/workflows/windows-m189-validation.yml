@@ -26,7 +26,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release download m189-windows-2-1 --repo "$GITHUB_REPOSITORY" --pattern '*.exe' --pattern '*.json' --dir "$RUNNER_TEMP/M189-verify/installers"
+        run: gh release download m189-windows-3-1 --repo "$GITHUB_REPOSITORY" --pattern '*.exe' --pattern '*.json' --dir "$RUNNER_TEMP/M189-verify/installers"
       - name: Install agent, provision it without UI, and remove its owned startup entry
         shell: pwsh
         run: |
@@ -46,4 +46,4 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: ./deployment/integrated/publish-windows.ps1 -ReleaseTag m189-windows-2-1 -BuildRoot "$env:RUNNER_TEMP/M189-verify" -NotesFile M189-START-HERE.md
+        run: ./deployment/integrated/publish-windows.ps1 -ReleaseTag m189-windows-3-1 -BuildRoot "$env:RUNNER_TEMP/M189-verify" -NotesFile M189-START-HERE.md

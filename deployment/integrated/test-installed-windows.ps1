@@ -101,7 +101,10 @@ foreach ($role in @('Teacher','Student')) {
         if ($remaining.Count -eq 0 -and -not (Test-Path $registry) -and -not (Test-Path (Join-Path $target 'Uninstall.exe'))) { break }
         Start-Sleep -Milliseconds 250
     } while ([DateTime]::UtcNow -lt $deadline)
-    if ($role -eq 'Student' -and (Get-ItemPropertyValue 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' 'FBS Classroom Student Agent' -ErrorAction SilentlyContinue)) { throw 'Student startup registration survived uninstall.' }
+    if ($role -eq 'Student') {
+        $runState=Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -ErrorAction SilentlyContinue
+        if ($null -ne $runState -and $null -ne $runState.PSObject.Properties['FBS Classroom Student Agent']) { throw 'Student startup registration survived uninstall.' }
+    }
     if ($remaining.Count -or (Test-Path $registry) -or (Test-Path (Join-Path $target 'Uninstall.exe'))) { throw 'Uninstall did not remove its owned payload.' }
     if ((Get-FileHash $marker).Hash -ne $markerHash -or @(Get-ChildItem $target -Recurse -File).Count -ne 1) { throw 'Unknown-file preservation failed.' }
     if (Test-Path -LiteralPath $action) { throw 'Owned setup shortcut remained after uninstall.' }
