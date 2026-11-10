@@ -1,0 +1,49 @@
+name: M189 validate exact Windows agent candidate
+on:
+  push:
+    branches: ['build/windows-m189-validate-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.23.4'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - name: Native safety checks required for validation reports
+        shell: pwsh
+        run: ./deployment/integrated/test-core-windows.ps1 -ReportDirectory "$env:RUNNER_TEMP/M189-verify/installers"
+      - name: Download original candidate without rebuilding tested application bytes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download m189-windows-2-1 --repo "$GITHUB_REPOSITORY" --pattern '*.exe' --pattern '*.json' --dir "$RUNNER_TEMP/M189-verify/installers"
+      - name: Install agent, provision it without UI, and remove its owned startup entry
+        shell: pwsh
+        run: |
+          $log=Join-Path $env:RUNNER_TEMP 'm189-agent-install.log'
+          $started=Get-Date
+          try {
+            & ./deployment/integrated/test-installed-windows.ps1 -BuildRoot "$env:RUNNER_TEMP/M189-verify" *> $log
+            Get-Content $log
+          } catch {
+            $details=@($_.Exception.Message,$_.ScriptStackTrace)+@(Get-Content $log -Tail 35 -ErrorAction SilentlyContinue)
+            foreach ($line in $details) { Write-Output ('::error::'+$line.ToString().Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')) }
+            $events=@(Get-WinEvent -FilterHashtable @{LogName='Application';StartTime=$started} -ErrorAction SilentlyContinue | Where-Object {$_.Message -match 'FBS.Student.Native'} | Select-Object -First 2)
+            foreach ($event in $events) { Write-Output ('::error::'+$event.Message.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')) }
+            throw
+          }
+      - name: Publish only if installed validation passes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./deployment/integrated/publish-windows.ps1 -ReleaseTag m189-windows-2-1 -BuildRoot "$env:RUNNER_TEMP/M189-verify" -NotesFile M189-START-HERE.md
