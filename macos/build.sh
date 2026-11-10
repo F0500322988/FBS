@@ -20,7 +20,7 @@ UI_TEST
 
 for fbs_arch in arm64 x86_64; do
   xcrun swiftc -swift-version 5 -O -target "$fbs_arch-apple-macosx13.0" -sdk "$fbs_mac_sdk" \
-    -framework AppKit -framework Security -framework CryptoKit -framework ApplicationServices -framework Carbon "$fbs_mac_root"/macos/Sources/*.swift -o "$fbs_mac_work/FBS-$fbs_arch"
+    -framework AppKit -framework WebKit -framework Security -framework CryptoKit -framework ApplicationServices -framework Carbon "$fbs_mac_root"/macos/Sources/*.swift -o "$fbs_mac_work/FBS-$fbs_arch"
 done
 xcrun lipo -create "$fbs_mac_work/FBS-arm64" "$fbs_mac_work/FBS-x86_64" -output "$fbs_mac_work/FBSClassroom"
 xcrun lipo "$fbs_mac_work/FBSClassroom" -verify_arch arm64 x86_64
@@ -95,6 +95,13 @@ AGENT_TEST
     plutil -lint "$fbs_mac_work/Student-package-root/Library/LaunchAgents/com.fbsclassroom.student.agent.plist"
     pkgbuild --root "$fbs_mac_work/Student-package-root" --identifier "com.fbsclassroom.student.preview" --version 0.189.0 --install-location / --ownership recommended "$fbs_mac_pkg"
   else
+    python3 - "$fbs_mac_app/Contents/MacOS/FBSClassroom" "$fbs_mac_output/Teacher-desktop-window-smoke.json" <<'DESKTOP_TEST'
+import subprocess,sys,pathlib,json
+p=subprocess.run([sys.argv[1],'--desktop-smoke-check'],capture_output=True,text=True,timeout=35)
+if p.returncode:raise SystemExit(p.stderr or p.stdout)
+report=json.loads(p.stdout.strip().splitlines()[-1]);assert report['desktopWindowSmokePassed'] and report['authenticatedWithoutPasswordEntry']
+pathlib.Path(sys.argv[2]).write_text(json.dumps(report,indent=2)+'\n')
+DESKTOP_TEST
     pkgbuild --root "$fbs_mac_work/$fbs_role-root" --identifier "com.fbsclassroom.$fbs_role_lower.preview" --version 0.189.0 --install-location /Applications --ownership recommended "$fbs_mac_pkg"
   fi
   mkdir -p "$fbs_mac_work/$fbs_role-dmg"

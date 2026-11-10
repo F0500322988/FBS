@@ -71,6 +71,13 @@ foreach ($role in @('Teacher','Student')) {
     if ($role -eq 'Teacher') {
         if (-not (Test-Path -LiteralPath $toolLink) -or $shell.CreateShortcut($toolLink).TargetPath -ne (Join-Path $target 'SetupKit')) { throw 'Teacher setup shortcut missing.' }
         if (-not (Test-Path -LiteralPath $action)) { throw 'Teacher preparation shortcut missing.' }
+        $desktopReport=Join-Path $out 'Teacher-desktop-window-smoke.json'
+        $teacherProcess=Start-Process -FilePath (Join-Path $target 'Teacher/FBS.Teacher.exe') -ArgumentList @('--desktop-smoke-check','--report',('"'+$desktopReport+'"')) -PassThru
+        if (-not $teacherProcess.WaitForExit(180000)) { $teacherProcess.Kill();throw 'Teacher desktop smoke timed out' }
+        if ($teacherProcess.ExitCode -ne 0 -or -not (Test-Path $desktopReport)) { throw 'Teacher embedded desktop did not open and authenticate automatically' }
+        $desktop=Get-Content $desktopReport -Raw | ConvertFrom-Json
+        if (-not $desktop.desktopWindowSmokePassed -or -not $desktop.authenticatedWithoutPasswordEntry) { throw 'Teacher desktop login failed' }
+
     } else {
         if ((Test-Path -LiteralPath $toolLink) -or (Test-Path -LiteralPath $action) -or (Test-Path (Join-Path $menu 'FBS Classroom Student Preview.lnk'))) { throw 'Student console/setup shortcut unexpectedly exposed.' }
         $startup=Get-ItemPropertyValue 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' 'FBS Classroom Student Agent'

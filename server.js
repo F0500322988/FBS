@@ -21,7 +21,9 @@ const publicDir = path.join(__dirname,'public');
 const teacherPassword=process.env.FBS_TEACHER_PASSWORD||'';
 const startupId=process.env.FBS_STARTUP_ID||undefined;
 const sessions=new Map();
+const desktopToken=process.env.FBS_DESKTOP_TOKEN||'';
 const enrollment=createEnrollment(process.env.FBS_ENROLLMENT_FILE||path.join(__dirname,'data','enrollment.json'));
+if(lan&&process.env.FBS_AUTO_ENROLL==='1')lan.setAutoEnrollment(enrollment);
 const leases=createControlLeases();
 const commands=createControlCommands();
 const messageStore=require('./classroom-messages').createMessageStore();
@@ -80,6 +82,15 @@ const server=http.createServer((req,res)=>{
   return send(res,404,{error:'Unknown enrollment operation'});
  }
 
+ if(req.method==='POST'&&url.pathname==='/api/desktop/session'){
+  if(!teacherPassword||!/^[a-f0-9]{64}$/.test(desktopToken)||
+     req.headers.host!==`${HOST}:${PORT}`||!teacherOriginAllowed(req)||
+     !['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress)||
+     !constantTimeEqual(req.headers['x-fbs-desktop-token']||'',desktopToken))return send(res,403,{error:'Desktop authorization required'});
+  const token=crypto.randomBytes(32).toString('hex');sessions.set(token,Infinity);
+  res.setHeader('Set-Cookie',`fbs_session=${token}; HttpOnly; SameSite=Strict; Path=/`);
+  return send(res,200,{ok:true});
+ }
  if(req.method==='POST'&&url.pathname==='/api/login'){
   if(!teacherPassword)return send(res,403,{error:'Login is not configured'});
   if(req.headers.origin && req.headers.origin!==`http://${HOST}:${PORT}`)return send(res,403,{error:'Origin rejected'});

@@ -11,14 +11,8 @@ internal static class Program
     private static void Main()
     {
         ApplicationConfiguration.Initialize();
-        // M150: optional local administrator audit is available from the teacher launcher.
-        // It does not provision devices or bypass teacher/server authentication.
-        if (MessageBox.Show("هل تريد فتح فحص إعدادات مسؤول المعمل المحلي؟\nاختر لا لتشغيل لوحة المعلم.",
-            "FBS Classroom", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-        {
-            Application.Run(new TeacherAdminAuditForm());
-            return;
-        }
+        if (Environment.GetCommandLineArgs().Contains("--admin"))
+        { Application.Run(new TeacherAdminAuditForm()); return; }
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Runtime"));
         var server = Path.Combine(root, "server.js");
         if (!File.Exists(server))
@@ -34,16 +28,11 @@ internal static class Program
         {
             try
             {
-                savedSettings = TeacherConnectionSettings.Load();
-                if (savedSettings is null)
-                {
-                    using var setup = new TeacherSetupForm();
-                    if (setup.ShowDialog() != DialogResult.OK) return;
-                    savedSettings = setup.Settings ?? throw new InvalidDataException("لم يكتمل الإعداد.");
-                }
+                savedSettings = TeacherConnectionSettings.LoadOrCreate();
             }
             catch (Exception)
             {
+                if (Environment.GetCommandLineArgs().Contains("--desktop-smoke-check")) { Environment.ExitCode = 2; return; }
                 MessageBox.Show("تعذر فتح إعدادات المعلم المحمية. استخدم حساب ويندوز الذي أنشأ الإعداد وتحقق من الشهادة. لن تُحذف أو تُستبدل الإعدادات تلقائيًا.", "FBS Classroom");
                 return;
             }
@@ -58,6 +47,9 @@ internal static class Program
             };
             savedSettings?.Apply(startInfo);
             startInfo.Environment["FBS_DEMO"] = "0";
+            startInfo.Environment["FBS_AUTO_ENROLL"] = "1";
+            var desktopToken = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+            startInfo.Environment["FBS_DESKTOP_TOKEN"] = desktopToken;
             // Installed application files may be read-only (Program Files).
             // Keep enrollment state under the Windows account running the teacher.
             var stateDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FBSClassroom", "Teacher");
@@ -92,16 +84,13 @@ internal static class Program
                     System.Threading.Thread.Sleep(200);
                 }
                 if (!ready || process.HasExited) throw new Exception("لم يكتمل بدء خادم المعلم خلال المهلة المحددة.");
-                Process.Start(new ProcessStartInfo("http://127.0.0.1:4177") { UseShellExecute = true });
-                var certificatePath = startInfo.Environment["FBS_TLS_CERT"] ?? throw new InvalidDataException("Certificate path missing");
-                startInfo.Environment.TryGetValue("FBS_AGENT_PORT", out var agentPort);
-                using var connectionInfo = new TeacherConnectionInfoForm(certificatePath, agentPort ?? "4180");
-                connectionInfo.ShowDialog();
+                Application.Run(new TeacherDesktopForm(desktopToken));
             }
             finally { if (!process.HasExited) process.Kill(entireProcessTree: true); }
         }
         catch (Exception ex)
         {
+            if (Environment.GetCommandLineArgs().Contains("--desktop-smoke-check")) { Environment.ExitCode = 2; return; }
             MessageBox.Show("تعذر التشغيل: " + ex.Message + "\nتأكد من تثبيت Node.js وإعداد الاتصال.", "FBS Classroom");
         }
     }

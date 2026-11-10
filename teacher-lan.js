@@ -9,6 +9,8 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
  const frames=new Map();
  const replay=new Map();
  let approvedKeys=new Map();
+ let autoEnrollment=null;
+ function setAutoEnrollment(store){autoEnrollment=store;}
  let controlLeases=null;
  let controlCommands=null;
  let messageStore=null;
@@ -36,7 +38,7 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
    try{
     const packet=JSON.parse(raw),body=packet.body;
     if(!body||typeof body.id!=='string'||!/^[\w.-]{1,64}$/.test(body.id)||!['win32','darwin','linux'].includes(body.platform))throw Error('invalid');
-    const known=approvedKeys.get(body.id);
+    let known=approvedKeys.get(body.id);
     if(known && known!==packet.publicKey)throw Error('key mismatch');
     const pub=known||packet.publicKey;
     if(typeof pub!=='string'||pub.length>2048)throw Error('bad key');
@@ -115,6 +117,9 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
      if(known && packet.publicKey!==known)throw Error('key mismatch');
      const prior=devices.get(body.id);
      if(prior && prior.publicKey!==packet.publicKey && (!known||known!==packet.publicKey))throw Error('pending key change');
+     if(!known&&autoEnrollment&&!autoEnrollment.blocked.has(body.id)){
+      autoEnrollment.approve(body.id,packet.publicKey);known=packet.publicKey;
+     }
      devices.set(body.id,{id:body.id,platform:body.platform,ip,lastSeen:Date.now(),publicKey:packet.publicKey,assistanceVersion:body.assistanceVersion===2?2:1,assistanceSupported:body.assistanceSupported===true,powerSupported:body.powerSupported===true});
      if(powerStore&&known)try{powerStore.observe(devices.get(body.id),body.wakeInterfaces);}catch{}
     }
@@ -132,7 +137,7 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
   announce();timer=setInterval(announce,intervalMs);console.log('Teacher LAN active:',localIPv4().join(', '));
  }
  async function stop(){clearInterval(timer);await Promise.all([new Promise(resolve=>server.close(resolve)),udpStarted?new Promise(resolve=>udp.close(resolve)):Promise.resolve()]);}
- return {devices,frames,server,start,stop,setApprovedKeys,setControlLeases,setControlCommands,setMessageStore,setBroadcastStore,setFileStore,setPauseStore,setAssistanceStore,setPowerStore,setLabNameProvider};
+ return {devices,frames,server,start,stop,setAutoEnrollment,setApprovedKeys,setControlLeases,setControlCommands,setMessageStore,setBroadcastStore,setFileStore,setPauseStore,setAssistanceStore,setPowerStore,setLabNameProvider};
 }
 if(require.main===module){const lan=createTeacherLan({secret:process.env.FBS_PAIRING_KEY});lan.start().catch(e=>{console.error(e);process.exitCode=1;});}
 module.exports={createTeacherLan};

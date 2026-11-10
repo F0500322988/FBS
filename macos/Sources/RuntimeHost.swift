@@ -6,6 +6,7 @@ final class RuntimeHost {
     private(set) var baseURL: URL?
     private var startupID = "", teacher = false, stdoutBuffer = "", generation = 0
     private var timer: Timer?
+    private var smokeState: URL?
     var status: ((String) -> Void)?
     var ready: ((URL) -> Void)?
     static var runtime: URL { Bundle.main.resourceURL!.appendingPathComponent("Runtime", isDirectory: true) }
@@ -50,14 +51,20 @@ final class RuntimeHost {
     }
     func start(_ config: ConnectionConfig) throws -> String? {
         guard process == nil else { throw ConfigurationError.invalid("التطبيق يعمل بالفعل؛ أوقفه قبل تغيير الاتصال") }
-        try config.validate(); let state = try PlatformServices.privateState(config.role)
+        try config.validate()
+        let state: URL
+        if config.role == .teacher && CommandLine.arguments.contains("--desktop-smoke-check") {
+            state = FileManager.default.temporaryDirectory.appendingPathComponent("fbs-teacher-desktop-" + UUID().uuidString)
+            try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            smokeState = state
+        } else { state = try PlatformServices.privateState(config.role) }
         token = try PlatformServices.randomToken(); startupID = try PlatformServices.randomToken(); teacher = config.role == .teacher
         var env = ProcessInfo.processInfo.environment
-        for name in ["FBS_PAIRING_KEY", "FBS_TEACHER_PASSWORD", "FBS_TLS_CERT", "FBS_TLS_KEY", "FBS_TEACHER_HOST", "FBS_TEACHER_PORT", "FBS_TEACHER_FINGERPRINT", "FBS_IDENTITY_FILE", "FBS_LOCAL_CONTROL_TOKEN", "FBS_DEVICE_ID", "FBS_DISCOVERY_PORT", "FBS_DISCOVERY_ENABLED"] { env.removeValue(forKey: name) }
+        for name in ["FBS_DESKTOP_TOKEN", "FBS_AUTO_ENROLL", "FBS_PAIRING_KEY", "FBS_TEACHER_PASSWORD", "FBS_TLS_CERT", "FBS_TLS_KEY", "FBS_TEACHER_HOST", "FBS_TEACHER_PORT", "FBS_TEACHER_FINGERPRINT", "FBS_IDENTITY_FILE", "FBS_LOCAL_CONTROL_TOKEN", "FBS_DEVICE_ID", "FBS_DISCOVERY_PORT", "FBS_DISCOVERY_ENABLED"] { env.removeValue(forKey: name) }
         var fingerprint: String?
         if teacher {
             let (cert, key, pin) = try PlatformServices.certificate(state); fingerprint = pin
-            env.merge(["FBS_PAIRING_KEY": config.pairingKey, "FBS_TEACHER_PASSWORD": config.teacherPassword, "FBS_TLS_CERT": cert.path, "FBS_TLS_KEY": key.path, "FBS_ENROLLMENT_FILE": state.appendingPathComponent("enrollment.json").path, "FBS_LAB_SETTINGS_FILE": state.appendingPathComponent("lab-settings.json").path, "FBS_STARTUP_ID": startupID, "FBS_DEMO": "0", "PORT": "4177", "FBS_AGENT_PORT": "4180"], uniquingKeysWith: { _, new in new })
+            env.merge(["FBS_PAIRING_KEY": config.pairingKey, "FBS_TEACHER_PASSWORD": config.teacherPassword, "FBS_TLS_CERT": cert.path, "FBS_TLS_KEY": key.path, "FBS_ENROLLMENT_FILE": state.appendingPathComponent("enrollment.json").path, "FBS_LAB_SETTINGS_FILE": state.appendingPathComponent("lab-settings.json").path, "FBS_STARTUP_ID": startupID, "FBS_DESKTOP_TOKEN": token, "FBS_AUTO_ENROLL": "1", "FBS_DEMO": "0", "PORT": "4177", "FBS_AGENT_PORT": "4180"], uniquingKeysWith: { _, new in new })
             baseURL = URL(string: "http://127.0.0.1:4177")
         } else { for name in ["FBS_TEACHER_HOST", "FBS_TEACHER_PORT", "FBS_TEACHER_FINGERPRINT"] { env.removeValue(forKey: name) }; env["FBS_ASSISTANCE_UI"] = "1"; env["FBS_POWER_UI"] = "1"; env.merge(try config.studentEnvironment(state: state, token: token), uniquingKeysWith: { _, new in new }); baseURL = nil }
         let task = Process(), pipe = Pipe(); task.executableURL = Self.node; task.arguments = [Self.runtime.appendingPathComponent(teacher ? "server.js" : "student-agent.js").path]
@@ -79,7 +86,7 @@ final class RuntimeHost {
                 guard let self = self, self.generation == revision, self.timer?.isValid == true else { return }
                 guard case .success(let json) = result else { return }
                 let valid = self.teacher ? (json["startupId"] as? String == self.startupID && json["required"] as? Bool == true) : (json["inputEnabled"] as? Bool == false && json.keys.contains("session"))
-                if valid { self.timer?.invalidate(); self.status?(self.teacher ? "خادم المعلم جاهز؛ سجّل الدخول في المتصفح" : "وكيل الطالب جاهز محليًا؛ انتظار الاتصال بالمعلم واعتماد الجهاز"); self.ready?(url) }
+                if valid { self.timer?.invalidate(); self.status?(self.teacher ? "لوحة المعلم جاهزة" : "وكيل الطالب جاهز محليًا؛ انتظار الاتصال بالمعلم واعتماد الجهاز"); self.ready?(url) }
             }
         }
         return fingerprint
@@ -126,5 +133,5 @@ final class RuntimeHost {
         }.resume()
     }
     func stop() { generation += 1; timer?.invalidate(); timer = nil; let owned = process; process = nil; baseURL = nil; if owned?.isRunning == true { owned?.terminate() } }
-    deinit { timer?.invalidate(); if process?.isRunning == true { process?.terminate() } }
+    deinit { if let state = smokeState { try? FileManager.default.removeItem(at: state) }; timer?.invalidate(); if process?.isRunning == true { process?.terminate() } }
 }

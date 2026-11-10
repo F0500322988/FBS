@@ -2,6 +2,7 @@ import AppKit
 import Darwin
 
 @MainActor final class ClassroomApp: NSObject, NSApplicationDelegate {
+    private var teacherDesktop: TeacherDesktopView?
     private var settingsWindow: NSWindow?, dashboard: StudentDashboardView?
     private var window: NSWindow!, role = ClassroomRole.student
     private var config: ConnectionConfig!, host = RuntimeHost(), messages: MessagesWindow?, broadcast: BroadcastWindow?, filesWindow: FilesWindow?
@@ -43,13 +44,27 @@ import Darwin
         messageButton.target = self; messageButton.action = #selector(openMessages)
         viewButton.target = self; viewButton.action = #selector(openBroadcast)
         shareButton.target = self; shareButton.action = #selector(openShare)
-        if role == .teacher { window.contentView = form }
+        if role == .teacher {
+            let desktop = TeacherDesktopView(); teacherDesktop = desktop
+            window.styleMask.insert(.resizable); window.setContentSize(NSSize(width: 1200, height: 800))
+            window.contentView = desktop.view
+        }
         host.status = { [weak self] message in self?.state.stringValue = message }
         host.ready = { [weak self] url in
             guard let self = self else { return }
-            if self.role == .teacher { NSWorkspace.shared.open(url) } else { self.screenPause?.stop(); self.screenPause = ScreenPauseController(self.host); self.assistance?.stop(); self.assistance = AssistanceController(self.host); self.messageButton.isEnabled = true; self.viewButton.isEnabled = true; self.shareButton.isEnabled = true; self.filesButton.isEnabled = true; self.broadcast?.stop(); self.broadcast = BroadcastWindow(self.host); self.power?.stop(); self.power = PowerController(self.host) }
+            if self.role == .teacher { self.teacherDesktop?.connect(url: url, token: self.host.token) } else { self.screenPause?.stop(); self.screenPause = ScreenPauseController(self.host); self.assistance?.stop(); self.assistance = AssistanceController(self.host); self.messageButton.isEnabled = true; self.viewButton.isEnabled = true; self.shareButton.isEnabled = true; self.filesButton.isEnabled = true; self.broadcast?.stop(); self.broadcast = BroadcastWindow(self.host); self.power?.stop(); self.power = PowerController(self.host) }
         }
-        do { config = (agentSmokeCheck ? nil : (try PlatformServices.load(role, allowInteraction: !backgroundStudent))) ?? ConnectionConfig(role: role, pairingKey: ""); loaded = true; key.stringValue = config.pairingKey; password.stringValue = config.teacherPassword; address.stringValue = config.teacherHost; port.stringValue = String(config.teacherPort); pin.stringValue = config.fingerprint; device.stringValue = config.deviceName; discovery.state = config.discovery ? .on : .off }
+        do {
+            if let saved = try ((agentSmokeCheck || CommandLine.arguments.contains("--desktop-smoke-check")) ? nil : PlatformServices.load(role, allowInteraction: !backgroundStudent)) { config = saved }
+            else if role == .teacher {
+                config = ConnectionConfig(role: .teacher, pairingKey: try PlatformServices.randomToken(), teacherPassword: try PlatformServices.randomToken())
+                if !CommandLine.arguments.contains("--desktop-smoke-check") { try PlatformServices.save(config) }
+            } else { config = ConnectionConfig(role: role, pairingKey: "") }
+            loaded = true
+            key.stringValue = config.pairingKey; password.stringValue = config.teacherPassword
+            address.stringValue = config.teacherHost; port.stringValue = String(config.teacherPort)
+            pin.stringValue = config.fingerprint; device.stringValue = config.deviceName; discovery.state = config.discovery ? .on : .off
+        }
         catch { startButton.isEnabled = false; showError(error) }
         pollTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -104,6 +119,7 @@ import Darwin
             if loaded && backgroundStudent { do { try config.validate();start() } catch { /* Wait for administrator provisioning without a student dialog. */ } }
             if !backgroundStudent { preferences.center(); preferences.makeKeyAndOrderFront(nil) }
         }
+        if loaded && role == .teacher { start() }
         if !backgroundStudent && role == .teacher { window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true) }
         if agentSmokeCheck {
             Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { [weak self] _ in
@@ -131,7 +147,7 @@ import Darwin
             if role == .teacher && updated.teacherPassword != config.teacherPassword && !CredentialPolicy.isPin(updated.teacherPassword) {
                 throw ConfigurationError.invalid("كلمة المرور يجب أن تتكون من 3 إلى 8 أرقام")
             }
-            try updated.validate(); try PlatformServices.save(updated); config = updated
+            try updated.validate(); if !CommandLine.arguments.contains("--desktop-smoke-check") { try PlatformServices.save(updated) }; config = updated
             if role == .student && !backgroundStudent { connection.stringValue = "حُفظ الإعداد. أعد تشغيل وكيل الطالب لتطبيق تغييرات الاتصال."; return }
             let fingerprint = try host.start(updated)
             if let fingerprint = fingerprint { connection.stringValue = "عنوان الشبكة: \(PlatformServices.ipv4())\nالمنفذ: 4180\nبصمة المعلم: \(fingerprint)" }
@@ -139,7 +155,7 @@ import Darwin
         } catch { showError(error) }
     }
     @objc private func stopHost() { power?.stop(); power = nil; screenPause?.stop(); screenPause = nil; assistance?.stop(); assistance = nil; host.stop(); dashboard?.disconnect(); messages?.window.close(); broadcast?.stop(); broadcast = nil; filesWindow?.window.close(); for button in [messageButton, viewButton, shareButton, filesButton] { button.isEnabled = false }; state.stringValue = "توقف التطبيق محليًا — التحكم غير مفعّل" }
-    @objc private func openTeacher() { if let url = host.baseURL, host.process?.isRunning == true { NSWorkspace.shared.open(url) } }
+    @objc private func openTeacher() { if role == .teacher { window.makeKeyAndOrderFront(nil) } }
     @objc private func openFiles() { if filesWindow == nil || filesWindow!.isClosed { filesWindow = FilesWindow(host) }; filesWindow?.show() }
     @objc private func openMessages() { if messages == nil || messages!.isClosed { messages = MessagesWindow(host) }; messages?.show() }
     @objc private func openBroadcast() { if broadcast == nil || broadcast!.isClosed { broadcast = BroadcastWindow(host) }; broadcast?.show() }

@@ -21,7 +21,7 @@ const plannedPages=new Set([]);
 function updatePageNotice(){
  const notice=el('notice');
  notice.hidden=true;
- if(pageNow==='enrollment'){notice.hidden=false;notice.textContent='راجع الجهاز قبل اعتماده؛ لم يتم بعد إثبات امتلاك مفتاح Windows CNG. اعتماد المعمل لا يفعّل التحكم عن بُعد.';}
+ if(pageNow==='enrollment'){notice.hidden=false;notice.textContent='يُعتمد جهاز الطالب المهيأ لهذا المعمل تلقائيًا عند التحقق من مفتاح المعمل وتوقيع هويته. يمكنك إلغاء اعتماده هنا؛ لن يعاد اعتماده تلقائيًا بعد الإلغاء.';}
  else if(pageNow==='control'){notice.hidden=false;notice.textContent='شاشات الدخول المحمية غير متاحة للتحكم؛ يلزم إذن الطالب وشاشة كاملة حديثة. قفل حساب النظام يحتاج تأكيدًا محليًا مستقلًا.';}
  else if(pageNow==='screens'){notice.hidden=false;notice.textContent=previewUnavailable?'تعذر تحديث صور الشاشات؛ أُزيلت الصور السابقة. ستُعاد المحاولة تلقائيًا.':'تظهر لقطات الشاشة عند مشاركة الطالب وموافقته فقط. نقل المعمل عبر TLS؛ التحقق الكامل من هوية كل جهاز لم يكتمل.';}
  else if(plannedPages.has(pageNow)){notice.hidden=false;notice.textContent='هذه الوظيفة قيد التطوير وغير متاحة في هذه النسخة.';}
@@ -370,9 +370,9 @@ async function loadBroadcastState(){
   const state=await broadcastApi('');
   if(broadcastBusy||generation!==broadcastGeneration)return;
   if(state.active){
-   broadcastSession=state;el('broadcast-state').textContent=broadcastStream?'مشاركة شاشة المعلم جارية — لقطات متتابعة بلا صوت':'توجد جلسة على الخادم؛ يمكنك إيقافها قبل بدء مشاركة جديدة';
-  }else if(broadcastStream){await stopBroadcast();}else{broadcastSession=null;el('broadcast-state').textContent='لا توجد مشاركة نشطة';}
- }catch{if(generation===broadcastGeneration){el('broadcast-state').textContent='تعذر تحديث حالة المشاركة';if(broadcastStream)await stopBroadcast();}}
+   broadcastSession=state;el('broadcast-state').textContent=(broadcastStream||broadcastTimer)?'مشاركة شاشة المعلم جارية — لقطات متتابعة بلا صوت':'توجد جلسة على الخادم؛ يمكنك إيقافها قبل بدء مشاركة جديدة';
+  }else if(broadcastStream||broadcastTimer){await stopBroadcast();}else{broadcastSession=null;el('broadcast-state').textContent='لا توجد مشاركة نشطة';}
+ }catch{if(generation===broadcastGeneration){el('broadcast-state').textContent='تعذر تحديث حالة المشاركة';if(broadcastStream||broadcastTimer)await stopBroadcast();}}
  finally{broadcastStateBusy=false;updateBroadcastButtons();}
 }
 async function stopBroadcast(){
@@ -383,8 +383,34 @@ async function stopBroadcast(){
  el('broadcast-state').textContent='تم إيقاف التقاط الشاشة';updateBroadcastButtons();
  if(stopped)try{await broadcastApi('/stop',{sessionId:stopped.id});el('broadcast-state').textContent='تم إيقاف مشاركة الشاشة';}catch{el('broadcast-state').textContent='توقف الالتقاط محليًا؛ تعذر تأكيد إيقاف الخادم. تختفي الصور عند تقادمها تلقائيًا.';}
 }
+async function startNativeTeacherBroadcast(){
+ if(broadcastBusy||broadcastSession||!broadcastSelection.size)return;
+ broadcastBusy=true;const generation=++broadcastGeneration;updateBroadcastButtons();
+ let opened=null;
+ try{
+  // Native macOS permission checks run before the session is opened.
+  let first=await window.webkit.messageHandlers.fbsTeacherCapture.postMessage('capture');
+  if(generation!==broadcastGeneration)return;
+  opened=await broadcastApi('/start',{deviceIds:[...broadcastSelection]});
+  if(generation!==broadcastGeneration){await broadcastApi('/stop',{sessionId:opened.id});return;}
+  broadcastSession=opened;broadcastSequence=0;
+  const upload=async()=>{
+   if(generation!==broadcastGeneration||broadcastSending)return;
+   broadcastSending=true;
+   try{
+    const jpeg=first||await window.webkit.messageHandlers.fbsTeacherCapture.postMessage('capture');first=null;
+    if(generation===broadcastGeneration)await broadcastApi('/frame',{sessionId:opened.id,sequence:++broadcastSequence,jpeg});
+   }catch{if(generation===broadcastGeneration)await stopBroadcast();}
+   finally{broadcastSending=false;}
+  };
+  el('broadcast-state').textContent='مشاركة شاشة المعلم جارية — الشاشة الرئيسية، بلا صوت';
+  broadcastTimer=setInterval(upload,1000);await upload();
+ }catch{if(generation===broadcastGeneration){if(opened)broadcastSession=opened;await stopBroadcast();el('broadcast-state').textContent='تعذر مشاركة الشاشة؛ تحقق من إذن تسجيل الشاشة في إعدادات macOS';}}
+ finally{if(generation===broadcastGeneration)broadcastBusy=false;updateBroadcastButtons();}
+}
 async function startBroadcast(){
  if(broadcastBusy||broadcastSession||!broadcastSelection.size)return;
+ if(window.webkit?.messageHandlers?.fbsTeacherCapture)return startNativeTeacherBroadcast();
  if(!navigator.mediaDevices?.getDisplayMedia){el('broadcast-state').textContent='مشاركة الشاشة غير مدعومة في هذا المتصفح؛ استخدم متصفحًا حديثًا على جهاز المعلم';return;}
  broadcastBusy=true;const generation=++broadcastGeneration,deviceIds=[...broadcastSelection];updateBroadcastButtons();
  el('broadcast-state').textContent='اختر الشاشة أو النافذة التي تريد مشاركتها';

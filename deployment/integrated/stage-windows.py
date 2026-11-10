@@ -40,8 +40,11 @@ if os.environ.get('FBS_BUILD_CURRENT_CORE') == '1':
   target=root/'stage'/role/'SetupKit'
   shutil.copy2(helper/'FBS.LabSetup.exe',target/'FBS-LabSetup-Windows.exe')
   shutil.copy2(mac,target/'FBS-LabSetup-Mac')
-  shutil.copy2(repo/'M189-START-HERE.md',target/'M189-START-HERE.md')
+  shutil.copy2(repo/'M190-START-HERE.md',target/'M190-START-HERE.md')
   shutil.copy2(repo/'deployment/m184/README-AR.md',target/'README-AR.md')
   # Old evidence describes the locked bootstrap helper, not the rebuilt binaries.
   shutil.rmtree(target/'Tests')
  print('M185: fresh native apps, current shared runtime and source-built setup helpers staged.')
+
+ if os.environ.get('FBS_WEBVIEW2_BOOTSTRAPPER'):
+  shutil.copy2(os.environ['FBS_WEBVIEW2_BOOTSTRAPPER'],root/'stage'/'Teacher'/'SetupKit'/'MicrosoftEdgeWebview2Setup.exe')

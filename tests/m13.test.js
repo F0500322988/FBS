@@ -5,5 +5,5 @@ test('M13 enrollment UI and limitations are visible',()=>{
  const js=fs.readFileSync(path.join(__dirname,'../public/app.js'),'utf8');
  assert.match(html,/data-page="enrollment"/);
  assert.match(js,/api\/enrollment\//);
- assert.match(js,/لم يتم بعد إثبات امتلاك مفتاح Windows CNG/);
+ assert.match(js,/يُعتمد جهاز الطالب المهيأ لهذا المعمل تلقائيًا/);
 });
