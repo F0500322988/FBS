@@ -52,3 +52,13 @@ test('desktop capability and automatic signed enrollment over real TLS; revocati
   if(teacher.lan.server.listening)await teacher.lan.stop();fs.rmSync(dir,{recursive:true,force:true});
  }
 });
+
+test('failed durable enrollment does not authorize a device in memory',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'fbs-m190-durable-')),file=path.join(dir,'enrollment.json');
+ try {
+  const store=require('../enrollment').createEnrollment(file);
+  fs.mkdirSync(file);
+  assert.throws(()=>store.approve('DEVICE','fixture-public-key'));
+  assert.equal(store.approved.has('DEVICE'),false);assert.equal(store.keys.has('DEVICE'),false);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});

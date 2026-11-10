@@ -28,7 +28,7 @@ internal static class Program
         {
             try
             {
-                savedSettings = TeacherConnectionSettings.LoadOrCreate();
+                savedSettings = TeacherAutomaticSetup.LoadOrCreate();
             }
             catch (Exception)
             {

@@ -13,6 +13,14 @@ function createEnrollment(file){
   for(const [id,key] of Object.entries(data.keys||{})){if(!/^[\w.-]{1,64}$/.test(id)||typeof key!=='string')throw Error('Invalid enrolled key');keys.set(id,key);}
  }
  function persist(){fs.mkdirSync(path.dirname(file),{recursive:true});const tmp=file+'.'+process.pid+'.tmp';fs.writeFileSync(tmp,JSON.stringify({approved:[...approved].sort(),keys:Object.fromEntries(keys),blocked:[...blocked].sort()},null,2),{mode:0o600});fs.renameSync(tmp,file);}
- return {approved,keys,blocked,approve(id,key){if(!/^[\w.-]{1,64}$/.test(id))throw Error('Invalid device id');if(key){keys.set(id,key);}approved.add(id);blocked.delete(id);persist();},revoke(id){approved.delete(id);keys.delete(id);blocked.add(id);persist();}};
+ function update(action){
+  const previous={approved:[...approved],keys:[...keys],blocked:[...blocked]};
+  try{action();persist();}catch(error){
+   approved.clear();previous.approved.forEach(id=>approved.add(id));
+   keys.clear();previous.keys.forEach(([id,key])=>keys.set(id,key));
+   blocked.clear();previous.blocked.forEach(id=>blocked.add(id));throw error;
+  }
+ }
+ return {approved,keys,blocked,approve(id,key){if(!/^[\w.-]{1,64}$/.test(id))throw Error('Invalid device id');update(()=>{if(key){keys.set(id,key);}approved.add(id);blocked.delete(id);});},revoke(id){if(!/^[\w.-]{1,64}$/.test(id))throw Error('Invalid device id');update(()=>{approved.delete(id);keys.delete(id);blocked.add(id);});}};
 }
 module.exports={createEnrollment};
