@@ -78,6 +78,13 @@ import AppKit
             check(opened, "dashboard settings button opens settings action")
             guard let bitmap = dashboard.bitmapImageRepForCachingDisplay(in: dashboard.bounds) else { fatalError("Dashboard bitmap missing") }
             dashboard.cacheDisplay(in: dashboard.bounds, to: bitmap)
+            for button in buttons {
+                let point = button.convert(NSPoint(x: 5, y: button.bounds.midY), to: dashboard)
+                let x = Int(point.x * CGFloat(bitmap.pixelsWide) / dashboard.bounds.width)
+                let y = Int(point.y * CGFloat(bitmap.pixelsHigh) / dashboard.bounds.height)
+                guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB) else { fatalError("Button background pixel missing") }
+                check(color.redComponent > 0.9 && color.greenComponent > 0.9 && color.blueComponent > 0.9, "rendered dashboard button has opaque white background")
+            }
             try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("Dashboard-\(theme.rawValue).png"))
             window.orderOut(nil)
         }
