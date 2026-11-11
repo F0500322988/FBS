@@ -64,6 +64,13 @@ const server=http.createServer((req,res)=>{
  if(url.pathname.startsWith('/api/enrollment/')){
   if(!isAuthenticated(req))return send(res,401,{error:'Teacher login required'});
   if(req.method!=='GET'&&!teacherOriginAllowed(req))return send(res,403,{error:'Origin rejected'});
+  if(req.method==='POST'&&url.pathname==='/api/enrollment/scan'){
+   if(!lan||!lan.server.listening)return send(res,409,{error:'شغّل اتصال المعمل الحقيقي قبل المسح'});
+   return readJson(req).then(async body=>{
+    const result=await lan.scanIps(body.first,body.last);
+    return send(res,200,{...result,found:result.found.map(d=>({id:d.id,ip:d.ip,platform:d.platform,online:true,approved:enrollment.approved.has(d.id)&&enrollment.keys.get(d.id)===d.publicKey}))});
+   }).catch(error=>{if(!res.headersSent)send(res,error.status||400,{error:error.message||'تعذر مسح النطاق'});});
+  }
   if(req.method==='GET'&&url.pathname==='/api/enrollment/devices'){
    return send(res,200,{devices:[...(lan?.devices||new Map()).values()].map(x=>({...x,approved:enrollment.approved.has(x.id)&&enrollment.keys.get(x.id)===x.publicKey,online:Date.now()-x.lastSeen<20000})),approved:[...enrollment.approved]});
   }

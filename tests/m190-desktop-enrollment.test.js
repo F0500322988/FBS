@@ -38,6 +38,9 @@ test('desktop capability and automatic signed enrollment over real TLS; revocati
   const forged=signMessage(identity,body);forged.body.id='FORGED';assert.equal((await heartbeat(forged)).status,400);
   const packet=signMessage(identity,body);assert.deepEqual(await heartbeat(packet),{status:204,approved:'1'});
   assert.equal((await heartbeat(packet)).status,400,'replayed identity proof rejected');
+  assert.equal((await fetch(base+'/api/enrollment/scan',{method:'POST',body:'{}'})).status,401);
+  assert.equal((await fetch(base+'/api/enrollment/scan',{method:'POST',headers:{...headers,Origin:'https://other.invalid'},body:'{}'})).status,403);
+  assert.equal((await fetch(base+'/api/enrollment/scan',{method:'POST',headers,body:JSON.stringify({first:'8.8.8.8',last:'8.8.8.8'})})).status,400);
   const devices=await(await fetch(base+'/api/enrollment/devices',{headers})).json();assert.equal(devices.devices[0].approved,true);
   const another=getIdentity(path.join(dir,'another.json'));
   assert.equal((await heartbeat(signMessage(another,body))).status,400,'cannot replace trusted identity');

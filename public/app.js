@@ -727,3 +727,41 @@ el('console-fullscreen').addEventListener('click',()=>toggleConsoleFullscreen(do
 
 function referenceRowIcon(kind){const s=document.createElementNS('http://www.w3.org/2000/svg','svg'),p=document.createElementNS('http://www.w3.org/2000/svg','path');s.setAttribute('viewBox','0 0 24 24');s.setAttribute('fill','none');s.setAttribute('stroke','currentColor');s.setAttribute('stroke-width','1.8');p.setAttribute('d',kind==='edit'?'m4 16 12-12 4 4L8 20H4Zm10-10 4 4':'M3 6h18M8 6V3h8v3M5 6l1 15h12l1-15M10 10v7m4-7v7');s.append(p);return s;}
 el('view-return').addEventListener('click',()=>document.querySelector('nav [data-page="home"]').click());
+
+// M191: explicit IPv4 range discovery, verified through the existing TLS heartbeat.
+{
+ const dialog=document.createElement('dialog');dialog.className='ip-scan-dialog';dialog.dir='rtl';dialog.setAttribute('aria-labelledby','ip-scan-title');
+ const make=(tag,id,text)=>{const node=document.createElement(tag);if(id)node.id=id;if(text)node.textContent=text;return node;};
+ const form=make('form','ip-scan-form'),header=make('header'),close=make('button','ip-scan-close','✕');close.type='button';close.setAttribute('aria-label','إغلاق');header.append(make('h2','ip-scan-title','إضافة أجهزة الطلاب عبر IP'),close);
+ const fields=make('div');fields.className='ip-scan-fields';
+ for(const [id,title,hint]of [['ip-scan-first','أول IP','192.168.1.10'],['ip-scan-last','آخر IP','192.168.1.40']]){
+  const label=make('label',null,title),input=make('input',id);input.dir='ltr';input.placeholder=hint;input.required=true;input.autocomplete='off';input.inputMode='decimal';label.append(input);fields.append(label);
+ }
+ const scan=make('button','ip-scan-start','Scan');scan.type='submit';fields.append(scan);
+ const status=make('p','ip-scan-status');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+ form.append(header,make('p',null,'أدخل نطاق الشبكة المحلية. يجب تشغيل Agent وتهيئته لهذا المعمل على أجهزة الطلاب.'),fields,status,make('div','ip-scan-results'));dialog.append(form);
+
+ document.body.append(dialog);let scanning=false;
+ el('ip-scan-open').addEventListener('click',()=>{if(!dialog.open)dialog.showModal();});
+ el('ip-scan-close').addEventListener('click',()=>dialog.close());
+ el('ip-scan-form').addEventListener('submit',async event=>{
+  event.preventDefault();if(scanning)return;scanning=true;el('ip-scan-start').disabled=true;el('ip-scan-first').disabled=true;el('ip-scan-last').disabled=true;
+  el('ip-scan-results').replaceChildren();el('ip-scan-status').textContent='جارٍ البحث عن وكلاء FBS في النطاق…';
+  try{
+   const response=await fetch('/api/enrollment/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({first:el('ip-scan-first').value.trim(),last:el('ip-scan-last').value.trim()}),signal:AbortSignal.timeout(30000)});
+   const data=await response.json();if(!response.ok)throw Error(data.error||'تعذر المسح');
+   el('ip-scan-status').textContent=`اكتمل مسح ${data.scanned} عنوانًا — عُثر على ${data.found.length} جهاز FBS متصل. العناوين الأخرى لم تؤكد اتصال Agent.`;
+   for(const device of data.found){
+    const row=document.createElement('article');row.className='ip-scan-result';
+    const text=document.createElement('span');text.textContent=device.id+' — '+device.ip+' — '+({win32:'Windows',darwin:'macOS',linux:'Linux'}[device.platform]||'جهاز طالب');
+    const button=document.createElement('button');button.type='button';button.disabled=device.approved;button.textContent=device.approved?'معتمد ✓':'اعتماد الجهاز';
+    button.addEventListener('click',async()=>{
+     button.disabled=true;
+     try{const r=await fetch('/api/enrollment/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId:device.id})});if(!r.ok)throw Error();button.textContent='معتمد ✓';if(pageNow==='enrollment')await loadEnrollment();else await refresh();}
+     catch{button.disabled=false;el('ip-scan-status').textContent='تعذر اعتماد الجهاز؛ أعد المسح وتحقق من اتصاله.';}
+    });row.append(text,button);el('ip-scan-results').append(row);
+   }
+  }catch(error){el('ip-scan-status').textContent=error.name==='TimeoutError'?'انتهت مهلة المسح؛ حاول مجددًا.':error.message;}
+  finally{scanning=false;el('ip-scan-start').disabled=false;el('ip-scan-first').disabled=false;el('ip-scan-last').disabled=false;}
+ });
+}

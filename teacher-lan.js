@@ -128,6 +128,13 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
    }catch{res.writeHead(400);res.end();}
   });
  });
+ const scanner=require('./lan-ip-scan').createIpScanner({devices,announce:ip=>new Promise(resolve=>{
+  const payload=JSON.stringify({type:'fbs-teacher-v1',port:server.address().port,fingerprint,nonce:crypto.randomBytes(12).toString('hex'),timestamp:Date.now()});
+  const packet=Buffer.from(JSON.stringify({payload,mac:signature(secret,payload)}));
+  const probe=dgram.createSocket('udp4');let closed=false;
+  const finish=()=>{if(closed)return;closed=true;clearTimeout(timer);try{probe.close();}catch{}resolve();};
+  const timer=setTimeout(finish,500);probe.once('error',finish);probe.send(packet,discoveryPort,ip,finish);
+ })});
  const udp=dgram.createSocket('udp4');udp.on('error',e=>console.error('Discovery:',e.message));
  let timer,udpStarted=false;
  async function start(){await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'0.0.0.0',()=>{server.off('error',reject);resolve();});});
@@ -137,7 +144,7 @@ function createTeacherLan({secret,port=4180,discoveryPort=4181,intervalMs=3000,d
   announce();timer=setInterval(announce,intervalMs);console.log('Teacher LAN active:',localIPv4().join(', '));
  }
  async function stop(){clearInterval(timer);await Promise.all([new Promise(resolve=>server.close(resolve)),udpStarted?new Promise(resolve=>udp.close(resolve)):Promise.resolve()]);}
- return {devices,frames,server,start,stop,setAutoEnrollment,setApprovedKeys,setControlLeases,setControlCommands,setMessageStore,setBroadcastStore,setFileStore,setPauseStore,setAssistanceStore,setPowerStore,setLabNameProvider};
+ return {devices,frames,server,start,stop,scanIps:scanner.scan,setAutoEnrollment,setApprovedKeys,setControlLeases,setControlCommands,setMessageStore,setBroadcastStore,setFileStore,setPauseStore,setAssistanceStore,setPowerStore,setLabNameProvider};
 }
 if(require.main===module){const lan=createTeacherLan({secret:process.env.FBS_PAIRING_KEY});lan.start().catch(e=>{console.error(e);process.exitCode=1;});}
 module.exports={createTeacherLan};
