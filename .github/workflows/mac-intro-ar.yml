@@ -1,0 +1,31 @@
+name: Arabic macOS introduction narration
+on:
+  push:
+    branches: ['media/mac-intro-ar-*']
+permissions:
+  contents: write
+jobs:
+  narration:
+    runs-on: macos-26-intel
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - name: Render available Arabic system voice for the educational guide
+        run: |
+          python3 - <<'PY'
+          import subprocess,json,pathlib,re
+          voices=subprocess.check_output(['/usr/bin/say','-v','?'],text=True)
+          names=[line.split('  ')[0].strip() for line in voices.splitlines() if re.search(r'\bar[_-]',line)]
+          if not names:raise SystemExit('No Arabic voice available on this macOS runner')
+          voice=names[0];out=pathlib.Path('narration');out.mkdir()
+          for scene in json.loads(pathlib.Path('media/mac-intro-ar/scenes.json').read_text()):
+              text=out/(scene['id']+'.txt');text.write_text(scene['text'])
+              subprocess.run(['/usr/bin/say','-v',voice,'-r','155','-f',str(text),'-o',str(out/(scene['id']+'.aiff'))],check=True,timeout=75)
+          (out/'voice.json').write_text(json.dumps({'voice':voice,'language':'ar','purpose':'educational software introduction'},ensure_ascii=False))
+          print('Arabic narration rendered:',voice)
+          PY
+      - name: Save narration assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "media-mac-intro-ar-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'FBS Classroom — Arabic macOS guide narration' --notes 'Arabic narration assets for the educational macOS introduction. Demonstration data; not a recording of a live classroom.' narration/*.aiff narration/voice.json media/mac-intro-ar/scenes.json
