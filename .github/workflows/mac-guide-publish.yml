@@ -1,0 +1,20 @@
+name: Publish Arabic Mac introduction video and guide
+on:
+  push:
+    branches: ['media/mac-guide-final-*']
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify final video and guide hashes
+        working-directory: media/mac-intro-ar/final
+        run: sha256sum -c SHA256SUMS.txt
+      - name: Publish downloadable educational media
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "media-mac-guide-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'FBS Classroom — فيديو ودليل الماك بالعربية' --notes-file media/mac-intro-ar/README-AR.md media/mac-intro-ar/final/*

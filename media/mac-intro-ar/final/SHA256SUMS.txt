@@ -1,0 +1,7 @@
+d4168d9f0f4b037bb2f54cbe198b4790faa17af58d8b18b0cdc21dccb54dbf12  FBS-Classroom-Mac-Intro-AR-M191.mp4
+4a4bc220baa5e246ebea900394ed8a40bcdefd2d883770dac707f2a0853b8d6f  FBS-Classroom-Mac-Guide-AR-M191.pdf
+47c4856dfeeb618625b6087910a12d4f9fcb92943975e46533c72e9b7964aab6  FBS-Classroom-Mac-Intro-AR-M191.srt
+744411af71556bd257b447899af06b012dd1f6d92534371fe6a623eaab099022  FBS-Classroom-Mac-Guide-AR-M191.md
+fca19b4a1dfb5d30341ede7f5f09b27bbfc95468e72e6d11a3489b064377a165  Narration-AR.txt
+de601a4c5a9c97cdd3451b1ab374de6ec75735f0827aeba0449107fa3805de40  Video-validation.json
+92703c338145affc70b2305a613137de816073890a64211b6d9792581f7d926b  FBS-Classroom-Mac-Intro-AR-Cover.png

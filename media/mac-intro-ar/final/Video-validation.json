@@ -1,0 +1,18 @@
+{
+  "video": "FBS-Classroom-Mac-Intro-AR-M191.mp4",
+  "durationSeconds": 130.14,
+  "resolution": "1920x1080",
+  "videoCodec": "h264",
+  "audioCodec": "aac",
+  "audioLanguage": "ara",
+  "narrationVoice": "Majed",
+  "syntheticNarration": true,
+  "optionalArabicSubtitlesIncluded": true,
+  "videoDecodedWithoutErrors": true,
+  "pdfPages": 3,
+  "pdfReadbackPassed": true,
+  "macOnlyGuide": true,
+  "interfaceUsesDemonstrationData": true,
+  "liveMacClassroomRecorded": false,
+  "applicationRuntimeChanged": false
+}
